@@ -1,0 +1,199 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #f97316; /* Tươi sáng hơn, màu cam Tailwind orange-500 */
+  --color-primary-dark: #ea580c;
+  --color-primary-light: #ffedd5;
+  --color-secondary: #0f172a; /* Slate 900 */
+  --color-accent: #334155;
+  
+  --shadow-soft: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+  --shadow-premium: 0 10px 30px -5px rgba(0, 0, 0, 0.08);
+  --shadow-glow: 0 0 15px rgba(249, 115, 22, 0.3);
+  
+}
+
+:root {
+  --color-bg-main: #f8fafc; /* Nền nhạt hơn, sang trọng hơn (slate-50) */
+}
+
+body {
+  background-color: var(--color-bg-main);
+  color: #0f172a;
+  font-family: 'Inter', 'Be Vietnam Pro', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, .font-serif {
+  font-family: 'Playfair Display', serif;
+  letter-spacing: -0.02em;
+}
+
+@layer components {
+  /* Input & Search: Hybrid (Crisp borders, soft focus to hard focus) */
+  .input-modern {
+    @apply w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-xl focus:outline-none focus:border-secondary focus:shadow-[4px_4px_0px_0px_rgba(15,23,42,0.15)] transition-all duration-300 text-sm font-medium placeholder-slate-400 hover:border-slate-300;
+  }
+
+  .input-modern:disabled {
+    @apply bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed opacity-80 shadow-none;
+  }
+
+  /* Buttons: Hybrid Neo-Brutalism + Soft */
+  .btn-modern {
+    @apply inline-flex items-center justify-center font-bold py-3.5 px-8 rounded-xl transition-all duration-300 text-white bg-primary border-2 border-primary hover:border-secondary hover:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 active:translate-y-0 active:shadow-none;
+  }
+
+  .btn-modern-secondary {
+    @apply inline-flex items-center justify-center font-bold py-3.5 px-8 rounded-xl transition-all duration-300 bg-white text-secondary border-2 border-slate-200 hover:border-secondary hover:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 active:translate-y-0 active:shadow-none;
+  }
+
+  .btn-auth-modern {
+    @apply w-full inline-flex items-center justify-center h-14 font-bold text-sm uppercase tracking-wider rounded-xl transition-all duration-300 text-white bg-secondary border-2 border-secondary hover:bg-black hover:shadow-[4px_4px_0px_0px_rgba(249,115,22,1)] hover:-translate-y-1 active:translate-y-0 active:shadow-none;
+  }
+
+  /* Card & Containers: Glass to Brutal on hover */
+  .card-modern {
+    @apply bg-white/95 backdrop-blur-md border-2 border-slate-100 rounded-2xl shadow-sm transition-all duration-300 hover:border-slate-800 hover:shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 p-6;
+  }
+
+  /* Badge */
+  .badge-modern {
+    @apply px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full bg-primary/10 text-primary border-2 border-primary/20;
+  }
+
+  /* Dropdown Select tùy chỉnh phong cách hiện đại */
+  .select-modern {
+    appearance: none !important;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 16px center !important;
+    background-size: 16px !important;
+    padding-right: 48px !important;
+  }
+
+  /* Mega Menu: Hiệu ứng trượt mượt mà SaaS */
+  .mega-menu {
+    @apply absolute top-full left-0 w-full bg-white/95 backdrop-blur-xl border-t-2 border-slate-800 shadow-[0_10px_30px_-5px_rgba(15,23,42,0.2)] opacity-0 invisible translate-y-2 transition-all duration-300 z-50 rounded-b-2xl;
+  }
+  
+  .group:hover .mega-menu {
+    @apply opacity-100 visible translate-y-0;
+  }
+  
+  /* Glass effect chung */
+  .glass {
+    @apply bg-white/80 backdrop-blur-lg border-b-2 border-white/20 shadow-sm;
+  }
+
+
+}
+
+/* Swiper Custom Modern Styling */
+.home-swiper .swiper-button-next,
+.home-swiper .swiper-button-prev {
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(8px) !important;
+  color: #0f172a !important;
+  width: 48px !important;
+  height: 48px !important;
+  border: 2px solid #0f172a !important;
+  box-shadow: 4px 4px 0px 0px rgba(15, 23, 42, 1) !important;
+  transition: all 0.3s ease !important;
+  border-radius: 12px !important; /* Squircle thay vì tròn xoe */
+}
+
+.home-swiper .swiper-button-next:hover,
+.home-swiper .swiper-button-prev:hover {
+  background: var(--color-primary) !important;
+  color: white !important;
+  transform: translate(-2px, -2px) !important;
+  box-shadow: 6px 6px 0px 0px rgba(15, 23, 42, 1) !important;
+}
+
+.home-swiper .swiper-button-next:active,
+.home-swiper .swiper-button-prev:active {
+  transform: translate(0px, 0px) !important;
+  box-shadow: none !important;
+}
+
+.home-swiper .swiper-button-next::after,
+.home-swiper .swiper-button-prev::after {
+  font-size: 18px !important;
+  font-weight: bold !important;
+}
+
+.home-swiper .swiper-pagination-bullet {
+  border-radius: 50% !important;
+  background: rgba(15, 23, 42, 0.2) !important;
+  width: 8px !important;
+  height: 8px !important;
+  transition: all 0.3s ease !important;
+}
+
+.home-swiper .swiper-pagination-bullet-active {
+  background: var(--color-primary) !important;
+  width: 24px !important;
+  border-radius: 4px !important;
+}
+
+/* Custom Scrollbar - Hybrid Style Toàn cục */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bg-main);
+  border-left: 1px solid #e2e8f0;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 6px;
+  border: 3px solid var(--color-bg-main); /* fake padding */
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #0f172a;
+}
+
+/* Class cụ thể cho những chỗ dùng custom-scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  border: none;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+  border: none;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #0f172a;
+}
+
+/* Swiper Custom Modern Styling cho Shop */
+.shop-swiper .swiper-pagination-bullet {
+  background: rgba(15, 23, 42, 0.2) !important;
+  width: 8px !important;
+  height: 8px !important;
+  transition: all 0.3s ease !important;
+}
+
+.shop-swiper .swiper-pagination-bullet-active {
+  background: var(--color-primary) !important;
+  width: 24px !important;
+  border-radius: 4px !important;
+}
+
+/* Swiper Container Padding & Spacing */
+.shop-swiper.swiper,
+.home-swiper.swiper {
+  padding-bottom: 56px !important;
+}
+
+.shop-swiper .swiper-pagination,
+.home-swiper .swiper-pagination {
+  bottom: 8px !important;
+}

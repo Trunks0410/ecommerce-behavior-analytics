@@ -1,0 +1,540 @@
+{
+	"info": {
+		"_postman_id": "ede3f24f-2042-416a-849a-abb41d7ec586",
+		"name": "LOGIN",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "44010302",
+		"_collection_link": "https://lamvandi-4150983.postman.co/workspace/LamVanDi's-Workspace~84d2b768-6be7-4657-8665-4a1face1117a/collection/44010302-ede3f24f-2042-416a-849a-abb41d7ec586?action=share&source=collection_link&creator=44010302"
+	},
+	"item": [
+		{
+			"name": "Đăng nhập quá 6 lần",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"email_or_phone\": \"lamvandi12@gmail.com\",\r\n    \"password\": \"25032006\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8088/auth/login",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8088",
+					"path": [
+						"auth",
+						"login"
+					]
+				}
+			},
+			"response": [
+				{
+					"name": "Đăng nhập quá 6 lần",
+					"originalRequest": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email_or_phone\": \"lamvandi12@gmail.com\",\r\n    \"password\": \"25032006\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8088/auth/login",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8088",
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"status": "Too Many Requests",
+					"code": 429,
+					"_postman_previewlanguage": "",
+					"header": [
+						{
+							"key": "X-Powered-By",
+							"value": "Express"
+						},
+						{
+							"key": "X-RateLimit-Limit",
+							"value": "6"
+						},
+						{
+							"key": "X-RateLimit-Remaining",
+							"value": "0"
+						},
+						{
+							"key": "Date",
+							"value": "Sat, 09 May 2026 10:56:27 GMT"
+						},
+						{
+							"key": "X-RateLimit-Reset",
+							"value": "1778324290"
+						},
+						{
+							"key": "Retry-After",
+							"value": "102"
+						},
+						{
+							"key": "Content-Type",
+							"value": "text/html; charset=utf-8"
+						},
+						{
+							"key": "Content-Length",
+							"value": "51"
+						},
+						{
+							"key": "ETag",
+							"value": "W/\"33-yynhFf/E7eEhr+xsJTvR8Gw3LDU\""
+						},
+						{
+							"key": "Connection",
+							"value": "keep-alive"
+						},
+						{
+							"key": "Keep-Alive",
+							"value": "timeout=5"
+						}
+					],
+					"cookie": [],
+					"body": "Too many attempts, please try again after 5 minutes"
+				}
+			]
+		},
+		{
+			"name": "Đăng nhập thành công (USER)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"email_or_phone\": \"lamvandi11@gmail.com\",\r\n    \"password\": \"25032005\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8088/auth/login",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8088",
+					"path": [
+						"auth",
+						"login"
+					]
+				}
+			},
+			"response": [
+				{
+					"name": "Đăng nhập thành công",
+					"originalRequest": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email_or_phone\": \"lamvandi11@gmail.com\",\r\n    \"password\": \"25032005\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8088/auth/login",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8088",
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": null,
+					"header": [
+						{
+							"key": "X-Powered-By",
+							"value": "Express"
+						},
+						{
+							"key": "X-RateLimit-Limit",
+							"value": "6"
+						},
+						{
+							"key": "X-RateLimit-Remaining",
+							"value": "3"
+						},
+						{
+							"key": "Date",
+							"value": "Sat, 09 May 2026 11:00:00 GMT"
+						},
+						{
+							"key": "X-RateLimit-Reset",
+							"value": "1778324602"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json; charset=utf-8"
+						},
+						{
+							"key": "Content-Length",
+							"value": "513"
+						},
+						{
+							"key": "ETag",
+							"value": "W/\"201-QTVIqD06xjikHTNV6Qjk4CWFnq8\""
+						},
+						{
+							"key": "Connection",
+							"value": "keep-alive"
+						},
+						{
+							"key": "Keep-Alive",
+							"value": "timeout=5"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"status\": 200,\n    \"message\": \"Login success\",\n    \"data\": {\n        \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJsYW12YW5kaTExQGdtYWlsLmNvbSIsInJvbGVfaWQiOjIsImlhdCI6MTc3ODMyNDQwMCwiZXhwIjoxNzc4MzI1MzAwfQ.kx5w8gMgUB5orl-66tynwgOxut3ZSXD3OpPXByqwJHY\",\n        \"redirectUrl\": \"user/profile\",\n        \"user\": {\n            \"id\": 1,\n            \"email\": \"lamvandi11@gmail.com\",\n            \"phone\": \"0365933624\"\n        }\n    }\n}"
+				}
+			]
+		},
+		{
+			"name": "Đăng nhập thành công (ADMIN)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"email_or_phone\": \"0365933625\",\r\n    \"password\": \"25032005\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8088/auth/login",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8088",
+					"path": [
+						"auth",
+						"login"
+					]
+				}
+			},
+			"response": [
+				{
+					"name": "Đăng nhập thành công",
+					"originalRequest": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email_or_phone\": \"0365933625\",\r\n    \"password\": \"25032005\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8088/auth/login",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8088",
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": null,
+					"header": [
+						{
+							"key": "X-Powered-By",
+							"value": "Express"
+						},
+						{
+							"key": "X-RateLimit-Limit",
+							"value": "6"
+						},
+						{
+							"key": "X-RateLimit-Remaining",
+							"value": "5"
+						},
+						{
+							"key": "Date",
+							"value": "Sat, 09 May 2026 11:03:30 GMT"
+						},
+						{
+							"key": "X-RateLimit-Reset",
+							"value": "1778324911"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json; charset=utf-8"
+						},
+						{
+							"key": "Content-Length",
+							"value": "514"
+						},
+						{
+							"key": "ETag",
+							"value": "W/\"202-upv6zBEOVhjVjvz8zQ8q416qTms\""
+						},
+						{
+							"key": "Connection",
+							"value": "keep-alive"
+						},
+						{
+							"key": "Keep-Alive",
+							"value": "timeout=5"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"status\": 200,\n    \"message\": \"Login success\",\n    \"data\": {\n        \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwiZW1haWwiOiJsYW12YW5kaTEyQGdtYWlsLmNvbSIsInJvbGVfaWQiOjEsImlhdCI6MTc3ODMyNDYxMCwiZXhwIjoxNzc4MzI1NTEwfQ.8I41Z0yrtRC4AinbOeIr1P3RS3a2dI2Q04GkkuakZHs\",\n        \"redirectUrl\": \"admin/profile\",\n        \"user\": {\n            \"id\": 2,\n            \"email\": \"lamvandi12@gmail.com\",\n            \"phone\": \"0365933625\"\n        }\n    }\n}"
+				}
+			]
+		},
+		{
+			"name": "Đăng nhập thất bại",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"email_or_phone\": \"0365933624\",\r\n    \"password\": \"2503205\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8088/auth/login",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8088",
+					"path": [
+						"auth",
+						"login"
+					]
+				}
+			},
+			"response": [
+				{
+					"name": "Đăng nhập thất bại",
+					"originalRequest": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email_or_phone\": \"0365933624\",\r\n    \"password\": \"2503205\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8088/auth/login",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8088",
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"status": "Unauthorized",
+					"code": 401,
+					"_postman_previewlanguage": null,
+					"header": [
+						{
+							"key": "X-Powered-By",
+							"value": "Express"
+						},
+						{
+							"key": "X-RateLimit-Limit",
+							"value": "6"
+						},
+						{
+							"key": "X-RateLimit-Remaining",
+							"value": "5"
+						},
+						{
+							"key": "Date",
+							"value": "Sat, 09 May 2026 11:11:05 GMT"
+						},
+						{
+							"key": "X-RateLimit-Reset",
+							"value": "1778325366"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json; charset=utf-8"
+						},
+						{
+							"key": "Content-Length",
+							"value": "41"
+						},
+						{
+							"key": "ETag",
+							"value": "W/\"29-sAYoW0NEVoDDYnvVcXzfZ+17mIs\""
+						},
+						{
+							"key": "Connection",
+							"value": "keep-alive"
+						},
+						{
+							"key": "Keep-Alive",
+							"value": "timeout=5"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"status\": 401,\n    \"message\": \"Wrong password\"\n}"
+				}
+			]
+		},
+		{
+			"name": "Không tìm thấy tài khoản",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"email_or_phone\": \"0365933626\",\r\n    \"password\": \"25032005\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8088/auth/login",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8088",
+					"path": [
+						"auth",
+						"login"
+					]
+				}
+			},
+			"response": [
+				{
+					"name": "không tìm thấy tài khoản",
+					"originalRequest": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"email_or_phone\": \"0365933626\",\r\n    \"password\": \"25032005\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8088/auth/login",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8088",
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"status": "Unauthorized",
+					"code": 401,
+					"_postman_previewlanguage": null,
+					"header": [
+						{
+							"key": "X-Powered-By",
+							"value": "Express"
+						},
+						{
+							"key": "X-RateLimit-Limit",
+							"value": "6"
+						},
+						{
+							"key": "X-RateLimit-Remaining",
+							"value": "4"
+						},
+						{
+							"key": "Date",
+							"value": "Sat, 09 May 2026 11:14:24 GMT"
+						},
+						{
+							"key": "X-RateLimit-Reset",
+							"value": "1778325366"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json; charset=utf-8"
+						},
+						{
+							"key": "Content-Length",
+							"value": "41"
+						},
+						{
+							"key": "ETag",
+							"value": "W/\"29-U3lZ8zLa+YZ/v6XDHmoqhI0+wPU\""
+						},
+						{
+							"key": "Connection",
+							"value": "keep-alive"
+						},
+						{
+							"key": "Keep-Alive",
+							"value": "timeout=5"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"status\": 401,\n    \"message\": \"User not found\"\n}"
+				}
+			]
+		}
+	]
+}

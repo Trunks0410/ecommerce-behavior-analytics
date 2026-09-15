@@ -1,0 +1,46 @@
+import express from "express";
+import userRouter from "./modules/user/user.routes.js";
+import authRouter from "./modules/auth/auth.routes.js";
+import forgotPasswordRoute from "./modules/forgotPassword/forgotPassword.routes.js";
+import productRouter from "./modules/product/product.routes.js";
+import categoryRouter from "./modules/category/category.routes.js";
+import cartRouter from "./modules/cart/cart.routes.js";
+import orderRouter from "./modules/order/order.routes.js";
+import addressRouter from "./modules/address/address.routes.js";
+import couponRouter from "./modules/coupon/coupon.routes.js";
+import shopRouter from "./modules/shop/shop.routes.js";
+import chatRouter from "./modules/chat/chat.routes.js";
+import adminRouter from "./modules/admin/admin.routes.js";
+import systemRouter from "./modules/system/system.routes.js";
+import managerRouter from "./modules/manager/manager.routes.js";
+import notificationRouter from "./modules/notification/notification.routes.js";
+import paymentRouter from "./modules/payment/payment.routes.js";
+import returnRouter from "./modules/return/return.routes.js";
+import blogRouter from "./modules/blog/blog.routes.js";
+import aiChatRouter from "./modules/aiChat/aiChat.routes.js";
+import shipmentRouter from "./modules/shipment/shipment.routes.js";
+
+const router = express.Router();
+
+router.use("/user", userRouter);
+router.use("/auth", authRouter);
+router.use("/auth/forgot-password", forgotPasswordRoute);
+router.use("/products", productRouter);
+router.use("/categories", categoryRouter);
+router.use("/cart", cartRouter);
+router.use("/orders", orderRouter);
+router.use("/addresses", addressRouter);
+router.use("/coupons", couponRouter);
+router.use("/shops", shopRouter);
+router.use("/chats", chatRouter);
+router.use("/admin", adminRouter);
+router.use("/manager", managerRouter);
+router.use("/notifications", notificationRouter);
+router.use("/payment", paymentRouter);
+router.use("/system", systemRouter);
+router.use("/returns", returnRouter);
+router.use("/", blogRouter);
+router.use("/", aiChatRouter);
+router.use("/shipments", shipmentRouter);
+
+export default router;

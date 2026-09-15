@@ -1,0 +1,301 @@
+{
+  "info": {
+    "_postman_id": "b31958b2-29fc-451e-b83c-1234567890ab",
+    "name": "User Profile Tests",
+    "description": "Các kịch bản test cho chức năng Profile và Edit Profile, bao gồm cả test Rate Limiting.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. GET Profile - Thành công (Chờ 200 OK)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{access_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/user/profile",
+          "host": ["{{base_url}}"],
+          "path": ["user", "profile"]
+        },
+        "description": "Lấy thông tin profile với Token hợp lệ."
+      },
+      "response": [
+        {
+          "name": "Thành công (200 OK)",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user/profile",
+              "host": ["{{base_url}}"],
+              "path": ["user", "profile"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [],
+          "cookie": [],
+          "body": "{\n    \"message\": \"Profile retrieved successfully\",\n    \"data\": {\n        \"id\": 1,\n        \"user_id\": 1,\n        \"full_name\": \"Nguyen Van A\",\n        \"address\": \"Ha Noi\",\n        \"gender\": \"male\"\n    }\n}"
+        }
+      ]
+    },
+    {
+      "name": "2. GET Profile - Lỗi không có Token (Chờ 401/403)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/user/profile",
+          "host": ["{{base_url}}"],
+          "path": ["user", "profile"]
+        },
+        "description": "Cố gắng truy cập profile mà không gửi theo header Authorization"
+      },
+      "response": [
+        {
+          "name": "Lỗi xác thực (401 Unauthorized)",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user/profile",
+              "host": ["{{base_url}}"],
+              "path": ["user", "profile"]
+            }
+          },
+          "status": "Unauthorized",
+          "code": 401,
+          "_postman_previewlanguage": "json",
+          "header": [],
+          "cookie": [],
+          "body": "{\n    \"message\": \"User not authenticated\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "3. PUT Edit Profile - Thành công (Chờ 200 OK)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{access_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "PUT",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"full_name\": \"Nguyễn Văn A\",\n    \"id_card\": \"123456789\",\n    \"gender\": \"male\",\n    \"address\": \"Hà Nội\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/user/edit-profile",
+          "host": ["{{base_url}}"],
+          "path": ["user", "edit-profile"]
+        },
+        "description": "Cập nhật profile với dữ liệu hợp lệ"
+      },
+      "response": [
+        {
+          "name": "Cập nhật thành công (200 OK)",
+          "originalRequest": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user/edit-profile",
+              "host": ["{{base_url}}"],
+              "path": ["user", "edit-profile"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [],
+          "cookie": [],
+          "body": "{\n    \"message\": \"Profile updated successfully\",\n    \"data\": {\n        \"full_name\": \"Nguyễn Văn A\",\n        \"id_card\": \"123456789\",\n        \"gender\": \"male\",\n        \"address\": \"Hà Nội\"\n    }\n}"
+        }
+      ]
+    },
+    {
+      "name": "4. PUT Edit Profile - Lỗi ID Card sai (Chờ 400)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{access_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "PUT",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"full_name\": \"Nguyễn Văn A\",\n    \"id_card\": \"123\" \n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/user/edit-profile",
+          "host": ["{{base_url}}"],
+          "path": ["user", "edit-profile"]
+        },
+        "description": "Cập nhật với ID card ít hơn 9 chữ số. Bị chặn bởi editProfileRules."
+      },
+      "response": [
+        {
+          "name": "Lỗi dữ liệu đầu vào (400 Bad Request)",
+          "originalRequest": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user/edit-profile",
+              "host": ["{{base_url}}"],
+              "path": ["user", "edit-profile"]
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "_postman_previewlanguage": "json",
+          "header": [],
+          "cookie": [],
+          "body": "{\n    \"message\": \"ID card must be 9-12 digits\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "5. PUT Edit Profile - Lỗi Full Name dài (Chờ 400)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{access_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "PUT",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"full_name\": \"TênNàySẽVượtQuáMứcHaiTrămKýTựĐượcCấuHìnhỞTrongBackendMụcĐíchLàĐểTestXemMiddlewareValidationCóChặnLạiNhưKỳVọngHayKhôngĐóMà... (lặp lại để đủ 200 ký tự) Một cái tên cực kỳ dài nhằm kiểm tra tính hợp lệ của trường full_name trong hệ thống của chúng ta hiện tại...\",\n    \"id_card\": \"123456789\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/user/edit-profile",
+          "host": ["{{base_url}}"],
+          "path": ["user", "edit-profile"]
+        },
+        "description": "Cập nhật với first_name dài hơn 100 ký tự."
+      },
+      "response": [
+        {
+          "name": "Lỗi dữ liệu đầu vào (400 Bad Request)",
+          "originalRequest": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user/edit-profile",
+              "host": ["{{base_url}}"],
+              "path": ["user", "edit-profile"]
+            }
+          },
+          "status": "Bad Request",
+          "code": 400,
+          "_postman_previewlanguage": "json",
+          "header": [],
+          "cookie": [],
+          "body": "{\n    \"message\": \"Full name must not exceed 200 characters\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "6. PUT Edit Profile - Test Rate Limit (Chờ 429)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{access_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "PUT",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"full_name\": \"Spam Test\",\n    \"id_card\": \"123456789\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/user/edit-profile",
+          "host": ["{{base_url}}"],
+          "path": ["user", "edit-profile"]
+        },
+        "description": "API này có cấu hình max: 30 requests/15 phút. Để test, hãy bấm Send liên tục 31 lần hoặc dùng Collection Runner."
+      },
+      "response": [
+        {
+          "name": "Spam quá nhiều (429 Too Many Requests)",
+          "originalRequest": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/user/edit-profile",
+              "host": ["{{base_url}}"],
+              "path": ["user", "edit-profile"]
+            }
+          },
+          "status": "Too Many Requests",
+          "code": 429,
+          "_postman_previewlanguage": "html",
+          "header": [],
+          "cookie": [],
+          "body": "Too many attempts, please try again later"
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8088",
+      "type": "string"
+    }
+  ]
+}

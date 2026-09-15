@@ -1,0 +1,6 @@
+Total indexes remaining: 4
+
+Key_name: PRIMARY, Column_name: id, Non_unique: 0
+Key_name: email, Column_name: email, Non_unique: 0
+Key_name: phone, Column_name: phone, Non_unique: 0
+Key_name: role_id, Column_name: role_id, Non_unique: 1

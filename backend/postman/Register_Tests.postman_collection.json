@@ -1,0 +1,188 @@
+{
+	"info": {
+		"_postman_id": "c42958c3-30ed-562f-c94d-2345678901bc",
+		"name": "Register Tests",
+		"description": "Các kịch bản test cho chức năng Register (Đăng ký tài khoản mới)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. POST Register - Thành công (Chờ 201 Created)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"test_user_{{$timestamp}}@example.com\",\n    \"phone\": \"09{{$randomInt}}{{$randomInt}}{{$randomInt}}\",\n    \"password\": \"password123\",\n    \"role_id\": 2\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/auth/register",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"auth",
+						"register"
+					]
+				},
+				"description": "Đăng ký tài khoản mới với đầy đủ thông tin hợp lệ. Ở đây dùng biến {{$timestamp}} và {{$randomInt}} của Postman để mỗi lần bấm Send sẽ sinh ra email/sđt mới không bị trùng."
+			},
+			"response": [
+				{
+					"name": "Đăng ký thành công (201 Created)",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "register"]
+						}
+					},
+					"status": "Created",
+					"code": 201,
+					"_postman_previewlanguage": "json",
+					"header": [],
+					"cookie": [],
+					"body": "{\n    \"status\": 201,\n    \"message\": \"User registered successfully\",\n    \"data\": {\n        \"id\": 10,\n        \"email\": \"test_user_1715340000@example.com\",\n        \"phone\": \"0912345678\"\n    }\n}"
+				}
+			]
+		},
+		{
+			"name": "2. POST Register - Thiếu thông tin bắt buộc (Chờ 400)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"test_user@example.com\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/auth/register",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"auth",
+						"register"
+					]
+				},
+				"description": "Gửi request thiếu password và phone để kiểm tra logic bắt lỗi Missing required fields."
+			},
+			"response": [
+				{
+					"name": "Thiếu trường bắt buộc (400 Bad Request)",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "register"]
+						}
+					},
+					"status": "Bad Request",
+					"code": 400,
+					"_postman_previewlanguage": "json",
+					"header": [],
+					"cookie": [],
+					"body": "{\n    \"message\": \"Missing required fields\"\n}"
+				}
+			]
+		},
+		{
+			"name": "3. POST Register - Trùng Email hoặc SĐT (Chờ 400)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"admin@gmail.com\",\n    \"phone\": \"0123456789\",\n    \"password\": \"password123\",\n    \"role_id\": 2\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/auth/register",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"auth",
+						"register"
+					]
+				},
+				"description": "Gửi request với Email hoặc SĐT đã tồn tại trong DB để test lỗi trùng lặp. Vui lòng thay đổi thông tin email/phone trong body cho giống với 1 user đã có trong DB của bạn."
+			},
+			"response": [
+				{
+					"name": "Trùng lặp dữ liệu (400 Bad Request)",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "register"]
+						}
+					},
+					"status": "Bad Request",
+					"code": 400,
+					"_postman_previewlanguage": "json",
+					"header": [],
+					"cookie": [],
+					"body": "{\n    \"status\": 400,\n    \"message\": \"Email or phone already exists\"\n}"
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		}
+	]
+}
