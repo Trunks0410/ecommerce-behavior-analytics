@@ -1,0 +1,203 @@
+{
+  "info": {
+    "name": "Order Status Update API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Update Order Status to CONFIRMED",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{admin_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"CONFIRMED\",\n  \"note\": \"Đã xác nhận đơn hàng\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8088/orders/{{order_id}}/status",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8088",
+          "path": [
+            "orders",
+            "{{order_id}}",
+            "status"
+          ]
+        }
+      }
+    },
+    {
+      "name": "2. Update Order Status to PREPARING",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{admin_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"PREPARING\",\n  \"note\": \"Bắt đầu chuẩn bị hàng\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8088/orders/{{order_id}}/status",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8088",
+          "path": [
+            "orders",
+            "{{order_id}}",
+            "status"
+          ]
+        }
+      }
+    },
+    {
+      "name": "2. Update Order Status to SHIPPING",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{admin_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"SHIPPING\",\n  \"note\": \"Đang giao cho đơn vị vận chuyển\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8088/orders/{{order_id}}/status",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8088",
+          "path": [
+            "orders",
+            "{{order_id}}",
+            "status"
+          ]
+        }
+      }
+    },
+    {
+      "name": "3. Update Order Status to DELIVERED",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{admin_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"DELIVERED\",\n  \"note\": \"Giao hàng thành công\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8088/orders/{{order_id}}/status",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8088",
+          "path": [
+            "orders",
+            "{{order_id}}",
+            "status"
+          ]
+        }
+      }
+    },
+    {
+      "name": "4. Update Order Status to CANCELLED",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{admin_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"CANCELLED\",\n  \"note\": \"Hết hàng\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8088/orders/{{order_id}}/status",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8088",
+          "path": [
+            "orders",
+            "{{order_id}}",
+            "status"
+          ]
+        }
+      }
+    }
+  ]
+}

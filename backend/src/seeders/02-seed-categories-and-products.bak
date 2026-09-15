@@ -1,0 +1,57 @@
+/** @type {import('sequelize-cli').Migration} */
+export default {
+  async up(queryInterface, Sequelize) {
+    const now = new Date();
+
+    // 1. Categories
+    await queryInterface.bulkInsert('categories', [
+      { id: 1, name: 'Thời trang nam', parent_id: null, is_active: 1 },
+      { id: 2, name: 'Thời trang nữ', parent_id: null, is_active: 1 },
+      { id: 3, name: 'Áo nam', parent_id: 1, is_active: 1 },
+      { id: 4, name: 'Quần nam', parent_id: 1, is_active: 1 },
+      { id: 5, name: 'Áo nữ', parent_id: 2, is_active: 1 },
+      { id: 6, name: 'Quần nữ', parent_id: 2, is_active: 1 }
+    ], { ignoreDuplicates: true });
+
+    // 2. Products
+    // Shop 1: Nike Official (vendor 2)
+    // Shop 2: Uniqlo VN (vendor 3)
+    await queryInterface.bulkInsert('products', [
+      { id: 1, shop_id: 1, category_id: 3, name: 'Áo Thun Nike Dri-FIT', description: 'Áo thun thể thao thoáng mát', approval_status: 'APPROVED', created_at: now, updated_at: now },
+      { id: 2, shop_id: 2, category_id: 3, name: 'Áo Sơ Mi Oxford Dài Tay', description: 'Phong cách thanh lịch', approval_status: 'APPROVED', created_at: now, updated_at: now },
+      { id: 3, shop_id: 2, category_id: 4, name: 'Quần Jean Slim Fit Stretch', description: 'Quần jean co giãn', approval_status: 'APPROVED', created_at: now, updated_at: now },
+      { id: 4, shop_id: 1, category_id: 4, name: 'Quần Short Thể Thao Nike', description: 'Thiết kế mỏng nhẹ', approval_status: 'APPROVED', created_at: now, updated_at: now },
+      { id: 5, shop_id: 2, category_id: 5, name: 'Đầm Hoa Dáng Xoè Cổ V', description: 'Họa tiết hoa nhí', approval_status: 'APPROVED', created_at: now, updated_at: now },
+      { id: 6, shop_id: 1, category_id: 5, name: 'Áo Thun Gân Croptop', description: 'Dáng ngắn trẻ trung', approval_status: 'APPROVED', created_at: now, updated_at: now }
+    ], { ignoreDuplicates: true });
+
+    // 3. Product Variants
+    await queryInterface.bulkInsert('product_variants', [
+      { id: 1, product_id: 1, sku: 'NIKE-DFT-BLK-M', size: 'M', color: 'Đen', price: 490000, stock_quantity: 20, is_active: 1 },
+      { id: 2, product_id: 1, sku: 'NIKE-DFT-BLK-L', size: 'L', color: 'Đen', price: 490000, stock_quantity: 30, is_active: 1 },
+      { id: 3, product_id: 2, sku: 'UNI-OXF-BLU-S', size: 'S', color: 'Xanh biển', price: 799000, stock_quantity: 15, is_active: 1 },
+      { id: 4, product_id: 2, sku: 'UNI-OXF-WHT-M', size: 'M', color: 'Trắng', price: 799000, stock_quantity: 15, is_active: 1 },
+      { id: 5, product_id: 3, sku: 'UNI-JEAN-BLU-30', size: '30', color: 'Xanh nhạt', price: 899000, stock_quantity: 15, is_active: 1 },
+      { id: 6, product_id: 4, sku: 'NIKE-SHO-BLK-M', size: 'M', color: 'Đen', price: 650000, stock_quantity: 25, is_active: 1 },
+      { id: 7, product_id: 5, sku: 'ZARA-DRE-FLR-S', size: 'S', color: 'Hoa', price: 999000, stock_quantity: 12, is_active: 1 },
+      { id: 8, product_id: 6, sku: 'ZARA-CROP-BLK-S', size: 'S', color: 'Đen', price: 350000, stock_quantity: 30, is_active: 1 }
+    ], { ignoreDuplicates: true });
+
+    // 4. Product Images
+    await queryInterface.bulkInsert('product_images', [
+      { id: 1, product_id: 1, image_url: 'https://images.unsplash.com/photo-1581655353564-df123a1eb820?q=80&w=800', sort_order: 0, is_primary: 1 },
+      { id: 2, product_id: 2, image_url: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?q=80&w=800', sort_order: 0, is_primary: 1 },
+      { id: 3, product_id: 3, image_url: 'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?q=80&w=800', sort_order: 0, is_primary: 1 },
+      { id: 4, product_id: 4, image_url: 'https://images.unsplash.com/photo-1591195853828-11db59a44f6b?q=80&w=800', sort_order: 0, is_primary: 1 },
+      { id: 5, product_id: 5, image_url: 'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?q=80&w=800', sort_order: 0, is_primary: 1 },
+      { id: 6, product_id: 6, image_url: 'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?q=80&w=800', sort_order: 0, is_primary: 1 }
+    ], { ignoreDuplicates: true });
+  },
+
+  async down(queryInterface, Sequelize) {
+    await queryInterface.bulkDelete('product_images', null, {});
+    await queryInterface.bulkDelete('product_variants', null, {});
+    await queryInterface.bulkDelete('products', null, {});
+    await queryInterface.bulkDelete('categories', null, {});
+  }
+};

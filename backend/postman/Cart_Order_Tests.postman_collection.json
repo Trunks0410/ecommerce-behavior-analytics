@@ -1,0 +1,579 @@
+{
+  "info": {
+    "_postman_id": "7c8a6f3b-5e4c-47a6-9d8a-0b1c2d3e4f5a",
+    "name": "Cart & Order Tests",
+    "description": "Các kịch bản test cho chức năng Giỏ hàng (Cart), Đặt hàng (Checkout) và Theo dõi/Hủy đơn hàng (Order Tracking) của dự án fullstack03.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "0. Đăng nhập để lấy Token",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"email_or_phone\": \"lamvandi11@gmail.com\",\n    \"password\": \"25032005\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/auth/login",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8088",
+          "path": [
+            "auth",
+            "login"
+          ]
+        },
+        "description": "Đăng nhập với tài khoản người dùng mẫu để lấy accessToken. Hãy copy token nhận được dán vào biến access_token của Collection."
+      },
+      "response": [
+        {
+          "name": "Đăng nhập thành công",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email_or_phone\": \"lamvandi11@gmail.com\",\n    \"password\": \"25032005\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [],
+          "cookie": [],
+          "body": "{\n    \"status\": 200,\n    \"message\": \"Login success\",\n    \"data\": {\n        \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n        \"user\": {\n            \"id\": 1,\n            \"email\": \"lamvandi11@gmail.com\"\n        }\n    }\n}"
+        }
+      ]
+    },
+    {
+      "name": "1. GET Giỏ hàng - Thành công (Chờ 200 OK)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{access_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/cart",
+          "host": ["{{base_url}}"],
+          "path": ["cart"]
+        },
+        "description": "Lấy thông tin giỏ hàng hiện tại của người dùng, bao gồm danh sách sản phẩm, các biến thể, tổng số lượng và tổng tiền."
+      },
+      "response": [
+        {
+          "name": "Thành công (200 OK)",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cart",
+              "host": ["{{base_url}}"],
+              "path": ["cart"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [],
+          "cookie": [],
+          "body": "{\n    \"message\": \"Success\",\n    \"data\": {\n        \"id\": 1,\n        \"user_id\": 1,\n        \"items\": [],\n        \"totalItems\": 0,\n        \"totalAmount\": 0\n    }\n}"
+        }
+      ]
+    },
+    {
+      "name": "2. POST Thêm sản phẩm vào giỏ - Thành công (Chờ 200 OK)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{access_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"productId\": 1,\n    \"variantId\": 1,\n    \"quantity\": 2\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/cart/items",
+          "host": ["{{base_url}}"],
+          "path": ["cart", "items"]
+        },
+        "description": "Thêm sản phẩm hoặc biến thể sản phẩm vào giỏ hàng. Nếu sản phẩm đã tồn tại, hệ thống tự động cộng dồn số lượng sau khi kiểm tra tồn kho."
+      },
+      "response": [
+        {
+          "name": "Thêm thành công (200 OK)",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"productId\": 1,\n    \"variantId\": 1,\n    \"quantity\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/cart/items",
+              "host": ["{{base_url}}"],
+              "path": ["cart", "items"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [],
+          "cookie": [],
+          "body": "{\n    \"message\": \"Thêm vào giỏ hàng thành công\",\n    \"data\": {\n        \"id\": 1,\n        \"cart_id\": 1,\n        \"product_id\": 1,\n        \"product_variant_id\": 1,\n        \"quantity\": 2,\n        \"unit_price\": \"120000.00\"\n    }\n}"
+        }
+      ]
+    },
+    {
+      "name": "3. PUT Cập nhật số lượng item - Thành công (Chờ 200 OK)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{access_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "PUT",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"quantity\": 5\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/cart/items/:itemId",
+          "host": ["{{base_url}}"],
+          "path": ["cart", "items", ":itemId"],
+          "variable": [
+            {
+              "key": "itemId",
+              "value": "1",
+              "description": "ID của CartItem cần cập nhật"
+            }
+          ]
+        },
+        "description": "Thay đổi số lượng của sản phẩm có sẵn trong giỏ hàng. Nếu số lượng truyền lên nhỏ hơn hoặc bằng 0, sản phẩm đó sẽ được tự động xóa khỏi giỏ."
+      },
+      "response": [
+        {
+          "name": "Cập nhật thành công (200 OK)",
+          "originalRequest": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"quantity\": 5\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/cart/items/:itemId",
+              "host": ["{{base_url}}"],
+              "path": ["cart", "items", ":itemId"],
+              "variable": [
+                {
+                  "key": "itemId",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [],
+          "cookie": [],
+          "body": "{\n    \"message\": \"Cập nhật thành công\",\n    \"data\": {\n        \"id\": 1,\n        \"cart_id\": 1,\n        \"product_id\": 1,\n        \"product_variant_id\": 1,\n        \"quantity\": 5,\n        \"unit_price\": \"120000.00\"\n    }\n}"
+        }
+      ]
+    },
+    {
+      "name": "4. DELETE Xóa sản phẩm khỏi giỏ - Thành công (Chờ 200 OK)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{access_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/cart/items/:itemId",
+          "host": ["{{base_url}}"],
+          "path": ["cart", "items", ":itemId"],
+          "variable": [
+            {
+              "key": "itemId",
+              "value": "1",
+              "description": "ID của CartItem cần xóa"
+            }
+          ]
+        },
+        "description": "Xóa hoàn toàn một CartItem khỏi giỏ hàng."
+      },
+      "response": [
+        {
+          "name": "Xóa thành công (200 OK)",
+          "originalRequest": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cart/items/:itemId",
+              "host": ["{{base_url}}"],
+              "path": ["cart", "items", ":itemId"],
+              "variable": [
+                {
+                  "key": "itemId",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [],
+          "cookie": [],
+          "body": "{\n    \"message\": \"Đã xóa sản phẩm khỏi giỏ hàng\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "5. POST Đặt hàng COD - Thành công (Chờ 201 Created)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{access_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"paymentMethod\": \"COD\",\n    \"recipientName\": \"Nguyễn Văn A\",\n    \"recipientPhone\": \"0987654321\",\n    \"shippingAddress\": \"123 Đường ABC, Quận 1, TP. Hồ Chí Minh\",\n    \"note\": \"Giao giờ hành chính, gọi điện trước khi giao\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/orders",
+          "host": ["{{base_url}}"],
+          "path": ["orders"]
+        },
+        "description": "Tạo đơn hàng mới từ giỏ hàng hiện tại. Trừ tồn kho sản phẩm/biến thể, cộng sold_count, ghi log trạng thái 'PENDING', sau đó làm sạch giỏ hàng."
+      },
+      "response": [
+        {
+          "name": "Đặt hàng thành công (201 Created)",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"paymentMethod\": \"COD\",\n    \"recipientName\": \"Nguyễn Văn A\",\n    \"recipientPhone\": \"0987654321\",\n    \"shippingAddress\": \"123 Đường ABC, Quận 1, TP. Hồ Chí Minh\",\n    \"note\": \"Giao giờ hành chính, gọi điện trước khi giao\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orders",
+              "host": ["{{base_url}}"],
+              "path": ["orders"]
+            }
+          },
+          "status": "Created",
+          "code": 201,
+          "_postman_previewlanguage": "json",
+          "header": [],
+          "cookie": [],
+          "body": "{\n    \"message\": \"Đặt hàng thành công\",\n    \"data\": {\n        \"id\": 1,\n        \"user_id\": 1,\n        \"order_code\": \"ORD-20260520-5F1A9\",\n        \"status\": \"PENDING\",\n        \"payment_method\": \"COD\",\n        \"payment_status\": \"UNPAID\",\n        \"recipient_name\": \"Nguyễn Văn A\",\n        \"recipient_phone\": \"0987654321\",\n        \"shipping_address\": \"123 Đường ABC, Quận 1, TP. Hồ Chí Minh\",\n        \"subtotal\": \"600000.00\",\n        \"shipping_fee\": \"0.00\",\n        \"discount_amount\": \"0.00\",\n        \"total_amount\": \"600000.00\",\n        \"note\": \"Giao giờ hành chính, gọi điện trước khi giao\",\n        \"created_at\": \"2026-05-20T14:40:00.000Z\",\n        \"updated_at\": \"2026-05-20T14:40:00.000Z\"\n    }\n}"
+        }
+      ]
+    },
+    {
+      "name": "6. GET Lịch sử đơn hàng - Thành công (Chờ 200 OK)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{access_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/orders",
+          "host": ["{{base_url}}"],
+          "path": ["orders"]
+        },
+        "description": "Lấy danh sách các đơn hàng đã đặt của người dùng hiện tại, có hỗ trợ phân trang."
+      },
+      "response": [
+        {
+          "name": "Thành công (200 OK)",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/orders",
+              "host": ["{{base_url}}"],
+              "path": ["orders"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [],
+          "cookie": [],
+          "body": "{\n    \"message\": \"Success\",\n    \"data\": {\n        \"total\": 1,\n        \"totalPages\": 1,\n        \"currentPage\": 1,\n        \"orders\": [\n            {\n                \"id\": 1,\n                \"user_id\": 1,\n                \"order_code\": \"ORD-20260520-5F1A9\",\n                \"status\": \"PENDING\",\n                \"payment_method\": \"COD\",\n                \"payment_status\": \"UNPAID\",\n                \"recipient_name\": \"Nguyễn Văn A\",\n                \"recipient_phone\": \"0987654321\",\n                \"shipping_address\": \"123 Đường ABC, Quận 1, TP. Hồ Chí Minh\",\n                \"total_amount\": \"600000.00\",\n                \"created_at\": \"2026-05-20T14:40:00.000Z\",\n                \"items\": [\n                    {\n                        \"id\": 1,\n                        \"order_id\": 1,\n                        \"product_name\": \"Nike Air Max 90\",\n                        \"variant_color\": \"Black\",\n                        \"variant_size\": \"42\",\n                        \"quantity\": 2,\n                        \"unit_price\": \"300000.00\",\n                        \"total_price\": \"600000.00\"\n                    }\n                ]\n            }\n        ]\n    }\n}"
+        }
+      ]
+    },
+    {
+      "name": "7. GET Lọc đơn hàng theo trạng thái - Thành công (Chờ 200 OK)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{access_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/orders?status=PENDING",
+          "host": ["{{base_url}}"],
+          "path": ["orders"],
+          "query": [
+            {
+              "key": "status",
+              "value": "PENDING",
+              "description": "Trạng thái đơn hàng cần lọc: PENDING, CONFIRMED, PREPARING, SHIPPING, DELIVERED, CANCELLED, CANCEL_REQUESTED"
+            }
+          ]
+        },
+        "description": "Lấy lịch sử đơn hàng và lọc theo trạng thái mong muốn."
+      },
+      "response": [
+        {
+          "name": "Thành công (200 OK)",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/orders?status=PENDING",
+              "host": ["{{base_url}}"],
+              "path": ["orders"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "PENDING"
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [],
+          "cookie": [],
+          "body": "{\n    \"message\": \"Success\",\n    \"data\": {\n        \"total\": 1,\n        \"totalPages\": 1,\n        \"currentPage\": 1,\n        \"orders\": [\n            {\n                \"id\": 1,\n                \"order_code\": \"ORD-20260520-5F1A9\",\n                \"status\": \"PENDING\",\n                \"total_amount\": \"600000.00\"\n            }\n        ]\n    }\n}"
+        }
+      ]
+    },
+    {
+      "name": "8. GET Chi tiết đơn hàng - Thành công (Chờ 200 OK)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{access_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/orders/:orderId",
+          "host": ["{{base_url}}"],
+          "path": ["orders", ":orderId"],
+          "variable": [
+            {
+              "key": "orderId",
+              "value": "1",
+              "description": "ID của đơn hàng cần xem chi tiết"
+            }
+          ]
+        },
+        "description": "Xem chi tiết một đơn hàng bất kỳ của người dùng, bao gồm thông tin thanh toán, giao hàng, các sản phẩm đã mua (dạng snapshot) và lịch sử hành trình trạng thái của đơn hàng."
+      },
+      "response": [
+        {
+          "name": "Thành công (200 OK)",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/orders/:orderId",
+              "host": ["{{base_url}}"],
+              "path": ["orders", ":orderId"],
+              "variable": [
+                {
+                  "key": "orderId",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [],
+          "cookie": [],
+          "body": "{\n    \"message\": \"Success\",\n    \"data\": {\n        \"id\": 1,\n        \"user_id\": 1,\n        \"order_code\": \"ORD-20260520-5F1A9\",\n        \"status\": \"PENDING\",\n        \"recipient_name\": \"Nguyễn Văn A\",\n        \"recipient_phone\": \"0987654321\",\n        \"shipping_address\": \"123 Đường ABC, Quận 1, TP. Hồ Chí Minh\",\n        \"subtotal\": \"600000.00\",\n        \"shipping_fee\": \"0.00\",\n        \"total_amount\": \"600000.00\",\n        \"items\": [\n            {\n                \"id\": 1,\n                \"product_name\": \"Nike Air Max 90\",\n                \"variant_color\": \"Black\",\n                \"variant_size\": \"42\",\n                \"quantity\": 2,\n                \"unit_price\": \"300000.00\",\n                \"total_price\": \"600000.00\"\n            }\n        ],\n        \"statusLogs\": [\n            {\n                \"id\": 1,\n                \"from_status\": null,\n                \"to_status\": \"PENDING\",\n                \"note\": \"Đơn hàng mới được tạo\",\n                \"created_at\": \"2026-05-20T14:40:00.000Z\"\n            }\n        ]\n    }\n}"
+        }
+      ]
+    },
+    {
+      "name": "9. POST Hủy đơn hàng - Thành công (Chờ 200 OK)",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{access_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"reason\": \"Đặt nhầm size giày, tôi muốn đổi sang size khác\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/orders/:orderId/cancel",
+          "host": ["{{base_url}}"],
+          "path": ["orders", ":orderId", "cancel"],
+          "variable": [
+            {
+              "key": "orderId",
+              "value": "1",
+              "description": "ID của đơn hàng muốn hủy"
+            }
+          ]
+        },
+        "description": "Yêu cầu hủy đơn hàng. \n- Nếu đơn đặt dưới 30 phút và ở trạng thái PENDING/CONFIRMED: đơn hàng được tự động hủy ngay lập tức (`CANCELLED`).\n- Nếu đơn đặt trên 30 phút hoặc đã chuyển sang trạng thái đang chuẩn bị hàng (`PREPARING`): đơn hàng chuyển sang trạng thái chờ admin phê duyệt (`CANCEL_REQUESTED`)."
+      },
+      "response": [
+        {
+          "name": "Hủy thành công (200 OK)",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"reason\": \"Đặt nhầm size giày, tôi muốn đổi sang size khác\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/:orderId/cancel",
+              "host": ["{{base_url}}"],
+              "path": ["orders", ":orderId", "cancel"],
+              "variable": [
+                {
+                  "key": "orderId",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [],
+          "cookie": [],
+          "body": "{\n    \"message\": \"Yêu cầu hủy đơn thành công\",\n    \"data\": {\n        \"newStatus\": \"CANCELLED\"\n    }\n}"
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8088",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "your_access_token_here",
+      "type": "string"
+    }
+  ]
+}
