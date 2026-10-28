@@ -404,25 +404,49 @@ const CheckoutPage = () => {
             <div className="w-32 h-32 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-8 border-4 border-primary">
               <Check size={64} strokeWidth={3} />
             </div>
-            <h1 className="text-5xl font-serif font-black tracking-tighter uppercase text-primary">Đặt hàng thành công!</h1>
-            <p className="text-gray-500 font-medium text-lg">Cảm ơn bạn đã mua sắm tại UTEShop. Đơn hàng của bạn đang được xử lý và sẽ sớm được giao đến bạn.</p>
+            <h1 className="text-4xl font-extrabold tracking-tight uppercase text-[#ee4d2d]">
+              Đặt hàng thành công!
+            </h1>
+            <p className="text-gray-500 font-medium text-base">
+              Cảm ơn bạn đã mua sắm tại MeeMart. Đơn hàng của bạn đang được xử lý và sẽ sớm được giao đến bạn.
+            </p>
             <div className="flex justify-center gap-4 mt-8">
-              <Link to="/orders" className="bg-black text-white px-8 py-4 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-primary transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] hover:shadow-none hover:translate-x-1 hover:translate-y-1">Xem đơn hàng</Link>
-              <Link to="/" className="bg-white border-2 border-black text-black px-8 py-4 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-gray-50 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] hover:shadow-none hover:translate-x-1 hover:translate-y-1">Tiếp tục mua sắm</Link>
+              <Link
+                to="/orders"
+                className="bg-[#ee4d2d] text-white px-8 py-3 rounded-lg font-semibold text-xs uppercase tracking-wider hover:bg-[#d03e1e] transition-colors shadow-xs"
+              >
+                Xem đơn hàng
+              </Link>
+              <Link
+                to="/"
+                className="bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-gray-700 dark:text-slate-200 px-8 py-3 rounded-lg font-semibold text-xs uppercase tracking-wider hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors shadow-xs"
+              >
+                Tiếp tục mua sắm
+              </Link>
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             {/* Cột trái: Form Thông tin hoặc Phương thức thanh toán */}
-            <div className="lg:col-span-8 space-y-6">
+            <div className="lg:col-span-8 space-y-4">
               {currentStep === 1 && (
-                <div className="card-brutal !p-8 !rounded-[2rem] bg-white border-2 border-black shadow-brutal">
-                  <div className="flex justify-between items-center mb-8">
-                    <h3 className="text-xl font-black uppercase tracking-tighter flex items-center gap-3">
-                      <MapPin className="text-primary" /> Địa chỉ nhận hàng
-                    </h3>
-                    <button type="button" onClick={handleAddNewAddress} className="text-[10px] font-black text-primary hover:underline uppercase tracking-tighter">+ Thêm mới</button>
-                  </div>
+                <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 shadow-xs overflow-hidden">
+                  {/* Shopee Postcard Stripe Ribbon */}
+                  <div className="h-1 w-full bg-[repeating-linear-gradient(45deg,#ee4d2d,#ee4d2d_25px,#fff_25px,#fff_35px,#0046be_35px,#0046be_60px,#fff_60px,#fff_70px)]" />
+
+                  <div className="p-6">
+                    <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-base font-bold text-gray-900 dark:text-slate-100 uppercase tracking-tight flex items-center gap-2">
+                        <MapPin className="text-[#ee4d2d]" size={18} /> Địa chỉ nhận hàng
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={handleAddNewAddress}
+                        className="text-xs font-bold text-[#ee4d2d] hover:underline uppercase"
+                      >
+                        + Thêm địa chỉ mới
+                      </button>
+                    </div>
 
                   <div className="grid grid-cols-1 gap-4 mb-6">
                     {addresses?.map(addr => (
@@ -478,129 +502,196 @@ const CheckoutPage = () => {
                     <textarea {...register('note')} rows={2} placeholder="Ví dụ: Giao giờ hành chính..." className="w-full bg-gray-50 border-2 border-black/20 rounded-xl px-4 py-3 font-bold text-sm focus:border-primary outline-none transition-colors resize-none"></textarea>
                   </div>
 
-                  <div className="mt-8 flex justify-end">
-                    <button type="button" onClick={handleNextStep} className="bg-black text-white px-10 py-4 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-primary transition-all">Tiếp tục thanh toán</button>
+                    <div className="mt-8 flex justify-end">
+                      <button type="button" onClick={handleNextStep} className="bg-[#ee4d2d] hover:bg-[#d03e1e] text-white px-8 py-3 rounded-lg font-semibold text-xs uppercase tracking-wider transition-colors shadow-xs">Tiếp tục thanh toán</button>
+                    </div>
                   </div>
                 </div>
               )}
 
               {currentStep === 2 && (
-                <div className="space-y-6">
-                  <div className="flex justify-between items-center bg-white p-6 rounded-[2rem] border-2 border-black shadow-sm">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary"><MapPin size={20} /></div>
+                <div className="space-y-4">
+                  {/* Địa chỉ tóm tắt */}
+                  <div className="flex justify-between items-center bg-white dark:bg-slate-800 p-4 rounded-xs sm:rounded-sm border border-black/[0.06] dark:border-slate-700/60 shadow-[0_1px_1px_0_rgba(0,0,0,0.05)]">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-[#fef0ed] dark:bg-[#ee4d2d]/20 rounded-full flex items-center justify-center text-[#ee4d2d]">
+                        <MapPin size={16} />
+                      </div>
                       <div>
-                        <p className="text-xs font-black uppercase text-gray-500">Giao đến</p>
-                        <p className="text-sm font-bold truncate max-w-sm">{addresses?.find(a => a.id === selectedAddressId)?.address_line || "Chưa có địa chỉ"}</p>
+                        <p className="text-[11px] font-semibold uppercase text-gray-500 dark:text-slate-400">Giao đến</p>
+                        <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-slate-100 truncate max-w-sm">
+                          {addresses?.find(a => a.id === selectedAddressId)?.address_line || "Chưa có địa chỉ"}
+                        </p>
                       </div>
                     </div>
-                    <button type="button" onClick={() => setCurrentStep(1)} className="text-[10px] font-black text-primary hover:underline uppercase">Thay đổi</button>
+                    <button type="button" onClick={() => setCurrentStep(1)} className="text-xs font-semibold text-[#ee4d2d] hover:underline cursor-pointer">
+                      Thay đổi
+                    </button>
                   </div>
 
                   {/* Vận chuyển */}
-                  <div className="card-brutal !p-8 !rounded-[2rem] bg-white border-2 border-black shadow-brutal">
-                    <h3 className="text-xl font-black uppercase tracking-tighter mb-8 flex items-center gap-3"><Truck className="text-primary" /> Phương thức vận chuyển</h3>
-                    <label className="relative flex items-center justify-between p-6 bg-primary/5 border-2 border-primary rounded-2xl cursor-pointer">
-                      <div className="flex items-center gap-4">
-                        <div className="w-6 h-6 rounded-full border border-primary flex items-center justify-center bg-white">
-                          <div className="w-2.5 h-2.5 rounded-full bg-primary"></div>
+                  <div className="bg-white dark:bg-slate-800 p-4 sm:p-5 rounded-xs sm:rounded-sm border border-black/[0.06] dark:border-slate-700/60 shadow-[0_1px_1px_0_rgba(0,0,0,0.05)]">
+                    <h3 className="text-sm font-bold uppercase tracking-tight text-gray-900 dark:text-slate-100 mb-3 flex items-center gap-2">
+                      <Truck className="text-[#ee4d2d]" size={16} /> Phương thức vận chuyển
+                    </h3>
+                    <label className="relative flex items-center justify-between p-3.5 bg-[#fef0ed]/40 dark:bg-slate-700/60 border border-[#ee4d2d] rounded-xs cursor-pointer transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="w-5 h-5 rounded-full border-2 border-[#ee4d2d] flex items-center justify-center bg-white">
+                          <div className="w-2.5 h-2.5 rounded-full bg-[#ee4d2d]" />
                         </div>
                         <div>
-                          <p className="text-sm font-black uppercase">Giao hàng tiêu chuẩn</p>
-                          <p className="text-xs text-gray-500 font-bold">Dự kiến giao: 2-3 ngày</p>
+                          <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-slate-100">Giao hàng tiêu chuẩn</p>
+                          <p className="text-[11px] text-gray-500">Dự kiến giao: 2-3 ngày</p>
                         </div>
                       </div>
-                      <span className="text-sm font-black">{currentShippingFee.toLocaleString()}₫</span>
+                      <span className="text-xs sm:text-sm font-bold text-[#ee4d2d]">{currentShippingFee.toLocaleString()}₫</span>
                     </label>
                   </div>
 
                   {/* Thanh toán */}
-                  <div className="card-brutal !p-8 !rounded-[2rem] bg-white border-2 border-black shadow-brutal">
-                    <h3 className="text-xl font-black uppercase tracking-tighter mb-8 flex items-center gap-3"><CreditCard className="text-primary" /> Phương thức thanh toán</h3>
-                    <div className="space-y-4">
+                  <div className="bg-white dark:bg-slate-800 p-4 sm:p-5 rounded-xs sm:rounded-sm border border-black/[0.06] dark:border-slate-700/60 shadow-[0_1px_1px_0_rgba(0,0,0,0.05)]">
+                    <h3 className="text-sm font-bold uppercase tracking-tight text-gray-900 dark:text-slate-100 mb-3 flex items-center gap-2">
+                      <CreditCard className="text-[#ee4d2d]" size={16} /> Phương thức thanh toán
+                    </h3>
+                    <div className="space-y-2.5">
                       <button 
                         type="button" 
                         disabled={isCodBlocked}
                         onClick={() => !isCodBlocked && setPaymentMethod("COD")} 
-                        className={`w-full flex items-center justify-between p-6 border-2 rounded-2xl transition-all text-left ${isCodBlocked ? 'bg-gray-100 border-black/10 opacity-60 cursor-not-allowed' : paymentMethod === 'COD' ? 'bg-primary/5 border-primary' : 'bg-white border-black/10 hover:border-black'}`}
+                        className={`w-full flex items-center justify-between p-3.5 border rounded-xs transition-colors text-left cursor-pointer ${
+                          isCodBlocked
+                            ? 'bg-gray-100 dark:bg-slate-800/60 border-gray-200 dark:border-slate-700 opacity-60 cursor-not-allowed'
+                            : paymentMethod === 'COD'
+                            ? 'bg-[#fef0ed]/40 dark:bg-slate-700/60 border-[#ee4d2d]'
+                            : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:border-gray-300'
+                        }`}
                       >
-                        <div className="flex items-center gap-4">
-                          <Wallet size={24} className={isCodBlocked ? 'text-gray-300' : paymentMethod === 'COD' ? 'text-primary' : 'text-gray-400'} />
+                        <div className="flex items-center gap-3">
+                          <Wallet size={20} className={isCodBlocked ? 'text-gray-300' : paymentMethod === 'COD' ? 'text-[#ee4d2d]' : 'text-gray-400'} />
                           <div>
-                            <p className="text-sm font-black uppercase">Thanh toán khi nhận hàng (COD)</p>
+                            <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-slate-100">Thanh toán khi nhận hàng (COD)</p>
                             {isCodBlocked && (
-                              <p className="text-[10px] text-red-500 font-bold uppercase tracking-tight mt-1 animate-pulse">
-                                Bị khóa tạm thời do bom hàng quá 3 lần trong 1 tháng qua!
+                              <p className="text-[10px] text-red-500 font-semibold mt-0.5">
+                                Bị khóa tạm thời do hủy/bom hàng quá nhiều lần
                               </p>
                             )}
                           </div>
                         </div>
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center bg-white ${paymentMethod === 'COD' ? 'border-primary' : 'border-gray-300'}`}>
-                          {paymentMethod === 'COD' && <div className="w-2 h-2 rounded-full bg-primary"></div>}
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center bg-white ${paymentMethod === 'COD' ? 'border-[#ee4d2d]' : 'border-gray-300'}`}>
+                          {paymentMethod === 'COD' && <div className="w-2 h-2 rounded-full bg-[#ee4d2d]" />}
                         </div>
                       </button>
 
-                      <button type="button" onClick={() => setPaymentMethod("VNPAY")} className={`w-full flex items-center justify-between p-6 border-2 rounded-2xl transition-all ${paymentMethod === 'VNPAY' ? 'bg-primary/5 border-primary' : 'bg-white border-black/10 hover:border-black'}`}>
-                        <div className="flex items-center gap-4">
-                          <Landmark size={24} className={paymentMethod === 'VNPAY' ? 'text-primary' : 'text-gray-400'} />
-                          <p className="text-sm font-black uppercase">Thanh toán qua VNPAY</p>
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod("VNPAY")}
+                        className={`w-full flex items-center justify-between p-3.5 border rounded-xs transition-colors text-left cursor-pointer ${
+                          paymentMethod === 'VNPAY'
+                            ? 'bg-[#fef0ed]/40 dark:bg-slate-700/60 border-[#ee4d2d]'
+                            : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Landmark size={20} className={paymentMethod === 'VNPAY' ? 'text-[#ee4d2d]' : 'text-gray-400'} />
+                          <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-slate-100">Thanh toán qua VNPAY / Ví điện tử</p>
                         </div>
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center bg-white ${paymentMethod === 'VNPAY' ? 'border-primary' : 'border-gray-300'}`}>
-                          {paymentMethod === 'VNPAY' && <div className="w-2 h-2 rounded-full bg-primary"></div>}
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center bg-white ${paymentMethod === 'VNPAY' ? 'border-[#ee4d2d]' : 'border-gray-300'}`}>
+                          {paymentMethod === 'VNPAY' && <div className="w-2 h-2 rounded-full bg-[#ee4d2d]" />}
                         </div>
                       </button>
                     </div>
                   </div>
 
                   {/* Voucher & Điểm tích lũy */}
-                  <div className="bg-white border-2 border-black rounded-[2.5rem] p-8 shadow-brutal">
-                    <h3 className="text-xl font-black uppercase tracking-tighter mb-6 flex items-center gap-3"><Tag className="text-primary" /> Khuyến mãi & Điểm</h3>
-                    <div className="space-y-6">
+                  <div className="bg-white dark:bg-slate-800 p-4 sm:p-5 rounded-xs sm:rounded-sm border border-black/[0.06] dark:border-slate-700/60 shadow-[0_1px_1px_0_rgba(0,0,0,0.05)]">
+                    <h3 className="text-sm font-bold uppercase tracking-tight text-gray-900 dark:text-slate-100 mb-3 flex items-center gap-2">
+                      <Tag className="text-[#ee4d2d]" size={16} /> Khuyến mãi & Điểm
+                    </h3>
+                    <div className="space-y-4">
                       <div>
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-2">Mã giảm giá sàn</label>
+                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-1.5">Mã giảm giá sàn</label>
                         <div className="flex gap-2">
-                          <input type="text" value={inputCoupon} onChange={(e) => setInputCoupon(e.target.value)} placeholder="Nhập mã voucher..." className="flex-1 bg-gray-50 border-2 border-black/20 rounded-xl px-4 py-3 font-bold uppercase text-sm focus:border-primary outline-none transition-colors" />
-                          <button type="button" onClick={handleApplyCoupon} disabled={calculateMutation.isPending} className="bg-black text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-primary transition-all disabled:opacity-50">Áp dụng</button>
+                          <input
+                            type="text"
+                            value={inputCoupon}
+                            onChange={(e) => setInputCoupon(e.target.value)}
+                            placeholder="Nhập mã voucher..."
+                            className="flex-1 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xs px-3 py-2 uppercase text-xs sm:text-sm font-semibold focus:border-[#ee4d2d] outline-none transition-colors"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleApplyCoupon}
+                            disabled={calculateMutation.isPending}
+                            className="bg-[#ee4d2d] hover:bg-[#d03e1e] text-white px-5 py-2 rounded-xs font-semibold text-xs uppercase tracking-wider transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
+                          >
+                            Áp dụng
+                          </button>
                         </div>
                         {couponCode && (
-                          <div className="mt-2 text-xs font-bold text-green-600 flex items-center gap-1">
+                          <div className="mt-2 text-xs font-semibold text-emerald-600 flex items-center gap-1">
                             <Check size={14} /> Đang áp dụng mã: {couponCode}
-                            <button type="button" className="text-red-500 ml-2 hover:underline" onClick={() => { setCouponCode(""); setInputCoupon(""); }}>Hủy</button>
+                            <button type="button" className="text-red-500 ml-2 hover:underline cursor-pointer" onClick={() => { setCouponCode(""); setInputCoupon(""); }}>Hủy</button>
                           </div>
                         )}
                       </div>
 
                       {platformCoupons.length > 0 && (
-                        <div className="flex gap-2 overflow-x-auto pb-2">
+                        <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
                           {platformCoupons.map((coupon: any) => (
-                            <button key={coupon.id} type="button" onClick={() => { setInputCoupon(coupon.code); setCouponCode(coupon.code); }} className={`shrink-0 border-2 rounded-xl p-3 text-left transition-all ${couponCode === coupon.code ? "border-primary bg-primary/5" : "border-black/10 hover:border-black"}`}>
-                              <p className="font-black text-sm uppercase">{coupon.code}</p>
-                              <p className="text-[10px] font-bold text-gray-500">Giảm {coupon.discount_type === "PERCENT" ? `${coupon.discount_value}%` : `${Number(coupon.discount_value).toLocaleString()}₫`}</p>
+                            <button
+                              key={coupon.id}
+                              type="button"
+                              onClick={() => { setInputCoupon(coupon.code); setCouponCode(coupon.code); }}
+                              className={`shrink-0 border rounded-xs p-2.5 text-left transition-colors cursor-pointer ${
+                                couponCode === coupon.code
+                                  ? "border-[#ee4d2d] bg-[#fef0ed]/50 text-[#ee4d2d]"
+                                  : "border-gray-200 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-900 hover:border-gray-300"
+                              }`}
+                            >
+                              <p className="font-bold text-xs uppercase">{coupon.code}</p>
+                              <p className="text-[10px] text-gray-500 dark:text-slate-400 mt-0.5">
+                                Giảm {coupon.discount_type === "PERCENT" ? `${coupon.discount_value}%` : `${Number(coupon.discount_value).toLocaleString()}₫`}
+                              </p>
                             </button>
                           ))}
                         </div>
                       )}
 
-                      <div className="border-t border-dashed border-gray-200 pt-6">
-                        <label className="flex items-center gap-3 cursor-pointer group">
-                          <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-all ${usePoints ? "bg-primary border-primary text-white" : "border-gray-300 bg-white"}`}>
-                            {usePoints && <Check size={16} strokeWidth={4} />}
+                      <div className="border-t border-gray-100 dark:border-slate-700/60 pt-3">
+                        <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={usePoints}
+                            onChange={(e) => setUsePoints(e.target.checked)}
+                            disabled={!profile?.loyalty_points}
+                            className="w-4 h-4 text-[#ee4d2d] accent-[#ee4d2d] rounded-xs cursor-pointer"
+                          />
+                          <div className="flex-1 text-xs">
+                            <span className="font-semibold text-gray-800 dark:text-slate-200">Sử dụng điểm tích lũy</span>
+                            <span className="text-gray-500 ml-1">
+                              (Có <strong className="text-[#ee4d2d]">{profile?.loyalty_points || 0} điểm</strong> = {((profile?.loyalty_points || 0) * (systemSettings?.redeemRate || 100)).toLocaleString()}₫)
+                            </span>
                           </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-black uppercase tracking-tight">Sử dụng điểm tích lũy</p>
-                            <p className="text-xs font-bold text-gray-500">Bạn đang có <span className="text-primary">{profile?.loyalty_points || 0} điểm</span> (1 điểm = {(systemSettings?.redeemRate || 100).toLocaleString()}₫)</p>
-                          </div>
-                          <input type="checkbox" className="hidden" checked={usePoints} onChange={(e) => setUsePoints(e.target.checked)} disabled={!profile?.loyalty_points} />
                         </label>
                       </div>
                     </div>
                   </div>
 
                   {/* Khối Button điều hướng cuối Form */}
-                  <div className="flex gap-4 pt-4">
-                    <button type="button" onClick={() => setCurrentStep(1)} className="border-2 border-black text-black px-8 py-5 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-gray-50 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1">Quay lại</button>
-                    <button type="submit" disabled={createOrderMutation.isPending || cartItems.length === 0} className="flex-1 bg-primary text-white py-5 rounded-2xl font-black text-sm uppercase tracking-widest border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[6px] hover:translate-y-[6px] transition-all flex items-center justify-center disabled:opacity-50">
-                      {createOrderMutation.isPending ? <Loader2 className="animate-spin" size={24} /> : "ĐẶT HÀNG NGAY"}
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep(1)}
+                      className="border border-gray-300 dark:border-slate-700 text-gray-700 dark:text-slate-200 px-6 py-3 rounded-xs font-semibold text-xs uppercase tracking-wider hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                    >
+                      Quay lại
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={createOrderMutation.isPending || cartItems.length === 0}
+                      className="flex-1 bg-[#ee4d2d] hover:bg-[#d03e1e] text-white py-3 px-6 rounded-xs font-bold text-xs uppercase tracking-wider transition-colors flex items-center justify-center disabled:opacity-50 shadow-sm cursor-pointer"
+                    >
+                      {createOrderMutation.isPending ? <Loader2 className="animate-spin" size={18} /> : "ĐẶT HÀNG NGAY"}
                     </button>
                   </div>
                 </div>
@@ -609,22 +700,24 @@ const CheckoutPage = () => {
 
             {/* Cột phải: Summary Đơn hàng (Luôn hiển thị ở Step 1 & 2) */}
             <div className="lg:col-span-4 space-y-6">
-              <div className="bg-black text-white border-2 border-black rounded-[2.5rem] p-8 shadow-brutal flex flex-col gap-8">
-                <h3 className="text-xl font-black uppercase tracking-tighter border-b border-white/20 pb-4 flex items-center gap-3">
-                  <Package className="text-primary" /> Đơn hàng
+              <div className="bg-white dark:bg-slate-800 border border-black/[0.06] dark:border-slate-700/60 rounded-xs sm:rounded-sm p-5 shadow-[0_1px_1px_0_rgba(0,0,0,0.05)] flex flex-col gap-5 text-gray-900 dark:text-slate-100">
+                <h3 className="text-sm sm:text-base font-bold uppercase tracking-tight border-b border-gray-100 dark:border-slate-700/70 pb-3 flex items-center gap-2">
+                  <Package className="text-[#ee4d2d]" size={18} /> Đơn hàng
                 </h3>
 
-                <div className="space-y-6">
+                <div className="space-y-5">
                   {shopGroups.map((group) => {
                     const shopCouponsList = availableShopCoupons.filter((c: any) => c.shop_id === group.shop?.id);
                     const currentCouponCode = shopCoupons[group.shop?.id] || "";
                     const selectedCoupon = shopCouponsList.find((c: any) => c.code === currentCouponCode);
 
                     return (
-                      <div key={group.shop?.id || "unknown"} className="space-y-4">
-                        <div className="flex items-center gap-2 border-b border-white/10 pb-2">
-                          <Store className="text-primary w-4 h-4" />
-                          <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">{group.shop?.shop_name || group.shop?.name || "UTEShop Official"}</h4>
+                      <div key={group.shop?.id || "unknown"} className="space-y-3 pb-3 border-b border-gray-100 dark:border-slate-700/60 last:border-0 last:pb-0">
+                        <div className="flex items-center gap-1.5 pb-1">
+                          <Store className="text-[#ee4d2d] w-4 h-4 shrink-0" />
+                          <h4 className="text-xs font-bold uppercase tracking-tight text-[#ee4d2d] truncate">
+                            {group.shop?.shop_name || group.shop?.name || "UTEShop Official"}
+                          </h4>
                         </div>
                         {group.items.map((item: any) => {
                           const product = item.variant?.product || item.product;
@@ -632,43 +725,56 @@ const CheckoutPage = () => {
                           const unitPrice = item.variant?.sale_price || item.variant?.price || item.unit_price || 0;
 
                           return (
-                            <div key={item.id} className="flex gap-4 items-center pl-2">
-                              <div className="w-16 h-20 bg-white/10 rounded-xl overflow-hidden border border-white/20 flex-shrink-0">
+                            <div key={item.id} className="flex gap-3 items-center">
+                              <div className="w-14 h-14 bg-gray-50 dark:bg-slate-900 rounded-xs overflow-hidden border border-gray-200 dark:border-slate-700 shrink-0">
                                 <img src={imageUrl.startsWith("http") ? imageUrl : `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8088"}${imageUrl}`} alt={product?.name} className="w-full h-full object-cover" />
                               </div>
-                              <div className="flex-grow">
-                                <p className="text-xs font-black uppercase truncate max-w-[120px] text-white">{product?.name}</p>
-                                <p className="text-[10px] font-bold text-gray-400">{item.variant ? `Size ${item.variant.size} / ${item.variant.color}` : "Mặc định"}</p>
+                              <div className="flex-grow min-w-0">
+                                <p className="text-xs font-medium text-gray-800 dark:text-slate-200 truncate">{product?.name}</p>
+                                <p className="text-[10px] text-gray-400">{item.variant ? `Size ${item.variant.size} / ${item.variant.color}` : "Mặc định"}</p>
                                 <div className="flex justify-between items-center mt-1">
-                                  <p className="text-xs font-black text-primary">{Number(unitPrice).toLocaleString()}₫</p>
-                                  <p className="text-[10px] font-black text-gray-400">x{item.quantity}</p>
+                                  <p className="text-xs font-bold text-[#ee4d2d]">{Number(unitPrice).toLocaleString()}₫</p>
+                                  <p className="text-[10px] text-gray-500 dark:text-slate-400">x{item.quantity}</p>
                                 </div>
                               </div>
                             </div>
                           );
                         })}
 
-                        {/* Dropdown Coupon thuộc về riêng từng Shop */}
+                        {/* Dropdown Coupon thuộc về riêng từng Shop chuẩn Shopee */}
                         {shopCouponsList.length > 0 && (
-                          <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between relative">
-                            <div className="flex items-center gap-2">
-                              <Ticket size={16} className="text-primary" />
-                              <span className="text-xs font-bold text-gray-400 uppercase">Mã của Shop</span>
+                          <div className="mt-3 pt-3 border-t border-gray-100 dark:border-slate-700/60 flex items-center justify-between relative">
+                            <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-slate-300">
+                              <Ticket size={14} className="text-[#ee4d2d]" />
+                              <span>Mã Shop:</span>
                             </div>
 
                             <div className="relative" ref={openShopCouponDropdownId === group.shop?.id ? dropdownRef : null}>
-                              <button type="button" onClick={() => setOpenShopCouponDropdownId(openShopCouponDropdownId === group.shop?.id ? null : group.shop?.id)} className="w-40 bg-[#1a1a1a] border-2 border-white/20 rounded-xl px-3 py-2 font-bold text-left text-white flex justify-between items-center text-xs">
+                              <button
+                                type="button"
+                                onClick={() => setOpenShopCouponDropdownId(openShopCouponDropdownId === group.shop?.id ? null : group.shop?.id)}
+                                className="w-40 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 hover:border-[#ee4d2d] rounded-xs px-2.5 py-1.5 font-medium text-left text-xs text-gray-800 dark:text-slate-200 flex justify-between items-center transition-colors cursor-pointer shadow-xs"
+                              >
                                 <span className="truncate">{selectedCoupon ? selectedCoupon.code : "Chọn mã"}</span>
-                                <ChevronDown size={14} className={`transform transition-transform ${openShopCouponDropdownId === group.shop?.id ? 'rotate-180' : 'text-gray-400'}`} />
+                                <ChevronDown size={13} className={`transform transition-transform ${openShopCouponDropdownId === group.shop?.id ? 'rotate-180 text-[#ee4d2d]' : 'text-gray-400'}`} />
                               </button>
 
                               {openShopCouponDropdownId === group.shop?.id && (
-                                <ul className="absolute right-0 bottom-full mb-2 w-56 bg-black border-2 border-white/20 rounded-xl z-50 max-h-48 overflow-y-auto text-white shadow-xl">
-                                  <li onClick={() => { setShopCoupons(prev => ({ ...prev, [group.shop?.id]: "" })); setOpenShopCouponDropdownId(null); }} className={`px-3 py-2 text-xs cursor-pointer ${!currentCouponCode ? 'bg-primary' : 'hover:bg-white/10'}`}>Không sử dụng</li>
+                                <ul className="absolute right-0 bottom-full mb-1.5 w-56 bg-white dark:bg-slate-800 border border-black/[0.09] dark:border-slate-700 rounded-xs z-50 max-h-48 overflow-y-auto text-xs shadow-[0_2px_20px_rgba(0,0,0,0.15)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.5)] p-1">
+                                  <li
+                                    onClick={() => { setShopCoupons(prev => ({ ...prev, [group.shop?.id]: "" })); setOpenShopCouponDropdownId(null); }}
+                                    className={`px-3 py-2 rounded-xs cursor-pointer transition-colors ${!currentCouponCode ? 'bg-[#fef0ed] text-[#ee4d2d] font-semibold' : 'hover:bg-gray-50 dark:hover:bg-slate-700/60 text-gray-700 dark:text-slate-200'}`}
+                                  >
+                                    Không sử dụng
+                                  </li>
                                   {shopCouponsList.map((c: any) => (
-                                    <li key={c.id} onClick={() => { setShopCoupons(prev => ({ ...prev, [group.shop?.id]: c.code })); setOpenShopCouponDropdownId(null); }} className={`px-3 py-2 text-xs cursor-pointer flex flex-col ${c.code === currentCouponCode ? 'bg-primary' : 'hover:bg-white/10'}`}>
-                                      <span className="font-black uppercase">{c.code}</span>
-                                      <span className="text-[9px] text-gray-400">Giảm {c.discount_type === 'PERCENT' ? `${c.discount_value}%` : `${Number(c.discount_value).toLocaleString()}₫`}</span>
+                                    <li
+                                      key={c.id}
+                                      onClick={() => { setShopCoupons(prev => ({ ...prev, [group.shop?.id]: c.code })); setOpenShopCouponDropdownId(null); }}
+                                      className={`px-3 py-2 rounded-xs cursor-pointer flex flex-col transition-colors mt-0.5 ${c.code === currentCouponCode ? 'bg-[#fef0ed] text-[#ee4d2d] font-semibold' : 'hover:bg-gray-50 dark:hover:bg-slate-700/60 text-gray-700 dark:text-slate-200'}`}
+                                    >
+                                      <span className="font-bold uppercase tracking-wider">{c.code}</span>
+                                      <span className="text-[10px] text-gray-500 dark:text-slate-400">Giảm {c.discount_type === 'PERCENT' ? `${c.discount_value}%` : `${Number(c.discount_value).toLocaleString()}₫`}</span>
                                     </li>
                                   ))}
                                 </ul>
@@ -682,39 +788,39 @@ const CheckoutPage = () => {
                 </div>
 
                 {/* Khối Tổng tính toán hóa đơn */}
-                <div className="space-y-4 pt-6 border-t border-white/10">
-                  <div className="flex justify-between text-xs font-bold text-gray-400">
-                    <span>TẠM TÍNH</span>
-                    <span className="text-white">{displaySubtotal.toLocaleString()}₫</span>
+                <div className="space-y-3 pt-4 border-t border-gray-100 dark:border-slate-700/70 text-xs">
+                  <div className="flex justify-between text-gray-600 dark:text-slate-400">
+                    <span>Tạm tính</span>
+                    <span className="font-medium text-gray-900 dark:text-slate-100">{displaySubtotal.toLocaleString()}₫</span>
                   </div>
                   {discountAmount > 0 && (
-                    <div className="flex justify-between text-xs font-bold text-gray-400">
-                      <span>GIẢM GIÁ (VOUCHER)</span>
-                      <span className="text-red-400">-{discountAmount.toLocaleString()}₫</span>
+                    <div className="flex justify-between text-gray-600 dark:text-slate-400">
+                      <span>Giảm giá Voucher</span>
+                      <span className="text-[#ee4d2d] font-medium">-{discountAmount.toLocaleString()}₫</span>
                     </div>
                   )}
                   {pointsDiscount > 0 && (
-                    <div className="flex justify-between text-xs font-bold text-gray-400">
-                      <span>GIẢM GIÁ (ĐIỂM)</span>
-                      <span className="text-red-400">-{pointsDiscount.toLocaleString()}₫</span>
+                    <div className="flex justify-between text-gray-600 dark:text-slate-400">
+                      <span>Giảm giá Điểm</span>
+                      <span className="text-[#ee4d2d] font-medium">-{pointsDiscount.toLocaleString()}₫</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-xs font-bold text-gray-400">
-                    <span>VẬN CHUYỂN</span>
-                    <span className="text-green-400">{currentShippingFee === 0 ? 'Miễn phí' : `${currentShippingFee.toLocaleString()}₫`}</span>
+                  <div className="flex justify-between text-gray-600 dark:text-slate-400">
+                    <span>Phí vận chuyển</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">{currentShippingFee === 0 ? 'Miễn phí' : `${currentShippingFee.toLocaleString()}₫`}</span>
                   </div>
-                  <div className="flex justify-between items-end pt-4 border-t border-white/5">
-                    <span className="text-xs font-black uppercase tracking-widest">TỔNG CỘNG</span>
-                    <span className="text-3xl font-black text-primary tracking-tighter">{displayTotal.toLocaleString()}₫</span>
+                  <div className="flex justify-between items-end pt-3 border-t border-gray-100 dark:border-slate-700/70">
+                    <span className="text-xs font-bold uppercase text-gray-800 dark:text-slate-200">Tổng thanh toán</span>
+                    <span className="text-2xl font-extrabold text-[#ee4d2d]">{displayTotal.toLocaleString()}₫</span>
                   </div>
-                  <div className="flex justify-between text-[10px] font-bold text-gray-400 mt-2">
-                    <span>Điểm thưởng nhận được</span>
-                    <span className="text-green-500">+{Math.floor(displayTotal / (systemSettings?.earnRate || 10000))} điểm</span>
+                  <div className="flex justify-between text-[11px] text-gray-500 dark:text-slate-400 mt-1">
+                    <span>Điểm thưởng tích lũy</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold">+{Math.floor(displayTotal / (systemSettings?.earnRate || 10000))} điểm</span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 text-[9px] font-bold text-gray-500 uppercase tracking-widest justify-center">
-                  <ShieldCheck size={14} className="text-green-500" /> Thanh toán được bảo mật
+                <div className="flex items-center gap-2 text-[10px] text-gray-500 uppercase tracking-wider justify-center pt-2">
+                  <ShieldCheck size={14} className="text-emerald-500" /> Thanh toán an toàn & bảo mật
                 </div>
               </div>
             </div>

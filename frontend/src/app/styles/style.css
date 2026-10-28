@@ -1,199 +1,188 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
-  --color-primary: #f97316; /* Tươi sáng hơn, màu cam Tailwind orange-500 */
-  --color-primary-dark: #ea580c;
-  --color-primary-light: #ffedd5;
-  --color-secondary: #0f172a; /* Slate 900 */
+  --color-primary: #ee4d2d; /* Shopee Vibrant Orange */
+  --color-primary-hover: #d03e1e;
+  --color-primary-dark: #c23517;
+  --color-primary-light: #fef0ed;
+  --color-secondary: #0f172a;
   --color-accent: #334155;
   
+  --shadow-shopee: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-shopee-hover: 0 4px 16px 0 rgba(0, 0, 0, 0.12);
   --shadow-soft: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
   --shadow-premium: 0 10px 30px -5px rgba(0, 0, 0, 0.08);
-  --shadow-glow: 0 0 15px rgba(249, 115, 22, 0.3);
-  
 }
 
 :root {
-  --color-bg-main: #f8fafc; /* Nền nhạt hơn, sang trọng hơn (slate-50) */
+  --color-bg-main: #f5f5f5;
+  --color-surface: #ffffff;
+  --color-text-main: #222222;
+  --color-text-muted: #757575;
+  --color-border: #e5e7eb;
+}
+
+.dark {
+  --color-bg-main: #0b0f19;
+  --color-surface: #1e293b;
+  --color-text-main: #f8fafc;
+  --color-text-muted: #94a3b8;
+  --color-border: #334155;
 }
 
 body {
   background-color: var(--color-bg-main);
-  color: #0f172a;
-  font-family: 'Inter', 'Be Vietnam Pro', sans-serif;
+  color: var(--color-text-main);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
-h1, h2, h3, .font-serif {
-  font-family: 'Playfair Display', serif;
-  letter-spacing: -0.02em;
+h1, h2, h3, h4, h5, h6 {
+  font-family: inherit;
+  letter-spacing: -0.01em;
 }
 
 @layer components {
-  /* Input & Search: Hybrid (Crisp borders, soft focus to hard focus) */
+  /* Shopee Component Classes */
+  .shopee-card {
+    @apply bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700/60 rounded-sm shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5;
+  }
+
+  .shopee-btn-primary {
+    @apply inline-flex items-center justify-center font-medium py-2.5 px-6 rounded-sm text-white bg-[#ee4d2d] hover:bg-[#d03e1e] active:opacity-90 transition-all duration-200 shadow-sm text-sm;
+  }
+
+  .shopee-btn-outline {
+    @apply inline-flex items-center justify-center font-medium py-2.5 px-6 rounded-sm text-[#ee4d2d] border border-[#ee4d2d] bg-[#fef0ed] dark:bg-slate-800 hover:bg-[#fde2dc] transition-all duration-200 text-sm;
+  }
+
+  .shopee-badge {
+    @apply px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-xs bg-[#fef0ed] text-[#ee4d2d] border border-[#ee4d2d]/30;
+  }
+
+  /* Shopee Box (Container / Panel) System */
+  .shopee-box {
+    @apply bg-white dark:bg-slate-800 rounded-xs sm:rounded-sm border border-black/[0.06] dark:border-slate-700/60 shadow-[0_1px_1px_0_rgba(0,0,0,0.05)];
+  }
+
+  .shopee-box-interactive {
+    @apply bg-white dark:bg-slate-800 rounded-xs sm:rounded-sm border border-black/[0.06] dark:border-slate-700/60 shadow-[0_1px_1px_0_rgba(0,0,0,0.05)] transition-all duration-200 hover:shadow-[0_2px_12px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 hover:border-[#ee4d2d]/40;
+  }
+
+  .shopee-box-header {
+    @apply px-4 py-3 sm:px-5 sm:py-3.5 border-b border-gray-100 dark:border-slate-700/60 flex items-center justify-between;
+  }
+
+  .shopee-box-title {
+    @apply text-sm sm:text-base font-bold text-gray-900 dark:text-slate-100 uppercase tracking-tight flex items-center gap-2;
+  }
+
+  /* Shopee Dropdown & Popover System */
+  .shopee-popover {
+    @apply bg-white dark:bg-slate-800 border border-black/[0.09] dark:border-slate-700 rounded-xs sm:rounded-sm shadow-[0_2px_24px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.45)] z-50;
+  }
+
+  .shopee-dropdown-item {
+    @apply w-full px-3.5 py-2.5 text-xs sm:text-sm text-gray-700 dark:text-slate-200 hover:bg-[#fbfbfb] dark:hover:bg-slate-700/70 hover:text-[#ee4d2d] dark:hover:text-[#ee4d2d] flex items-center gap-2.5 transition-colors cursor-pointer text-left;
+  }
+
+  .shopee-dropdown-item-active {
+    @apply text-[#ee4d2d] dark:text-[#ee4d2d] font-semibold bg-[#fef0ed]/60 dark:bg-slate-700/80;
+  }
+
+  .shopee-select-btn {
+    @apply bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xs sm:rounded-sm px-3.5 py-2 text-xs sm:text-sm text-gray-800 dark:text-slate-200 hover:border-[#ee4d2d] focus:border-[#ee4d2d] transition-all flex items-center justify-between gap-2 shadow-xs cursor-pointer;
+  }
+
+  /* Retain backward compatibility with modernized styles */
   .input-modern {
-    @apply w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-xl focus:outline-none focus:border-secondary focus:shadow-[4px_4px_0px_0px_rgba(15,23,42,0.15)] transition-all duration-300 text-sm font-medium placeholder-slate-400 hover:border-slate-300;
+    @apply w-full px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:border-[#ee4d2d] focus:ring-1 focus:ring-[#ee4d2d] transition-all text-sm font-normal text-slate-800 dark:text-slate-100 placeholder-slate-400;
   }
 
   .input-modern:disabled {
-    @apply bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed opacity-80 shadow-none;
+    @apply bg-slate-100 dark:bg-slate-800/50 text-slate-400 border-slate-200 dark:border-slate-700 cursor-not-allowed opacity-80;
   }
 
-  /* Buttons: Hybrid Neo-Brutalism + Soft */
   .btn-modern {
-    @apply inline-flex items-center justify-center font-bold py-3.5 px-8 rounded-xl transition-all duration-300 text-white bg-primary border-2 border-primary hover:border-secondary hover:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 active:translate-y-0 active:shadow-none;
+    @apply inline-flex items-center justify-center font-semibold py-2.5 px-6 rounded-lg transition-all duration-200 text-white bg-[#ee4d2d] hover:bg-[#d03e1e] active:scale-[0.98] shadow-sm text-sm;
   }
 
   .btn-modern-secondary {
-    @apply inline-flex items-center justify-center font-bold py-3.5 px-8 rounded-xl transition-all duration-300 bg-white text-secondary border-2 border-slate-200 hover:border-secondary hover:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 active:translate-y-0 active:shadow-none;
+    @apply inline-flex items-center justify-center font-semibold py-2.5 px-6 rounded-lg transition-all duration-200 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-[0.98] shadow-sm text-sm;
   }
 
   .btn-auth-modern {
-    @apply w-full inline-flex items-center justify-center h-14 font-bold text-sm uppercase tracking-wider rounded-xl transition-all duration-300 text-white bg-secondary border-2 border-secondary hover:bg-black hover:shadow-[4px_4px_0px_0px_rgba(249,115,22,1)] hover:-translate-y-1 active:translate-y-0 active:shadow-none;
+    @apply w-full inline-flex items-center justify-center h-12 font-bold text-sm tracking-wide rounded-lg transition-all duration-200 text-white bg-[#ee4d2d] hover:bg-[#d03e1e] active:scale-[0.98] shadow-md;
   }
 
-  /* Card & Containers: Glass to Brutal on hover */
   .card-modern {
-    @apply bg-white/95 backdrop-blur-md border-2 border-slate-100 rounded-2xl shadow-sm transition-all duration-300 hover:border-slate-800 hover:shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] hover:-translate-y-1 p-6;
+    @apply bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 rounded-xl shadow-sm transition-all duration-200 hover:shadow-md p-5;
   }
 
-  /* Badge */
   .badge-modern {
-    @apply px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full bg-primary/10 text-primary border-2 border-primary/20;
+    @apply px-2.5 py-0.5 text-xs font-semibold rounded-full bg-[#fef0ed] dark:bg-[#ee4d2d]/20 text-[#ee4d2d];
   }
 
-  /* Dropdown Select tùy chỉnh phong cách hiện đại */
-  .select-modern {
-    appearance: none !important;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>") !important;
-    background-repeat: no-repeat !important;
-    background-position: right 16px center !important;
-    background-size: 16px !important;
-    padding-right: 48px !important;
-  }
-
-  /* Mega Menu: Hiệu ứng trượt mượt mà SaaS */
-  .mega-menu {
-    @apply absolute top-full left-0 w-full bg-white/95 backdrop-blur-xl border-t-2 border-slate-800 shadow-[0_10px_30px_-5px_rgba(15,23,42,0.2)] opacity-0 invisible translate-y-2 transition-all duration-300 z-50 rounded-b-2xl;
-  }
-  
-  .group:hover .mega-menu {
-    @apply opacity-100 visible translate-y-0;
-  }
-  
-  /* Glass effect chung */
   .glass {
-    @apply bg-white/80 backdrop-blur-lg border-b-2 border-white/20 shadow-sm;
+    @apply bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-gray-200 dark:border-slate-800 shadow-xs;
   }
-
-
 }
 
-/* Swiper Custom Modern Styling */
+/* Swiper Custom Styling Shopee */
 .home-swiper .swiper-button-next,
 .home-swiper .swiper-button-prev {
-  background: rgba(255, 255, 255, 0.9) !important;
-  backdrop-filter: blur(8px) !important;
-  color: #0f172a !important;
-  width: 48px !important;
-  height: 48px !important;
-  border: 2px solid #0f172a !important;
-  box-shadow: 4px 4px 0px 0px rgba(15, 23, 42, 1) !important;
-  transition: all 0.3s ease !important;
-  border-radius: 12px !important; /* Squircle thay vì tròn xoe */
+  background: rgba(0, 0, 0, 0.3) !important;
+  color: white !important;
+  width: 36px !important;
+  height: 60px !important;
+  border-radius: 0 !important;
+  transition: all 0.2s ease !important;
 }
 
 .home-swiper .swiper-button-next:hover,
 .home-swiper .swiper-button-prev:hover {
-  background: var(--color-primary) !important;
-  color: white !important;
-  transform: translate(-2px, -2px) !important;
-  box-shadow: 6px 6px 0px 0px rgba(15, 23, 42, 1) !important;
-}
-
-.home-swiper .swiper-button-next:active,
-.home-swiper .swiper-button-prev:active {
-  transform: translate(0px, 0px) !important;
-  box-shadow: none !important;
+  background: rgba(0, 0, 0, 0.6) !important;
 }
 
 .home-swiper .swiper-button-next::after,
 .home-swiper .swiper-button-prev::after {
-  font-size: 18px !important;
+  font-size: 16px !important;
   font-weight: bold !important;
 }
 
 .home-swiper .swiper-pagination-bullet {
-  border-radius: 50% !important;
-  background: rgba(15, 23, 42, 0.2) !important;
-  width: 8px !important;
-  height: 8px !important;
-  transition: all 0.3s ease !important;
+  background: rgba(255, 255, 255, 0.7) !important;
+  width: 9px !important;
+  height: 9px !important;
+  opacity: 0.8 !important;
+  transition: all 0.2s ease !important;
 }
 
 .home-swiper .swiper-pagination-bullet-active {
-  background: var(--color-primary) !important;
-  width: 24px !important;
-  border-radius: 4px !important;
+  background: #ee4d2d !important;
+  width: 18px !important;
+  border-radius: 6px !important;
+  opacity: 1 !important;
 }
 
-/* Custom Scrollbar - Hybrid Style Toàn cục */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
-}
-::-webkit-scrollbar-track {
-  background: var(--color-bg-main);
-  border-left: 1px solid #e2e8f0;
-}
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 6px;
-  border: 3px solid var(--color-bg-main); /* fake padding */
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #0f172a;
-}
-
-/* Class cụ thể cho những chỗ dùng custom-scrollbar */
-.custom-scrollbar::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-  border: none;
+::-webkit-scrollbar-track {
+  background: var(--color-bg-main);
 }
-.custom-scrollbar::-webkit-scrollbar-thumb {
+::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 4px;
-  border: none;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #0f172a;
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
 }
-
-/* Swiper Custom Modern Styling cho Shop */
-.shop-swiper .swiper-pagination-bullet {
-  background: rgba(15, 23, 42, 0.2) !important;
-  width: 8px !important;
-  height: 8px !important;
-  transition: all 0.3s ease !important;
-}
-
-.shop-swiper .swiper-pagination-bullet-active {
-  background: var(--color-primary) !important;
-  width: 24px !important;
-  border-radius: 4px !important;
-}
-
-/* Swiper Container Padding & Spacing */
-.shop-swiper.swiper,
-.home-swiper.swiper {
-  padding-bottom: 56px !important;
-}
-
-.shop-swiper .swiper-pagination,
-.home-swiper .swiper-pagination {
-  bottom: 8px !important;
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }

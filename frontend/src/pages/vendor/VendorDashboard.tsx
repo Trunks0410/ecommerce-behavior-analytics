@@ -1862,14 +1862,15 @@ const VendorDashboard = () => {
               </span>
             </div>
 
-            <NotificationDropdown />
+            <NotificationDropdown variant="button" />
 
-            <div className="w-[2px] h-8 bg-gray-100"></div>
+            <div className="w-[1px] h-6 bg-gray-200 dark:bg-slate-700"></div>
 
             <div className="relative">
               <button
+                type="button"
                 onClick={() => setShowUserDropdown(!showUserDropdown)}
-                className="w-11 h-11 bg-primary/10 border-2 border-black rounded-xl flex items-center justify-center text-primary hover:bg-primary/20 transition-all active:translate-y-1 overflow-hidden shadow-sm"
+                className="w-9 h-9 rounded-full border border-gray-200 dark:border-slate-700 hover:border-[#ee4d2d] flex items-center justify-center overflow-hidden transition-all cursor-pointer shadow-xs"
               >
                 {shopInfo?.avatar_url || shopInfo?.shop_logo ? (
                   <img
@@ -1887,46 +1888,61 @@ const VendorDashboard = () => {
               </button>
 
               {showUserDropdown && (
-                <div className="absolute right-0 mt-4 w-64 bg-white border-2 border-black rounded-2xl shadow-brutal z-50 p-4 animate-in fade-in slide-in-from-top-2">
-                  <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-100">
-                    <div className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center font-black overflow-hidden border border-black/10">
-                      {shopInfo?.avatar_url || shopInfo?.shop_logo ? (
-                        <img
-                          src={shopInfo.avatar_url || shopInfo.shop_logo}
-                          alt="Avatar"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <img
-                          src={DEFAULT_SHOP_LOGO}
-                          alt="Avatar"
-                          className="w-full h-full object-cover"
-                        />
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-xs font-black uppercase">
-                        {shopInfo?.shop_name || shopInfo?.name}
-                      </p>
-                      <p className="text-[10px] text-primary font-bold">
-                        {user?.email}
-                      </p>
-                    </div>
-                  </div>
+                <div className="absolute right-0 top-full pt-2 w-64 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  {/* Invisible Hover Bridge (Vùng cầu nối hình chữ nhật chống tắt nhầm khi rê chuột) */}
+                  <div className="absolute -top-3 left-0 right-0 h-4 bg-transparent" />
+                  {/* Shopee Popover Arrow */}
+                  <div className="absolute top-0.5 right-3.5 w-3 h-3 bg-white dark:bg-slate-800 border-t border-l border-black/[0.09] dark:border-slate-700 rotate-45 z-10" />
 
-                  <div className="space-y-1">
-                    <button
-                      onClick={() => setActiveTab("settings")}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
-                    >
-                      Thông tin cửa hàng
-                    </button>
-                    <button
-                      onClick={handleLogout}
-                      className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all mt-2"
-                    >
-                      Đăng xuất
-                    </button>
+                  <div className="relative bg-white dark:bg-slate-800 border border-black/[0.09] dark:border-slate-700 rounded-xs sm:rounded-sm shadow-[0_2px_24px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] p-3.5 overflow-hidden text-left">
+                    <div className="flex items-center gap-2.5 pb-3 border-b border-gray-100 dark:border-slate-700/80">
+                      <div className="w-9 h-9 rounded-full bg-[#fef0ed] text-[#ee4d2d] flex items-center justify-center font-bold overflow-hidden border border-black/5 shrink-0">
+                        {shopInfo?.avatar_url || shopInfo?.shop_logo ? (
+                          <img
+                            src={shopInfo.avatar_url || shopInfo.shop_logo}
+                            alt="Avatar"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <img
+                            src={DEFAULT_SHOP_LOGO}
+                            alt="Avatar"
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-gray-900 dark:text-slate-100 truncate">
+                          {shopInfo?.shop_name || shopInfo?.name}
+                        </p>
+                        <p className="text-[11px] text-[#ee4d2d] font-medium truncate">
+                          {user?.email}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveTab("settings");
+                          setShowUserDropdown(false);
+                        }}
+                        className="w-full text-left px-3 py-2 hover:bg-[#fafafa] dark:hover:bg-slate-700/70 hover:text-[#ee4d2d] rounded-xs text-xs font-medium text-gray-700 dark:text-slate-200 transition-colors cursor-pointer"
+                      >
+                        Thông tin cửa hàng
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowUserDropdown(false);
+                          handleLogout();
+                        }}
+                        className="w-full text-left px-3 py-2 hover:bg-red-50/60 dark:hover:bg-red-950/30 text-red-600 dark:text-red-400 rounded-xs text-xs font-medium transition-colors cursor-pointer"
+                      >
+                        Đăng xuất
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}

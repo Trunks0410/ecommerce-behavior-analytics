@@ -508,7 +508,7 @@ const OrderDetailPage = () => {
                       Shop
                     </span>
                     <span className="font-black text-sm text-black uppercase">
-                      {order.shop?.shop_name || order.shop?.name || "UTEShop Official"}
+                      {order.shop?.shop_name || order.shop?.name || "MeeMart Mall"}
                     </span>
                   </div>
                 </div>

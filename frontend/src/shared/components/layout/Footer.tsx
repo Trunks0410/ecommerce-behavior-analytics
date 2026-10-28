@@ -1,99 +1,194 @@
-import { ShoppingBag, Send } from "lucide-react";
+import { MapPin, Phone, Mail, HelpCircle } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useLanguage } from "@/shared/context/LanguageContext";
 
-// Custom Social Icons
 const FacebookIcon = ({ size = 18 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+  </svg>
 );
 
 const InstagramIcon = ({ size = 18 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+    <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+  </svg>
 );
 
-const XIcon = ({ size = 18 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4l11.733 16h4.267l-11.733 -16z"/><path d="M4 20l6.768 -6.768m2.46 -2.46l6.772 -6.772"/></svg>
+const TwitterIcon = ({ size = 18 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+  </svg>
+);
+
+const YoutubeIcon = ({ size = 18 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+  </svg>
 );
 
 const Footer = () => {
+  const { t, language } = useLanguage();
+
   return (
-    <footer className="w-full bg-white border-t border-black/10 mt-32">
-      <div className="max-w-7xl mx-auto px-6 py-20">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-16">
-          {/* Brand Info */}
-          <div className="space-y-8">
-            <Link to="/" className="flex items-center space-x-3 group">
-              <div className="w-10 h-10 bg-primary text-white border-2 border-black/10 rounded-xl flex items-center justify-center group-hover:bg-black group-hover:border-black transition-all shadow-sm">
-                <ShoppingBag size={24} strokeWidth={2.5} />
-              </div>
-              <span className="font-serif text-2xl font-black text-primary uppercase group-hover:text-black transition-colors">UTEShop</span>
-            </Link>
-            <p className="text-sm font-bold text-gray-500 leading-relaxed max-w-xs">
-              Nâng tầm phong cách cá nhân với những thiết kế tối giản và hiện đại từ UTEShop.
-            </p>
-            <div className="flex space-x-4">
-              {[
-                { icon: <FacebookIcon />, href: "#" },
-                { icon: <InstagramIcon />, href: "#" },
-                { icon: <XIcon />, href: "#" }
-              ].map((social, i) => (
-                <a key={i} href={social.href} className="w-11 h-11 bg-white border border-black/10 rounded-xl flex items-center justify-center text-black hover:bg-primary hover:text-white transition-all shadow-sm hover:shadow-subtle hover:-translate-y-1">
-                  {social.icon}
-                </a>
-              ))}
-            </div>
-          </div>
-
-          {/* Quick Links */}
+    <footer className="w-full bg-[#fbfbfb] dark:bg-slate-950 border-t border-gray-200 dark:border-slate-800 text-gray-600 dark:text-slate-400 text-xs">
+      {/* 4 Main Columns */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          {/* Column 1: Chăm sóc khách hàng */}
           <div>
-            <h4 className="font-black text-xs uppercase tracking-widest mb-8 pb-2 border-b border-black/10 w-fit">Mua sắm</h4>
-            <ul className="space-y-4">
-              {["Thời trang Nam", "Thời trang Nữ", "Phụ kiện", "Bộ sưu tập"].map((link) => (
-                <li key={link}>
-                  <Link to="/products" className="text-sm font-bold text-gray-500 hover:text-primary transition-colors">{link}</Link>
-                </li>
-              ))}
+            <h4 className="font-bold text-sm text-gray-900 dark:text-slate-100 uppercase mb-4">
+              {t("customer_care")}
+            </h4>
+            <ul className="space-y-2.5">
+              <li>
+                <Link to="/blogs" className="hover:text-[#ee4d2d] transition-colors">
+                  {t("help_center")}
+                </Link>
+              </li>
+              <li>
+                <Link to="/blogs" className="hover:text-[#ee4d2d] transition-colors">
+                  {t("meemart_blog")}
+                </Link>
+              </li>
+              <li>
+                <Link to="/blogs" className="hover:text-[#ee4d2d] transition-colors">
+                  {t("shopping_guide")}
+                </Link>
+              </li>
+              <li>
+                <Link to="/blogs" className="hover:text-[#ee4d2d] transition-colors">
+                  {t("payment_guide")}
+                </Link>
+              </li>
+              <li>
+                <Link to="/blogs" className="hover:text-[#ee4d2d] transition-colors">
+                  {t("shipping_guide")}
+                </Link>
+              </li>
             </ul>
           </div>
 
-          {/* Support */}
+          {/* Column 2: Về MeeMart */}
           <div>
-            <h4 className="font-black text-xs uppercase tracking-widest mb-8 pb-2 border-b border-black/10 w-fit">Hỗ trợ</h4>
-            <ul className="space-y-4">
-              {["Chính sách đổi trả", "Hướng dẫn chọn size", "Câu hỏi thường gặp", "Liên hệ"].map((link) => (
-                <li key={link}>
-                  <Link to="#" className="text-sm font-bold text-gray-500 hover:text-primary transition-colors">{link}</Link>
-                </li>
-              ))}
+            <h4 className="font-bold text-sm text-gray-900 dark:text-slate-100 uppercase mb-4">
+              {t("about_meemart")}
+            </h4>
+            <ul className="space-y-2.5">
+              <li>
+                <Link to="/blogs" className="hover:text-[#ee4d2d] transition-colors">
+                  {t("about_us")}
+                </Link>
+              </li>
+              <li>
+                <Link to="/blogs" className="hover:text-[#ee4d2d] transition-colors">
+                  {t("careers")}
+                </Link>
+              </li>
+              <li>
+                <Link to="/blogs" className="hover:text-[#ee4d2d] transition-colors">
+                  {t("terms")}
+                </Link>
+              </li>
+              <li>
+                <Link to="/blogs" className="hover:text-[#ee4d2d] transition-colors">
+                  {t("privacy")}
+                </Link>
+              </li>
+              <li>
+                <Link to="/blogs" className="hover:text-[#ee4d2d] transition-colors">
+                  {t("media_contact")}
+                </Link>
+              </li>
             </ul>
           </div>
 
-          {/* Newsletter */}
-          <div className="space-y-8">
-            <h4 className="font-black text-xs uppercase tracking-widest mb-8 pb-2 border-b border-black/10 w-fit">Bản tin</h4>
-            <form className="relative">
-              <input
-                type="email"
-                placeholder="Email của bạn"
-                className="input-brutal h-14 pr-16"
-              />
-              <button
-                type="submit"
-                className="absolute right-1.5 top-1.5 bottom-1.5 w-11 bg-black text-white rounded-lg flex items-center justify-center border border-black hover:bg-primary transition-all shadow-sm"
+          {/* Column 3: Liên hệ */}
+          <div>
+            <h4 className="font-bold text-sm text-gray-900 dark:text-slate-100 uppercase mb-4">
+              {t("contact")}
+            </h4>
+            <ul className="space-y-3">
+              <li className="flex items-start gap-2">
+                <MapPin size={16} className="text-[#ee4d2d] shrink-0 mt-0.5" />
+                <span>{t("address_text")}</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <Phone size={16} className="text-[#ee4d2d] shrink-0" />
+                <span className="font-semibold text-gray-900 dark:text-slate-200">
+                  {t("hotline")}
+                </span>
+              </li>
+              <li className="flex items-center gap-2">
+                <Mail size={16} className="text-[#ee4d2d] shrink-0" />
+                <span>support@meemart.vn</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* Column 4: Kết nối với chúng tôi */}
+          <div>
+            <h4 className="font-bold text-sm text-gray-900 dark:text-slate-100 uppercase mb-4">
+              {t("connect_with_us")}
+            </h4>
+            <div className="flex items-center space-x-3 mb-4">
+              <a
+                href="https://facebook.com"
+                target="_blank"
+                rel="noreferrer"
+                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-slate-800 hover:bg-[#ee4d2d] hover:text-white flex items-center justify-center transition-colors text-gray-700 dark:text-slate-200"
+                title="Facebook"
               >
-                <Send size={18} strokeWidth={2.5} />
-              </button>
-            </form>
+                <FacebookIcon size={16} />
+              </a>
+              <a
+                href="https://instagram.com"
+                target="_blank"
+                rel="noreferrer"
+                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-slate-800 hover:bg-[#ee4d2d] hover:text-white flex items-center justify-center transition-colors text-gray-700 dark:text-slate-200"
+                title="Instagram"
+              >
+                <InstagramIcon size={16} />
+              </a>
+              <a
+                href="https://twitter.com"
+                target="_blank"
+                rel="noreferrer"
+                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-slate-800 hover:bg-[#ee4d2d] hover:text-white flex items-center justify-center transition-colors text-gray-700 dark:text-slate-200"
+                title="Twitter / X"
+              >
+                <TwitterIcon size={15} />
+              </a>
+              <a
+                href="https://youtube.com"
+                target="_blank"
+                rel="noreferrer"
+                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-slate-800 hover:bg-[#ee4d2d] hover:text-white flex items-center justify-center transition-colors text-gray-700 dark:text-slate-200"
+                title="YouTube"
+              >
+                <YoutubeIcon size={16} />
+              </a>
+            </div>
+
+            <Link
+              to="/blogs"
+              className="inline-flex items-center gap-1.5 text-[#ee4d2d] hover:underline font-medium mt-2"
+            >
+              <HelpCircle size={15} />
+              <span>{t("faq")}</span>
+            </Link>
           </div>
         </div>
 
-        <div className="border-t border-black/10 mt-20 pt-10 flex flex-col md:flex-row justify-between items-center gap-6">
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-            © 2024 UTEShop. ALL RIGHTS RESERVED.
+        {/* Bottom Copyright Notice */}
+        <div className="border-t border-gray-200 dark:border-slate-800 mt-10 pt-6 text-center space-y-1 text-gray-500 dark:text-slate-500 text-[11px]">
+          <p>{t("copyright")}</p>
+          <p>
+            {language === "vi"
+              ? "Địa chỉ văn phòng: Tòa nhà Tech Innovation, Số 1, Đường Lê Lợi, Quận 1, TP. Hồ Chí Minh."
+              : "Office Address: Tech Innovation Building, No. 1, Le Loi Street, District 1, Ho Chi Minh City."}
           </p>
-          <div className="flex gap-8">
-             <span className="text-[10px] font-black uppercase tracking-widest text-black cursor-pointer hover:text-primary transition-colors">Privacy Policy</span>
-             <span className="text-[10px] font-black uppercase tracking-widest text-black cursor-pointer hover:text-primary transition-colors">Terms of Service</span>
-          </div>
         </div>
       </div>
     </footer>

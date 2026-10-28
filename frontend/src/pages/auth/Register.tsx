@@ -105,7 +105,7 @@ const Register = () => {
 
           {/* Right Side - Form */}
           <div className="w-full md:w-1/2 flex flex-col justify-center">
-            <Card className="p-10 mb-8 rounded-xl">
+            <Card className="p-8 sm:p-10 mb-8 rounded-xs sm:rounded-sm shadow-sm">
               <div className="mb-8">
                 <h1 className="font-serif text-4xl font-bold mb-3">
                   Tạo tài khoản

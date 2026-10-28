@@ -18,14 +18,14 @@ const MainLayout = () => {
   }
 
   return (
-    <>
+    <div className="min-h-screen flex flex-col bg-[#f5f5f5] dark:bg-[#0b0f19] text-gray-900 dark:text-slate-100 transition-colors">
       <Header />
-      <main>
+      <main className="flex-1">
         <Outlet />
       </main>
       <Footer />
       <ChatWidget />
-    </>
+    </div>
   );
 };
 
