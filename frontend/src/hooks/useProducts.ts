@@ -20,7 +20,7 @@ export const useProductDetail = (slug: string) => {
   });
 };
 
-export const useFeaturedProducts = (limit: number) => {
+export const useFeaturedProducts = (limit: number = 10) => {
   return useQuery({
     queryKey: ["featured-products", limit],
     queryFn: () => productService.getFeaturedProducts(limit),
@@ -29,7 +29,7 @@ export const useFeaturedProducts = (limit: number) => {
   });
 };
 
-export const useNewestProducts = (limit: number) => {
+export const useNewestProducts = (limit: number = 10) => {
   return useQuery({
     queryKey: ["newest-products", limit],
     queryFn: () => productService.getNewestProducts(limit),
@@ -38,7 +38,7 @@ export const useNewestProducts = (limit: number) => {
   });
 };
 
-export const useBestSellerProducts = (limit: number) => {
+export const useBestSellerProducts = (limit: number = 10) => {
   return useQuery({
     queryKey: ["best-seller-products", limit],
     queryFn: () => productService.getBestSellerProducts(limit),
@@ -47,7 +47,7 @@ export const useBestSellerProducts = (limit: number) => {
   });
 };
 
-export const useMostViewedProducts = (limit: number) => {
+export const useMostViewedProducts = (limit: number = 10) => {
   return useQuery({
     queryKey: ["most-viewed-products", limit],
     queryFn: () => productService.getMostViewedProducts(limit),

@@ -61,7 +61,7 @@ const ForgotPassword = () => {
   return (
     <div className="min-h-screen flex flex-col bg-[#faf9f6]">
       <main className="flex-grow flex items-center justify-center p-6">
-        <Card className="max-w-md w-full p-10 mt-10 rounded-xl">
+        <Card className="max-w-md w-full p-8 sm:p-10 mt-10 rounded-xs sm:rounded-sm shadow-sm">
           <div className="flex justify-center mb-8">
             <div className="w-16 h-16 bg-black text-white flex items-center justify-center">
               <ShieldCheck size={32} />

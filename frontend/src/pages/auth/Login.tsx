@@ -139,7 +139,7 @@ const Login = () => {
 
           {/* Right Side - Form */}
           <div className="w-full md:w-[450px]">
-            <Card className="p-10 rounded-xl">
+            <Card className="p-8 sm:p-10 rounded-xs sm:rounded-sm shadow-sm">
               <div className="mb-10 text-center">
                 <h1 className="font-serif text-4xl font-bold mb-3">
                   Đăng nhập UTEShop
