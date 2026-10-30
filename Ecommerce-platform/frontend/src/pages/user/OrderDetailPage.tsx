@@ -64,17 +64,15 @@ const OrderDetailPage = () => {
   };
 
   const handleConfirmReceipt = async () => {
-    const confirmText = language === 'vi'
-      ? 'Bạn xác nhận đã nhận đầy đủ hàng và muốn hoàn tất đơn hàng?'
-      : 'Do you confirm that you received the full order and want to complete this purchase?';
+    const confirmText = t("order_detail_confirm_receipt");
     if (!window.confirm(confirmText)) return;
     setIsConfirming(true);
     try {
       await orderService.updateOrderStatus(Number(id), 'COMPLETED');
-      alert(language === 'vi' ? 'Xác nhận nhận hàng và hoàn tất đơn hàng thành công!' : 'Order received and completed successfully!');
+      alert(t("order_detail_confirmed_success"));
       queryClient.invalidateQueries({ queryKey: ["order", Number(id)] });
     } catch (error: any) {
-      alert("Lỗi: " + (error.response?.data?.message || error.message));
+      alert(`${t("error_label")}: ${error.response?.data?.message || error.message}`);
     } finally {
       setIsConfirming(false);
     }
@@ -89,7 +87,7 @@ const OrderDetailPage = () => {
       },
       onError: (error: any) => {
         alert(
-          error.response?.data?.message || "Không thể tạo lại thanh toán VNPay",
+          error.response?.data?.message || t("order_detail_retry_payment_error"),
         );
       },
     });
@@ -112,7 +110,7 @@ const OrderDetailPage = () => {
       await Promise.all(promises);
       navigate("/cart");
     } catch (error) {
-      alert(language === 'vi' ? 'Có lỗi xảy ra khi thêm vào giỏ hàng' : 'Something went wrong while adding items to cart');
+      alert(t("order_detail_add_cart_error"));
     }
   };
 
@@ -153,12 +151,12 @@ const OrderDetailPage = () => {
         {
           onSuccess: () => {
             setReviewModalOpen(false);
-            alert("Cập nhật đánh giá thành công!");
+            alert(t("order_detail_review_updated"));
           },
           onError: (error: any) => {
             const errMsg =
               error?.response?.data?.message ||
-              "Có lỗi xảy ra khi cập nhật đánh giá";
+              t("order_detail_review_update_error");
             alert(errMsg);
           },
         },
@@ -171,12 +169,12 @@ const OrderDetailPage = () => {
             setReviewModalOpen(false);
             setComment("");
             setRating(5);
-            alert("Đánh giá thành công! Bạn đã được tặng 100 điểm thưởng.");
+            alert(t("order_detail_review_success"));
           },
           onError: (error: any) => {
             const errMsg =
               error?.response?.data?.message ||
-              "Có lỗi xảy ra khi gửi đánh giá";
+              t("order_detail_review_error");
             alert(errMsg);
           },
         },
@@ -203,18 +201,18 @@ const OrderDetailPage = () => {
 
 
   const getStatusColor = (status: OrderStatus) => {
-    if (['DELIVERED', 'COMPLETED'].includes(status)) return 'bg-green-50 text-green-600 border-green-200';
-    if (['SHIPPING'].includes(status)) return 'bg-blue-50 text-blue-600 border-blue-200';
-    if (['CANCELLED', 'CANCEL_REQUESTED', 'FAILED'].includes(status)) return 'bg-red-50 text-red-600 border-red-200';
-    if (['RETURN_PENDING', 'RETURNED'].includes(status)) return 'bg-pink-50 text-pink-600 border-pink-200';
-    return 'bg-orange-50 text-orange-600 border-orange-200';
+    if (['DELIVERED', 'COMPLETED'].includes(status)) return 'bg-green-50 text-green-600 border-green-200 dark:bg-green-950/40 dark:text-green-300 dark:border-green-800';
+    if (['SHIPPING'].includes(status)) return 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800';
+    if (['CANCELLED', 'CANCEL_REQUESTED', 'FAILED'].includes(status)) return 'bg-red-50 text-red-600 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800';
+    if (['RETURN_PENDING', 'RETURNED'].includes(status)) return 'bg-pink-50 text-pink-600 border-pink-200 dark:bg-pink-950/40 dark:text-pink-300 dark:border-pink-800';
+    return 'bg-orange-50 text-orange-600 border-orange-200 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800';
   };
 
   const renderReturnTimeline = (currentStatus: string) => {
     const returnStatuses = [
-      { key: "FAILED", label: "Giao thất bại" },
-      { key: "RETURN_PENDING", label: "Đang chuyển hoàn" },
-      { key: "RETURNED", label: "Đã hoàn hàng" },
+      { key: "FAILED", label: t("orders_status_delivery_failed") },
+      { key: "RETURN_PENDING", label: t("orders_status_returning") },
+      { key: "RETURNED", label: t("orders_status_returned") },
     ];
 
     const currentIndex = returnStatuses.findIndex(s => s.key === currentStatus);
@@ -231,7 +229,7 @@ const OrderDetailPage = () => {
               {idx < returnStatuses.length - 1 && (
                 <div className={`absolute top-5 left-1/2 w-full h-[3px] ${isActive ? 'bg-pink-500' : 'bg-gray-200'} -z-10 transition-all`}></div>
               )}
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center border-[3px] text-sm transition-all duration-300 ${isActive ? 'bg-pink-500 border-pink-500 text-white shadow-[0_0_15px_rgba(236,72,153,0.3)] scale-110' : 'bg-white border-gray-300 text-gray-400 font-bold'}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center border-[3px] text-sm transition-all duration-300 ${isActive ? 'bg-pink-500 border-pink-500 text-white shadow-[0_0_15px_rgba(236,72,153,0.3)] scale-110' : 'bg-white border-gray-300 text-gray-400 font-bold dark:bg-slate-800 dark:border-slate-600'}`}>
                 {isCompleted ? <CheckCircle size={20} /> : idx + 1}
               </div>
               <p className={`text-[11px] mt-4 font-black uppercase tracking-wider text-center transition-all ${isActive ? 'text-pink-600 translate-y-1' : 'text-gray-400'}`}>
@@ -246,17 +244,17 @@ const OrderDetailPage = () => {
 
   const renderReturnRequestTimeline = (retReq: any) => {
     const steps = [
-      { key: "PENDING", label: "Đang chờ duyệt" },
-      { key: "APPROVED", label: "Yêu cầu được chấp nhận" },
-      { key: "SHIPPING", label: "Chờ lấy hàng" },
-      { key: "COMPLETED", label: "Hoàn tất" }
+      { key: "PENDING", label: t("orders_return_waiting_approval") },
+      { key: "APPROVED", label: t("orders_return_accepted") },
+      { key: "SHIPPING", label: t("orders_return_waiting_pickup") },
+      { key: "COMPLETED", label: t("orders_return_done") }
     ];
 
     let currentIndex = 0;
     if (retReq.status === "PENDING") {
       currentIndex = 0;
     } else if (retReq.status === "REJECTED") {
-      steps[1] = { key: "REJECTED", label: "Bị từ chối (Chờ Admin)" };
+      steps[1] = { key: "REJECTED", label: t("orders_return_rejected_waiting_admin") };
       currentIndex = 1;
     } else if (retReq.status === "APPROVED_BY_SHOP" || retReq.status === "RESOLVED_BY_ADMIN") {
       currentIndex = 2; // shipping / in-transit is next
@@ -285,7 +283,7 @@ const OrderDetailPage = () => {
               {idx < steps.length - 1 && (
                 <div className={`absolute top-5 left-1/2 w-full h-[3px] ${isActive && s.key !== "REJECTED" ? 'bg-pink-500' : 'bg-gray-200'} -z-10 transition-all`}></div>
               )}
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center border-[3px] text-sm transition-all duration-300 ${isActive ? `${stepColor} text-white shadow-[0_0_15px_${shadowColor}] scale-110` : 'bg-white border-gray-300 text-gray-400 font-bold'}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center border-[3px] text-sm transition-all duration-300 ${isActive ? `${stepColor} text-white shadow-[0_0_15px_${shadowColor}] scale-110` : 'bg-white border-gray-300 text-gray-400 font-bold dark:bg-slate-800 dark:border-slate-600'}`}>
                 {isCompleted ? <CheckCircle size={20} /> : idx + 1}
               </div>
               <p className={`text-[11px] mt-4 font-black uppercase tracking-wider text-center transition-all ${isActive ? `${textColor} translate-y-1` : 'text-gray-400'}`}>
@@ -304,43 +302,43 @@ const OrderDetailPage = () => {
   const renderTimeline = (currentStatus: string) => {
     if (!order) return null;
     if (['CANCELLED', 'CANCEL_REQUESTED', 'FAILED', 'RETURN_PENDING', 'RETURNED'].includes(currentStatus)) {
-      let title = "Đơn hàng đã hủy";
-      let desc = "Đơn hàng này đã bị hủy và không thể tiếp tục giao.";
+      let title = t("order_detail_cancelled");
+      let desc = t("order_detail_cancelled_desc");
       let colorClass = "text-red-600";
       let bgClass = "bg-red-50 border-red-200";
       let borderClass = "border-red-500";
       let symbol = "!";
 
       if (currentStatus === 'FAILED') {
-        title = "Giao hàng thất bại";
+        title = t("order_detail_delivery_failed");
         const failedHistory = shipment?.histories?.find(h => h.status === 'FAILED');
-        desc = failedHistory?.note ? `Lý do: ${failedHistory.note}` : "Đơn hàng giao không thành công.";
+        desc = failedHistory?.note ? `${t("order_detail_reason_prefix")} ${failedHistory.note}` : t("order_detail_order_failed");
       } else if (currentStatus === 'RETURN_PENDING') {
         if (order.returnRequests && order.returnRequests.length > 0) {
           const retReq = order.returnRequests[0];
           if (retReq.status === "PENDING") {
-            title = "Chờ duyệt trả hàng";
-            desc = "Yêu cầu trả hàng của bạn đang được người bán xem xét.";
+            title = t("order_detail_return_waiting");
+            desc = t("order_detail_return_waiting_desc");
           } else if (retReq.status === "APPROVED_BY_SHOP") {
-            title = "Người bán đồng ý trả hàng";
-            desc = "Người bán đã duyệt yêu cầu. Đang gán shipper đến thu hồi sản phẩm từ bạn.";
+            title = t("order_detail_return_accepted");
+            desc = t("order_detail_return_accepted_desc");
           } else if (retReq.status === "REJECTED") {
-            title = "Người bán từ chối trả hàng";
-            desc = "Cửa hàng đã từ chối yêu cầu trả hàng của bạn. Hệ thống đã tự động chuyển lên Ban quản trị (Admin) để phân xử.";
+            title = t("order_detail_return_rejected");
+            desc = t("order_detail_return_rejected_desc");
           } else {
-            title = "Đang xử lý trả hàng";
-            desc = "Yêu cầu trả hàng đang được xử lý.";
+            title = t("order_detail_return_processing");
+            desc = t("order_detail_return_processing_desc");
           }
         } else {
-          title = "Đang chuyển hoàn";
-          desc = "Đơn hàng giao thất bại và đang trên đường chuyển hoàn về shop.";
+          title = t("order_detail_returning");
+          desc = t("order_detail_returning_desc");
         }
         colorClass = "text-pink-600";
         bgClass = "bg-pink-50 border-pink-200";
         borderClass = "border-pink-500";
       } else if (currentStatus === 'RETURNED') {
-        title = "Đã hoàn hàng";
-        desc = "Đơn hàng đã hoàn trả về shop thành công.";
+        title = t("order_detail_returned");
+        desc = t("order_detail_returned_desc");
         colorClass = "text-gray-600";
         bgClass = "bg-gray-50 border-gray-200";
         borderClass = "border-gray-500";
@@ -348,12 +346,12 @@ const OrderDetailPage = () => {
 
       return (
         <div className="space-y-6">
-          <div className={`flex flex-col items-center justify-center p-8 rounded-2xl border-2 ${bgClass}`}>
-            <div className={`w-16 h-16 bg-white rounded-full border-4 ${borderClass} flex items-center justify-center mb-4`}>
+          <div className={`flex flex-col items-center justify-center rounded-2xl border-2 p-8 ${bgClass}`}>
+            <div className={`mb-4 flex h-16 w-16 items-center justify-center rounded-full border-4 bg-white dark:bg-slate-800 ${borderClass}`}>
               <span className={`${colorClass} font-black text-2xl`}>{symbol}</span>
             </div>
             <h3 className={`text-xl font-black ${colorClass} uppercase mb-2`}>{title}</h3>
-            <p className="text-sm font-bold text-gray-500">{desc}</p>
+            <p className="text-sm font-bold text-gray-500 dark:text-slate-300">{desc}</p>
           </div>
           {order.returnRequests && order.returnRequests.length > 0 && (
             renderReturnRequestTimeline(order.returnRequests[0])
@@ -376,7 +374,7 @@ const OrderDetailPage = () => {
               {idx < orderStatuses.length - 1 && (
                 <div className={`absolute top-5 left-1/2 w-full h-[3px] ${isActive ? 'bg-primary' : 'bg-gray-200'} -z-10 transition-all`}></div>
               )}
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center border-[3px] text-sm transition-all duration-300 ${isActive ? 'bg-primary border-primary text-white shadow-[0_0_15px_rgba(var(--color-primary),0.3)] scale-110' : 'bg-white border-gray-300 text-gray-400 font-bold'}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center border-[3px] text-sm transition-all duration-300 ${isActive ? 'bg-primary border-primary text-white shadow-[0_0_15px_rgba(var(--color-primary),0.3)] scale-110' : 'bg-white border-gray-300 text-gray-400 font-bold dark:bg-slate-800 dark:border-slate-600'}`}>
                 {isCompleted ? <CheckCircle size={20} /> : idx + 1}
               </div>
               <p className={`text-[11px] mt-4 font-black uppercase tracking-wider text-center transition-all ${isActive ? 'text-black translate-y-1' : 'text-gray-400'}`}>
@@ -406,11 +404,11 @@ const OrderDetailPage = () => {
     return (
       <div className="mt-8 border-t-2 border-gray-100 pt-8">
         <h3 className="text-xl font-black uppercase mb-6 flex items-center gap-2">
-          <MapPin className="text-primary" size={24} /> Hành trình giao hàng
+          <MapPin className="text-primary" size={24} /> {t("order_detail_shipment_journey")}
         </h3>
         
         {shipment.shipper && (
-          <div className="bg-gray-50 p-4 rounded-xl border-2 border-gray-200 mb-6 flex items-center gap-4">
+          <div className="mb-6 flex items-center gap-4 rounded-xl border-2 border-gray-200 bg-gray-50 p-4 dark:border-slate-700 dark:bg-slate-800">
             {shipment.shipper.avatar_url ? (
               <img src={shipment.shipper.avatar_url} alt="Shipper" className="w-12 h-12 rounded-full border-2 border-primary object-cover" />
             ) : (
@@ -419,13 +417,13 @@ const OrderDetailPage = () => {
               </div>
             )}
             <div>
-              <p className="text-sm font-black text-gray-500 uppercase tracking-widest mb-1">Tài xế giao hàng</p>
-              <p className="font-bold">{shipment.shipper.full_name}</p>
-              <p className="text-sm font-medium text-gray-600">{shipment.shipper.phone}</p>
+              <p className="text-sm font-black text-gray-500 uppercase tracking-widest mb-1">{t("order_detail_driver")}</p>
+              <p className="font-bold text-slate-900 dark:text-slate-100">{shipment.shipper.full_name}</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-slate-300">{shipment.shipper.phone}</p>
             </div>
             {shipment.tracking_number && (
               <div className="ml-auto text-right">
-                <p className="text-sm font-black text-gray-500 uppercase tracking-widest mb-1">Mã vận đơn</p>
+                <p className="text-sm font-black text-gray-500 uppercase tracking-widest mb-1">{t("order_detail_tracking")}</p>
                 <p className="font-bold text-primary">{shipment.tracking_number}</p>
               </div>
             )}
@@ -439,19 +437,19 @@ const OrderDetailPage = () => {
               <div key={h.id} className="relative flex gap-4">
                 <div className={`absolute -left-6 top-1 w-6 h-6 rounded-full border-4 border-white ${idx === 0 ? 'bg-primary shadow-[0_0_10px_rgba(var(--color-primary),0.5)]' : 'bg-gray-300'}`}></div>
                 <div className="flex-1">
-                  <p className={`font-bold ${idx === 0 ? 'text-black' : 'text-gray-500'}`}>
-                    {getShipmentStatusLabel(h.status)}
+                  <p className={`font-bold ${idx === 0 ? 'text-black dark:text-slate-100' : 'text-gray-500 dark:text-slate-400'}`}>
+                    {getShipmentStatusLabel(h.status, language)}
                   </p>
                   {h.location && (
-                    <p className="text-sm font-medium text-gray-600 mt-1 flex items-center gap-1">
+                    <p className="mt-1 flex items-center gap-1 text-sm font-medium text-gray-600 dark:text-slate-300">
                       <MapPin size={14} /> {h.location}
                     </p>
                   )}
                   {h.note && (
-                    <p className="text-sm text-gray-500 mt-1">{h.note}</p>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">{h.note}</p>
                   )}
                   {h.proof_image_url && (
-                    <img src={h.proof_image_url} alt="Proof" className="mt-3 rounded-lg border border-gray-200 max-w-[200px] h-auto object-cover" />
+                    <img src={h.proof_image_url} alt={t("order_detail_cover_proof")} className="mt-3 h-auto max-w-[200px] rounded-lg border border-gray-200 object-cover dark:border-slate-700" />
                   )}
                   <p className="text-xs font-bold text-gray-400 mt-2">
                     {new Date(h.created_at).toLocaleString(locale)}
@@ -467,7 +465,7 @@ const OrderDetailPage = () => {
 
   if (isLoading || isShipmentLoading) {
     return (
-      <div className="min-h-screen bg-[#F4F4F0] flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-[#F4F4F0] dark:bg-slate-950">
         <Loader2 className="animate-spin text-primary" size={48} />
       </div>
     );
@@ -475,15 +473,15 @@ const OrderDetailPage = () => {
 
   if (isError || !order) {
     return (
-      <div className="min-h-screen bg-[#F4F4F0] pt-24 pb-32 px-6 flex flex-col items-center justify-center">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-[#F4F4F0] px-6 pt-24 pb-32 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
         <h1 className="text-3xl font-black uppercase mb-4">
-          Không tìm thấy đơn hàng
+          {t("order_detail_not_found")}
         </h1>
         <Link
           to="/orders"
           className="text-primary hover:underline font-bold uppercase text-sm"
         >
-          Quay lại danh sách
+          {t("order_detail_back_list")}
         </Link>
       </div>
     );
@@ -500,27 +498,27 @@ const OrderDetailPage = () => {
   })();
 
   return (
-    <div className="min-h-screen bg-[#F4F4F0] pt-24 pb-32 px-6">
+    <div className="min-h-screen bg-[#F4F4F0] px-6 pt-24 pb-32 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div className="max-w-5xl mx-auto">
         <div className="mb-8 flex items-center justify-between">
           <Link
             to="/orders"
-            className="flex items-center gap-2 text-sm font-black uppercase tracking-widest hover:text-primary transition-all bg-white px-5 py-3 rounded-xl border-2 border-black/10 hover:border-black shadow-sm group"
+            className="flex items-center gap-2 rounded-xl border-2 border-black/10 bg-white px-5 py-3 text-sm font-black uppercase tracking-widest shadow-sm transition-all group hover:border-black hover:text-primary dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-500"
           >
             <ChevronLeft
               size={20}
               className="group-hover:-translate-x-1 transition-transform"
             />{" "}
-            Quay lại lịch sử
+            {t("order_detail_back_history")}
           </Link>
         </div>
 
-        <div className="bg-white border-2 border-black rounded-[2.5rem] overflow-hidden shadow-sm">
+        <div className="overflow-hidden rounded-[2.5rem] border-2 border-black bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
           {/* Header */}
-          <div className="bg-gray-50 border-b-2 border-black/5 p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div className="flex flex-col items-start justify-between gap-6 border-b-2 border-black/5 bg-gray-50 p-8 dark:border-slate-700 dark:bg-slate-800 md:flex-row md:items-center">
             <div>
               <h1 className="text-3xl font-serif font-black tracking-tighter uppercase mb-4 flex items-center gap-3">
-                <Package className="text-primary" size={32} /> Chi tiết đơn hàng
+                <Package className="text-primary" size={32} /> {t("order_detail_title")}
               </h1>
               <div className="flex items-center gap-6 flex-wrap">
                 <div className="flex items-center gap-2 border-r-2 border-gray-200 pr-6">
@@ -529,25 +527,25 @@ const OrderDetailPage = () => {
                     <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5 mb-1">
                       Shop
                     </span>
-                    <span className="font-black text-sm text-black uppercase">
+                    <span className="font-black text-sm uppercase text-black dark:text-slate-100">
                       {order.shop?.shop_name || order.shop?.name || "MeeMart Mall"}
                     </span>
                   </div>
                 </div>
                 <div className="flex flex-col hidden md:flex">
                   <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5 mb-1">
-                    <Hash size={12} /> Mã đơn hàng
+                    <Hash size={12} /> {t("order_detail_code")}
                   </span>
-                  <span className="font-mono font-black text-sm text-black">
+                  <span className="font-mono text-sm font-black text-black dark:text-slate-100">
                     {order.shop_order_code || order.order_code}
                   </span>
                 </div>
                 <div className="w-[2px] h-8 bg-gray-200 hidden md:block"></div>
                 <div className="flex flex-col">
                   <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1.5 mb-1">
-                    <Calendar size={12} /> Ngày đặt
+                    <Calendar size={12} /> {t("order_detail_date")}
                   </span>
-                  <span className="font-bold text-sm text-black">
+                  <span className="text-sm font-bold text-black dark:text-slate-100">
                     {new Date(order.created_at).toLocaleString(locale)}
                   </span>
                 </div>
@@ -556,7 +554,7 @@ const OrderDetailPage = () => {
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
               <div className={`px-6 py-3 rounded-full border-2 font-black text-xs uppercase tracking-widest shadow-subtle ${getStatusColor(displayStatus as OrderStatus)}`}>
-                {getOrderStatusLabel(displayStatus as OrderStatus)}
+                {getOrderStatusLabel(displayStatus as OrderStatus, language)}
               </div>
               
               <div className="flex flex-row flex-wrap items-center gap-3">
@@ -566,31 +564,31 @@ const OrderDetailPage = () => {
                     disabled={isConfirming}
                     className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-black text-xs uppercase tracking-widest rounded-full border-2 border-black shadow-subtle hover:shadow-none transition-all active:translate-y-[2px]"
                   >
-                    {isConfirming ? 'Đang xử lý...' : 'Đã nhận hàng'}
+                    {isConfirming ? t("orders_processing") : t("orders_received")}
                   </button>
                 )}
                 {canReturn && (
                   order.returnRequests && order.returnRequests.length > 0 ? (
                     <div className="flex flex-col items-start sm:items-end gap-1">
-                      <span className="text-xs font-black text-red-500 uppercase tracking-widest bg-red-50 px-3 py-2 rounded-full border border-red-100">
+                      <span className="rounded-full border border-red-100 bg-red-50 px-3 py-2 text-xs font-black uppercase tracking-widest text-red-500 dark:border-red-900 dark:bg-red-950/30">
                         {order.returnRequests[0].status === "PENDING"
-                          ? "Đã gửi yêu cầu trả hàng"
+                          ? t("order_detail_return_sent")
                           : order.returnRequests[0].status === "APPROVED_BY_SHOP"
-                            ? "Shop đã duyệt trả hàng"
+                            ? t("order_detail_return_approved_waiting")
                             : order.returnRequests[0].status === "REJECTED"
-                              ? "Yêu cầu bị từ chối (Chờ Admin)"
+                              ? t("order_detail_return_rejected_waiting")
                               : order.returnRequests[0].status === "RESOLVED_BY_ADMIN"
-                                ? "Từ chối (Hệ thống đã phân xử)"
-                                : "Hoàn thành trả hàng"}
+                                ? t("order_detail_return_admin_resolved")
+                                : t("order_detail_return_complete")}
                       </span>
                       {order.returnRequests[0].status === "REJECTED" && (
                         <span className="text-[10px] font-bold text-red-600 max-w-[250px] text-right leading-tight block">
-                          Lý do Shop từ chối: {order.returnRequests[0].resolve_note || "Không có lý do"}
+                          {t("order_detail_return_reject")} {order.returnRequests[0].resolve_note || t("order_detail_unknown_reason")}
                         </span>
                       )}
                       {order.returnRequests[0].status === "RESOLVED_BY_ADMIN" && (
                         <span className="text-[10px] font-bold text-gray-500 max-w-[250px] text-right leading-tight block">
-                          Đã bị từ chối và không thể yêu cầu lại. Lý do: {order.returnRequests[0].resolve_note || "Không hợp lệ"}
+                          {t("order_detail_return_admin_conclusion")} {order.returnRequests[0].resolve_note || t("order_detail_dispute_closed")}
                         </span>
                       )}
                     </div>
@@ -599,7 +597,7 @@ const OrderDetailPage = () => {
                       onClick={() => setReturnModalOpen(true)}
                       className="px-6 py-3 bg-white text-red-600 border-2 border-red-200 rounded-full font-black text-xs uppercase tracking-widest hover:bg-red-50 hover:border-red-300 transition-all shadow-subtle hover:shadow-none active:translate-y-[2px]"
                     >
-                      Trả hàng / Hoàn tiền
+                      {t("orders_return_refund")}
                     </button>
                   )
                 )}
@@ -607,28 +605,28 @@ const OrderDetailPage = () => {
             </div>
           </div>
 
-          <div className="p-8 border-b-2 border-black/5">
+          <div className="border-b-2 border-black/5 p-8 dark:border-slate-700">
             {renderTimeline(displayStatus || '')}
             {renderShipmentHistory()}
           </div>
 
-          <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8 bg-gray-50/30 border-b-2 border-black/5">
+          <div className="grid grid-cols-1 gap-8 border-b-2 border-black/5 bg-gray-50/30 p-8 dark:border-slate-700 dark:bg-slate-800/50 md:grid-cols-2">
             <div className="space-y-6">
               <h3 className="text-lg font-black uppercase tracking-tighter flex items-center gap-2 border-b-2 border-black/10 pb-3">
-                <MapPin className="text-primary" /> Thông tin nhận hàng
+                <MapPin className="text-primary" /> {t("order_detail_shipping_info")}
               </h3>
-              <div className="bg-white p-6 rounded-2xl border-2 border-black/5 shadow-sm">
-                <p className="text-sm font-medium text-gray-600 leading-relaxed">
+              <div className="rounded-2xl border-2 border-black/5 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                <p className="text-sm font-medium leading-relaxed text-gray-600 dark:text-slate-300">
                   {order.parentOrder?.shipping_address ||
                     order.shipping_address ||
-                    "Chưa có thông tin nhận hàng"}
+                    t("order_detail_no_shipping_info")}
                 </p>
                 {order.parentOrder?.note && (
                   <div className="mt-4 pt-4 border-t border-dashed border-gray-200">
                     <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">
-                      Ghi chú
+                      {t("order_detail_note")}
                     </p>
-                    <p className="text-sm font-medium italic text-gray-600">
+                    <p className="text-sm font-medium italic text-gray-600 dark:text-slate-300">
                       {order.parentOrder.note}
                     </p>
                   </div>
@@ -638,24 +636,24 @@ const OrderDetailPage = () => {
 
             <div className="space-y-6">
               <h3 className="text-lg font-black uppercase tracking-tighter flex items-center gap-2 border-b-2 border-black/10 pb-3">
-                <CreditCard className="text-primary" /> Thanh toán
+                <CreditCard className="text-primary" /> {t("order_detail_payment")}
               </h3>
-              <div className="bg-white p-6 rounded-2xl border-2 border-black/5 shadow-sm space-y-4">
+              <div className="space-y-4 rounded-2xl border-2 border-black/5 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
                 <div className="flex justify-between items-center pb-4 border-b border-dashed border-gray-200">
                   <span className="text-xs font-black uppercase text-gray-500">
-                    Phương thức
+                    {t("order_detail_payment_method")}
                   </span>
                   <span className="text-sm font-black uppercase">
                     {(order.parentOrder?.payment_method ||
                       order.payment_method) === "COD"
-                      ? "Thanh toán khi nhận hàng"
+                      ? t("order_detail_payment_cod_label")
                       : order.parentOrder?.payment_method ||
                         order.payment_method}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-black uppercase text-gray-500">
-                    Trạng thái
+                    {t("order_detail_payment_status")}
                   </span>
                   <span
                     className={`px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest ${
@@ -669,8 +667,8 @@ const OrderDetailPage = () => {
                     {(order.parentOrder?.payment_status || order.payment_status) === "PAID" ||
                     ((order.parentOrder?.payment_method || order.payment_method) === "COD" &&
                       ["DELIVERED", "COMPLETED"].includes(order.status))
-                      ? "Đã thanh toán"
-                      : "Chưa thanh toán"}
+                      ? t("order_detail_paid")
+                      : t("order_detail_unpaid")}
                   </span>
                 </div>
                 {(order.parentOrder?.payment_method || order.payment_method) ===
@@ -698,7 +696,7 @@ const OrderDetailPage = () => {
 
           <div className="p-8">
             <h3 className="text-lg font-black uppercase tracking-tighter flex items-center gap-2 mb-6">
-              <Package className="text-primary" /> Danh sách sản phẩm
+              <Package className="text-primary" /> {t("order_detail_products")}
             </h3>
 
             <div className="space-y-4">
@@ -727,14 +725,14 @@ const OrderDetailPage = () => {
                 return (
                   <div
                     key={idx}
-                    className="flex gap-6 items-center p-4 bg-gray-50 rounded-2xl border-2 border-black/5 hover:border-black/20 transition-colors"
+                    className="flex items-center gap-6 rounded-2xl border-2 border-black/5 bg-gray-50 p-4 transition-colors hover:border-black/20 dark:border-slate-700 dark:bg-slate-800"
                   >
                     <div
                       onClick={() =>
                         navigateProductId &&
                         navigate(`/products/${navigateProductId}`)
                       }
-                      className="w-20 h-24 bg-white rounded-xl overflow-hidden border border-black/10 flex-shrink-0 cursor-pointer hover:border-primary transition-colors"
+                      className="h-24 w-20 flex-shrink-0 cursor-pointer overflow-hidden rounded-xl border border-black/10 bg-white transition-colors hover:border-primary dark:border-slate-700 dark:bg-slate-900"
                     >
                       <img
                         src={imageUrl}
@@ -754,15 +752,15 @@ const OrderDetailPage = () => {
                       </p>
                       <p className="text-xs font-bold text-gray-400 mt-1">
                         {color || size
-                          ? `Phân loại: ${size || ""} ${color ? `/ ${color}` : ""}`
-                          : "Mặc định"}
+                          ? `${t("order_detail_variant_label")} ${size || ""} ${color ? `/ ${color}` : ""}`
+                          : t("order_detail_default_variant")}
                       </p>
                       <div className="flex justify-between items-center mt-3">
                         <div className="flex items-center gap-3">
                           <p className="text-sm font-black text-primary">
                             {Number(item.unit_price).toLocaleString()}₫
                           </p>
-                          <p className="text-xs font-black text-gray-500 bg-white px-3 py-1 rounded-full border border-black/10 shadow-sm">
+                          <p className="rounded-full border border-black/10 bg-white px-3 py-1 text-xs font-black text-gray-500 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
                             x{item.quantity}
                           </p>
                         </div>
@@ -786,8 +784,8 @@ const OrderDetailPage = () => {
                                   className="fill-yellow-400 text-yellow-400"
                                 />{" "}
                                 {existingReview
-                                  ? "Xem lại đánh giá"
-                                  : "Đánh giá"}
+                                  ? t("order_detail_review_again")
+                                  : t("order_detail_review")}
                               </button>
                             );
                           })()}
@@ -805,28 +803,28 @@ const OrderDetailPage = () => {
               <DollarSign size={32} className="text-primary" />
               <div className="text-left">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">
-                  Cảm ơn bạn đã mua hàng
+                  {t("order_detail_thanks")}
                 </p>
-                <p className="text-sm font-bold">Hy vọng bạn thích sản phẩm!</p>
+                <p className="text-sm font-bold">{t("order_detail_hope_enjoy")}</p>
               </div>
             </div>
 
             <div className="w-full sm:w-80 space-y-4">
               <div className="flex justify-between text-sm font-bold text-gray-400">
-                <span>Tạm tính</span>
+                <span>{t("order_detail_subtotal")}</span>
                 <span className="text-white">
                   {Number(order.subtotal || 0).toLocaleString()}₫
                 </span>
               </div>
               <div className="flex justify-between text-sm font-bold text-gray-400">
-                <span>Phí vận chuyển</span>
+                <span>{t("order_detail_shipping_fee")}</span>
                 <span className="text-white">
                   {Number(order.shipping_fee).toLocaleString()}₫
                 </span>
               </div>
               {Number(order.discount_amount) > 0 && (
                 <div className="flex justify-between text-sm font-bold text-gray-400">
-                  <span>Giảm giá</span>
+                  <span>{t("order_detail_discount")}</span>
                   <span className="text-red-400">
                     -{Number(order.discount_amount).toLocaleString()}₫
                   </span>
@@ -834,20 +832,20 @@ const OrderDetailPage = () => {
               )}
               {Number(order.points_used) > 0 && (
                 <div className="flex justify-between text-sm font-bold text-gray-400">
-                  <span>Điểm đã dùng</span>
+                  <span>{t("order_detail_points_used")}</span>
                   <span className="text-red-400">
                     -
                     {(
                       Number(order.points_used) *
                       (systemSettings?.redeemRate || 100)
                     ).toLocaleString()}
-                    ₫ ({order.points_used} điểm)
+                    ₫ ({order.points_used} {t("order_detail_points_unit")})
                   </span>
                 </div>
               )}
               <div className="flex justify-between items-end pt-4 border-t border-white/20">
                 <span className="text-sm font-black uppercase tracking-widest">
-                  Tổng cộng
+                  {t("order_detail_total")}
                 </span>
                 <span className="text-4xl font-black text-primary tracking-tighter">
                   {Number(
@@ -858,9 +856,9 @@ const OrderDetailPage = () => {
               </div>
               {Number(order.points_earned) > 0 && (
                 <div className="flex justify-between text-xs font-bold text-gray-400 mt-2">
-                  <span>Điểm thưởng nhận được</span>
+                  <span>{t("order_detail_points_earned")}</span>
                   <span className="text-green-400">
-                    +{order.points_earned} điểm
+                    +{order.points_earned} {t("order_detail_points_unit")}
                   </span>
                 </div>
               )}
@@ -868,28 +866,28 @@ const OrderDetailPage = () => {
           </div>
           {/* Action Buttons */}
           {order.status === "DELIVERED" ? (
-            <div className="p-8 bg-white border-t-2 border-black/5 flex justify-end gap-3">
+            <div className="flex justify-end gap-3 border-t-2 border-black/5 bg-white p-8 dark:border-slate-700 dark:bg-slate-900">
               {order.returnRequests && order.returnRequests.length > 0 ? (
                 <div className="flex flex-col items-end gap-2">
-                  <span className="text-xs font-black text-red-500 uppercase tracking-widest bg-red-50 px-5 py-3 rounded-xl border border-red-100">
+                  <span className="rounded-xl border border-red-100 bg-red-50 px-5 py-3 text-xs font-black uppercase tracking-widest text-red-500 dark:border-red-900 dark:bg-red-950/30">
                     {order.returnRequests[0].status === "PENDING"
-                      ? "Đã gửi yêu cầu trả hàng"
+                      ? t("order_detail_return_sent")
                       : order.returnRequests[0].status === "APPROVED_BY_SHOP"
-                        ? "Đã duyệt trả hàng (Chờ Shipper)"
+                        ? t("order_detail_return_approved_waiting")
                         : order.returnRequests[0].status === "REJECTED"
-                          ? "Yêu cầu bị từ chối (Chờ Admin)"
+                          ? t("order_detail_return_rejected_waiting")
                           : order.returnRequests[0].status === "RESOLVED_BY_ADMIN"
-                            ? "Admin đã xử lý tranh chấp"
-                            : "Hoàn tất hoàn trả"}
+                            ? t("order_detail_return_admin_resolved")
+                            : t("order_detail_return_complete")}
                   </span>
                   {order.returnRequests[0].status === "REJECTED" && (
-                    <span className="text-xs text-red-500 font-bold max-w-[400px] text-right">
-                      Lý do từ chối: {order.returnRequests[0].resolve_note || "Không rõ"}
+                    <span className="max-w-[400px] text-right text-xs font-bold text-red-500">
+                      {t("order_detail_return_reason")} {order.returnRequests[0].resolve_note || t("order_detail_unknown_reason")}
                     </span>
                   )}
                   {order.returnRequests[0].status === "RESOLVED_BY_ADMIN" && (
-                    <span className="text-xs text-gray-500 font-bold max-w-[400px] text-right">
-                      Kết luận của Admin: {order.returnRequests[0].resolve_note || "Đã đóng tranh chấp"}
+                    <span className="max-w-[400px] text-right text-xs font-bold text-gray-500">
+                      {t("order_detail_return_admin_conclusion")} {order.returnRequests[0].resolve_note || t("order_detail_dispute_closed")}
                     </span>
                   )}
                 </div>
@@ -897,28 +895,28 @@ const OrderDetailPage = () => {
                 <>
                   <button
                     onClick={() => setReturnModalOpen(true)}
-                    className="px-6 py-3 bg-white text-red-600 border-2 border-red-200 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-red-50 hover:border-red-300 transition-all shadow-subtle hover:shadow-none active:translate-y-[2px]"
+                    className="rounded-xl border-2 border-red-200 bg-white px-6 py-3 text-xs font-black uppercase tracking-widest text-red-600 shadow-subtle transition-all hover:border-red-300 hover:bg-red-50 hover:shadow-none active:translate-y-[2px] dark:border-red-900 dark:bg-slate-900 dark:hover:bg-red-950/30"
                   >
-                    Trả hàng / Hoàn tiền
+                    {t("orders_return_refund")}
                   </button>
                   <button
                     onClick={handleConfirmReceipt}
                     disabled={isConfirming}
                     className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-black text-xs uppercase tracking-widest rounded-xl border-2 border-black shadow-subtle hover:shadow-none transition-all active:translate-y-[2px]"
                   >
-                    {isConfirming ? 'Đang xử lý...' : 'Đã nhận hàng'}
+                    {isConfirming ? t("orders_processing") : t("orders_received")}
                   </button>
                 </>
               )}
             </div>
           ) : (order.status === "CANCELLED" || order.status === "CANCEL_REQUESTED") ? (
-            <div className="p-8 bg-white border-t-2 border-black/5 flex justify-end">
+            <div className="flex justify-end border-t-2 border-black/5 bg-white p-8 dark:border-slate-700 dark:bg-slate-900">
               <button
                 onClick={() => handleRepurchase(order.items || [])}
                 disabled={addToCartMutation.isPending}
                 className="flex items-center gap-2 px-8 py-4 bg-primary text-white border-2 border-primary rounded-xl font-black text-sm uppercase tracking-widest hover:bg-black hover:border-black transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 active:translate-y-1 disabled:opacity-50"
               >
-                Mua lại đơn hàng này
+                {t("orders_repurchase")}
               </button>
             </div>
           ) : null}
@@ -935,21 +933,21 @@ const OrderDetailPage = () => {
       {/* Review Modal */}
       {reviewModalOpen && selectedProductToReview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white border-2 border-black rounded-[2rem] w-full max-w-md p-6 relative animate-in fade-in zoom-in duration-200">
+          <div className="relative w-full max-w-md animate-in fade-in zoom-in rounded-[2rem] border-2 border-black bg-white p-6 duration-200 dark:border-slate-700 dark:bg-slate-900">
             <button
               onClick={() => setReviewModalOpen(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-black hover:rotate-90 transition-all"
+              className="absolute top-4 right-4 text-gray-400 transition-all hover:rotate-90 hover:text-black dark:hover:text-white"
             >
               <X size={24} />
             </button>
             <h2 className="text-2xl font-black uppercase tracking-tighter mb-2">
-              Đánh giá sản phẩm
+              {t("order_detail_review_title")}
             </h2>
             <p className="text-sm text-gray-500 mb-6 font-medium">
-              Chia sẻ trải nghiệm của bạn và nhận 100 điểm thưởng!
+              {t("order_detail_review_desc")}
             </p>
 
-            <div className="flex items-center gap-4 mb-6 p-4 bg-gray-50 rounded-2xl border-2 border-black/5">
+            <div className="mb-6 flex items-center gap-4 rounded-2xl border-2 border-black/5 bg-gray-50 p-4 dark:border-slate-700 dark:bg-slate-800">
               {(() => {
                 const product =
                   selectedProductToReview.variant?.product ||
@@ -975,7 +973,7 @@ const OrderDetailPage = () => {
                     <img
                       src={finalImgUrl}
                       alt="Product"
-                      className="w-16 h-16 rounded-xl object-cover border border-black/10 bg-white"
+                      className="h-16 w-16 rounded-xl border border-black/10 bg-white object-cover dark:border-slate-700 dark:bg-slate-900"
                     />
                     <div>
                       <p className="font-black text-sm uppercase leading-tight line-clamp-2 mb-1">
@@ -983,8 +981,8 @@ const OrderDetailPage = () => {
                       </p>
                       <p className="text-xs text-gray-500 font-bold">
                         {color || size
-                          ? `Phân loại: ${size || ""} ${color ? `/ ${color}` : ""}`
-                          : "Mặc định"}
+                          ? `${t("order_detail_variant_label")} ${size || ""} ${color ? `/ ${color}` : ""}`
+                          : t("order_detail_default_variant")}
                       </p>
                     </div>
                   </>
@@ -995,7 +993,7 @@ const OrderDetailPage = () => {
             <form onSubmit={handleSubmitReview} className="space-y-6">
               <div>
                 <label className="block text-xs font-black uppercase tracking-widest text-gray-500 mb-3 text-center">
-                  Chất lượng sản phẩm
+                  {t("order_detail_review_quality")}
                 </label>
                 <div className="flex justify-center gap-2">
                   {[1, 2, 3, 4, 5].map((star) => (
@@ -1016,7 +1014,7 @@ const OrderDetailPage = () => {
 
               <div>
                 <label className="block text-xs font-black uppercase tracking-widest text-gray-500 mb-2">
-                  Đánh giá chi tiết
+                  {t("order_detail_review_details")}
                 </label>
                 <div className="flex flex-wrap gap-2 mb-3">
                   {reviewSuggestions.map((suggestion, idx) => (
@@ -1024,15 +1022,15 @@ const OrderDetailPage = () => {
                       key={idx}
                       type="button"
                       onClick={() => handleSuggestionClick(suggestion)}
-                      className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-full transition-colors border border-gray-200 active:scale-95"
+                      className="rounded-full border border-gray-200 bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-200 active:scale-95 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                     >
                       + {suggestion}
                     </button>
                   ))}
                 </div>
                 <textarea
-                  className="w-full h-32 border-2 border-black/20 focus:border-black rounded-xl p-4 font-medium outline-none transition-all resize-none"
-                  placeholder="Hãy chia sẻ cảm nhận của bạn về sản phẩm nhé..."
+                  className="h-32 w-full resize-none rounded-xl border-2 border-black/20 p-4 font-medium outline-none transition-all focus:border-black dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-slate-400"
+                  placeholder={t("order_detail_review_placeholder")}
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                   required
@@ -1049,10 +1047,10 @@ const OrderDetailPage = () => {
               >
                 {createReviewMutation.isPending ||
                 updateReviewMutation.isPending
-                  ? "Đang gửi..."
+                  ? t("order_detail_sending")
                   : isUpdatingReview
-                    ? "Cập nhật đánh giá"
-                    : "Gửi đánh giá"}
+                    ? t("order_detail_update_review")
+                    : t("order_detail_submit_review")}
               </button>
             </form>
           </div>

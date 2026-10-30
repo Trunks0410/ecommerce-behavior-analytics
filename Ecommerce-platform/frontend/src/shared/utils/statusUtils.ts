@@ -1,5 +1,26 @@
-export const getOrderStatusLabel = (status: string | undefined): string => {
+export const getOrderStatusLabel = (
+  status: string | undefined,
+  language: "vi" | "en" = "vi",
+): string => {
   if (!status) return "";
+  if (language === "en") {
+    const labels: Record<string, string> = {
+      PENDING: "Pending confirmation",
+      CONFIRMED: "Confirmed",
+      PREPARING: "Preparing",
+      READY_FOR_PICKUP: "Ready for pickup",
+      SHIPPING: "Out for delivery",
+      DELIVERING: "Out for delivery",
+      DELIVERED: "Delivered",
+      COMPLETED: "Completed",
+      CANCEL_REQUESTED: "Cancellation requested",
+      CANCELLED: "Cancelled",
+      FAILED: "Delivery failed",
+      RETURN_PENDING: "Returning",
+      RETURNED: "Returned",
+    };
+    return labels[status] || status;
+  }
   const labels: Record<string, string> = {
     PENDING: "Chờ xác nhận",
     CONFIRMED: "Đã xác nhận",
@@ -18,8 +39,25 @@ export const getOrderStatusLabel = (status: string | undefined): string => {
   return labels[status] || status;
 };
 
-export const getShipmentStatusLabel = (status: string | undefined): string => {
+export const getShipmentStatusLabel = (
+  status: string | undefined,
+  language: "vi" | "en" = "vi",
+): string => {
   if (!status) return '';
+  if (language === "en") {
+    const labels: Record<string, string> = {
+      PENDING_PICKUP: "Awaiting pickup",
+      PICKED_UP: "Picked up",
+      IN_TRANSIT: "In transit",
+      OUT_FOR_DELIVERY: "Out for delivery",
+      DELIVERED: "Delivered",
+      FAILED: "Delivery failed",
+      RETURN_PENDING: "Awaiting return",
+      RETURNED: "Returned",
+      CANCELLED: "Cancelled",
+    };
+    return labels[status] || status;
+  }
   const labels: Record<string, string> = {
     'PENDING_PICKUP': 'Chờ shipper nhận',
     'PICKED_UP': 'Đã lấy hàng',

@@ -30,9 +30,11 @@ import { ReturnOrderModal } from "@/shared/components/modals/ReturnOrderModal";
 import { useQueryClient } from "@tanstack/react-query";
 import orderService from "@/services/orderService";
 import { OrderStatus } from "@/shared/types/order.types";
+import { useLanguage } from "@/shared/context/LanguageContext";
 
 const OrderHistoryPage = () => {
   const navigate = useNavigate();
+  const { language, t } = useLanguage();
   const [activeTab, setActiveTab] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentTime, setCurrentTime] = useState(Date.now());
@@ -65,14 +67,14 @@ const OrderHistoryPage = () => {
   };
 
   const cancelledSuggestions = [
-    "Muốn thay đổi địa chỉ giao hàng",
-    "Muốn thay đổi sản phẩm (màu sắc, kích thước...)",
-    "Thay đổi ý định không muốn mua nữa",
-    "Nhập sai thông tin (số điện thoại, email, địa chỉ...)",
-    "Phát sinh việc đột xuất",
-    "Giá cao",
-    "Không hài lòng với sản phẩm/dịch vụ",
-    "Lý do khác",
+    t("orders_cancel_reason_address"),
+    t("orders_cancel_reason_product"),
+    t("orders_cancel_reason_changed_mind"),
+    t("orders_cancel_reason_wrong_info"),
+    t("orders_cancel_reason_unexpected"),
+    t("orders_cancel_reason_price"),
+    t("orders_cancel_reason_quality"),
+    t("orders_cancel_reason_other"),
   ];
 
   const { data: orderResponse, isLoading } = useMyOrders(getStatusQuery());
@@ -118,15 +120,15 @@ const OrderHistoryPage = () => {
   };
 
   const handleConfirmReceipt = async (orderId: number) => {
-    if (!window.confirm("Bạn xác nhận đã nhận đầy đủ hàng và muốn hoàn tất đơn hàng?")) return;
+    if (!window.confirm(t("orders_confirm_receipt"))) return;
     setIsConfirming(orderId);
     try {
       await orderService.updateOrderStatus(orderId, 'COMPLETED');
-      alert("Xác nhận nhận hàng và hoàn tất đơn hàng thành công!");
+      alert(t("orders_receipt_success"));
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["orderCounts"] });
     } catch (error: any) {
-      alert("Lỗi: " + (error.response?.data?.message || error.message));
+      alert(`${t("error_label")}: ${error.response?.data?.message || error.message}`);
     } finally {
       setIsConfirming(null);
     }
@@ -141,7 +143,7 @@ const OrderHistoryPage = () => {
   const submitCancelOrder = () => {
     if (!orderToCancel) return;
     if (!cancelReason.trim()) {
-      alert("Vui lòng nhập lý do hủy đơn");
+      alert(t("orders_cancel_reason_required"));
       return;
     }
     cancelOrderMutation.mutate(
@@ -164,7 +166,7 @@ const OrderHistoryPage = () => {
       },
       onError: (error: any) => {
         alert(
-          error.response?.data?.message || "Không thể tạo lại thanh toán VNPay",
+          error.response?.data?.message || t("orders_payment_retry_error"),
         );
       },
     });
@@ -187,23 +189,23 @@ const OrderHistoryPage = () => {
       await Promise.all(promises);
       navigate("/cart");
     } catch (error) {
-      alert("Có lỗi xảy ra khi thêm vào giỏ hàng");
+      alert(t("orders_add_cart_error"));
     }
   };
 
   const orderStatuses = [
-    { key: "PENDING", label: "Đơn mới" },
-    { key: "CONFIRMED", label: "Đã xác nhận" },
-    { key: "PREPARING", label: "Chuẩn bị hàng" },
-    { key: "SHIPPING", label: "Đang giao" },
-    { key: "COMPLETED", label: "Hoàn thành" },
+    { key: "PENDING", label: t("orders_status_new") },
+    { key: "CONFIRMED", label: t("orders_tab_confirmed") },
+    { key: "PREPARING", label: t("orders_status_preparing_goods") },
+    { key: "SHIPPING", label: t("orders_status_shipping") },
+    { key: "COMPLETED", label: t("orders_tab_completed") },
   ];
 
   const renderReturnTimeline = (currentStatus: string) => {
     const returnStatuses = [
-      { key: "FAILED", label: "Giao thất bại" },
-      { key: "RETURN_PENDING", label: "Đang chuyển hoàn" },
-      { key: "RETURNED", label: "Đã hoàn hàng" },
+      { key: "FAILED", label: t("orders_status_delivery_failed") },
+      { key: "RETURN_PENDING", label: t("orders_status_returning") },
+      { key: "RETURNED", label: t("orders_status_returned") },
     ];
 
     const currentIndex = returnStatuses.findIndex(s => s.key === currentStatus);
@@ -220,7 +222,7 @@ const OrderHistoryPage = () => {
               {idx < returnStatuses.length - 1 && (
                 <div className={`absolute top-5 left-1/2 w-full h-[3px] ${isActive ? 'bg-pink-500' : 'bg-gray-200'} -z-10 transition-all`}></div>
               )}
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center border-[3px] text-sm transition-all duration-300 ${isActive ? 'bg-pink-500 border-pink-500 text-white shadow-[0_0_15px_rgba(236,72,153,0.3)] scale-110' : 'bg-white border-gray-300 text-gray-400 font-bold'}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center border-[3px] text-sm transition-all duration-300 ${isActive ? 'bg-pink-500 border-pink-500 text-white shadow-[0_0_15px_rgba(236,72,153,0.3)] scale-110' : 'bg-white border-gray-300 text-gray-400 font-bold dark:bg-slate-800 dark:border-slate-600'}`}>
                 {isCompleted ? <CheckCircle size={20} /> : idx + 1}
               </div>
               <p className={`text-[11px] mt-4 font-black uppercase tracking-wider text-center transition-all ${isActive ? 'text-pink-600 translate-y-1' : 'text-gray-400'}`}>
@@ -235,17 +237,17 @@ const OrderHistoryPage = () => {
 
   const renderReturnRequestTimeline = (retReq: any) => {
     const steps = [
-      { key: "PENDING", label: "Đang chờ duyệt" },
-      { key: "APPROVED", label: "Yêu cầu được chấp nhận" },
-      { key: "SHIPPING", label: "Chờ lấy hàng" },
-      { key: "COMPLETED", label: "Hoàn tất" }
+      { key: "PENDING", label: t("orders_return_waiting_approval") },
+      { key: "APPROVED", label: t("orders_return_accepted") },
+      { key: "SHIPPING", label: t("orders_return_waiting_pickup") },
+      { key: "COMPLETED", label: t("orders_return_done") }
     ];
 
     let currentIndex = 0;
     if (retReq.status === "PENDING") {
       currentIndex = 0;
     } else if (retReq.status === "REJECTED") {
-      steps[1] = { key: "REJECTED", label: "Bị từ chối (Chờ Admin)" };
+      steps[1] = { key: "REJECTED", label: t("orders_return_rejected_waiting_admin") };
       currentIndex = 1;
     } else if (retReq.status === "APPROVED_BY_SHOP" || retReq.status === "RESOLVED_BY_ADMIN") {
       currentIndex = 2;
@@ -341,37 +343,37 @@ const OrderHistoryPage = () => {
   const tabs = [
     {
       id: "all",
-      label: "Tất cả",
+      label: t("orders_tab_all"),
       icon: <Package size={15} />,
       countKey: "ALL",
     },
     {
       id: "pending",
-      label: "Chờ xác nhận",
+      label: t("orders_tab_pending"),
       icon: <Calendar size={15} />,
       countKey: "PENDING",
     },
     {
       id: "confirmed",
-      label: "Đã xác nhận",
+      label: t("orders_tab_confirmed"),
       icon: <CheckCircle size={15} />,
       countKey: "CONFIRMED",
     },
     {
       id: "preparing",
-      label: "Đang chuẩn bị",
+      label: t("orders_tab_preparing"),
       icon: <Package size={15} />,
       countKey: "PREPARING",
     },
     {
       id: "shipping",
-      label: "Đang giao",
+      label: t("orders_tab_shipping"),
       icon: <Truck size={15} />,
       countKey: "DELIVERING",
     },
     {
       id: "completed",
-      label: "Hoàn thành",
+      label: t("orders_tab_completed"),
       icon: <CheckCircle size={15} />,
       countKey: "COMPLETED",
     },
@@ -381,27 +383,27 @@ const OrderHistoryPage = () => {
 
   const getStatusColor = (status: OrderStatus) => {
     if (["DELIVERED", "COMPLETED"].includes(status))
-      return "bg-green-50 text-green-600 border-green-200";
+      return "bg-green-50 text-green-600 border-green-200 dark:bg-green-950/40 dark:text-green-300 dark:border-green-800";
     if (["DELIVERING", "SHIPPING", "READY_FOR_PICKUP", "PICKED_UP", "IN_TRANSIT"].includes(status))
-      return "bg-blue-50 text-blue-600 border-blue-200";
+      return "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800";
     if (["CANCELLED", "CANCEL_REQUESTED"].includes(status))
-      return "bg-red-50 text-red-600 border-red-200";
+      return "bg-red-50 text-red-600 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800";
     if (["RETURN_PENDING", "RETURNED"].includes(status))
-      return "bg-pink-50 text-pink-600 border-pink-200";
-    return "bg-orange-50 text-orange-600 border-orange-200";
+      return "bg-pink-50 text-pink-600 border-pink-200 dark:bg-pink-950/40 dark:text-pink-300 dark:border-pink-800";
+    return "bg-orange-50 text-orange-600 border-orange-200 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800";
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f5f1] pt-24 pb-32 px-4 md:px-6">
+    <div className="min-h-screen bg-[#f5f5f1] px-4 pt-24 pb-32 text-slate-900 dark:bg-slate-950 dark:text-slate-100 md:px-6">
       <div className="max-w-6xl mx-auto">
-        <div className="mb-8 rounded-[28px] border border-[#ebe7df] bg-white p-5 shadow-[0_12px_32px_rgba(15,23,42,0.06)] md:p-7">
+        <div className="mb-8 rounded-[28px] border border-[#ebe7df] bg-white p-5 shadow-[0_12px_32px_rgba(15,23,42,0.06)] dark:border-slate-800 dark:bg-slate-900 md:p-7">
           <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="mb-2 text-[11px] font-black uppercase tracking-[0.24em] text-[#ee4d2d]">
-                Tài khoản của tôi
+                {t("orders_account")}
               </p>
-              <h1 className="text-3xl font-black tracking-[-0.04em] text-slate-900 md:text-4xl">
-                Đơn hàng của tôi
+              <h1 className="text-3xl font-black tracking-[-0.04em] text-slate-900 dark:text-slate-100 md:text-4xl">
+                {t("orders_title")}
               </h1>
             </div>
 
@@ -410,8 +412,8 @@ const OrderHistoryPage = () => {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Tìm theo mã đơn hoặc tên sản phẩm..."
-                className="w-full rounded-2xl border border-slate-200 bg-[#f9fafb] px-4 py-3 pl-11 text-sm font-medium text-slate-700 outline-none transition-all focus:border-[#ee4d2d] focus:bg-white focus:ring-4 focus:ring-[#ee4d2d]/10"
+                placeholder={t("orders_search_placeholder")}
+                className="w-full rounded-2xl border border-slate-200 bg-[#f9fafb] px-4 py-3 pl-11 text-sm font-medium text-slate-700 outline-none transition-all focus:border-[#ee4d2d] focus:bg-white focus:ring-4 focus:ring-[#ee4d2d]/10 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:bg-slate-700"
               />
               <Search
                 className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
@@ -427,7 +429,7 @@ const OrderHistoryPage = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-2.5 font-bold transition-all duration-200 whitespace-nowrap ${activeTab === tab.id ? "border-[#ee4d2d] bg-[#ee4d2d] text-white shadow-[0_10px_24px_rgba(238,77,45,0.25)]" : "border-slate-200 bg-white text-slate-600 hover:border-[#ee4d2d]/40 hover:text-[#ee4d2d]"}`}
+                className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border px-3.5 py-2.5 font-bold transition-all duration-200 ${activeTab === tab.id ? "border-[#ee4d2d] bg-[#ee4d2d] text-white shadow-[0_10px_24px_rgba(238,77,45,0.25)]" : "border-slate-200 bg-white text-slate-600 hover:border-[#ee4d2d]/40 hover:text-[#ee4d2d] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"}`}
               >
                 {tab.icon}
                 <span className="text-[10px] uppercase tracking-[0.12em]">
@@ -446,7 +448,7 @@ const OrderHistoryPage = () => {
                   };
                   return counts && (
                     <span
-                      className={`rounded-full px-1.5 py-0.5 text-[9px] font-black ${activeTab === tab.id ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"}`}
+                      className={`rounded-full px-1.5 py-0.5 text-[9px] font-black ${activeTab === tab.id ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300"}`}
                     >
                       {getTabCount(tab.countKey)}
                     </span>
@@ -462,17 +464,17 @@ const OrderHistoryPage = () => {
             <Loader2 className="animate-spin text-[#ee4d2d]" size={48} />
           </div>
         ) : filteredOrders.length === 0 ? (
-          <div className="rounded-[28px] border-2 border-dashed border-slate-200 bg-white p-16 text-center shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
-            <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-[#fff2ee] text-[#ee4d2d]">
+          <div className="rounded-[28px] border-2 border-dashed border-slate-200 bg-white p-16 text-center shadow-[0_10px_24px_rgba(15,23,42,0.04)] dark:border-slate-700 dark:bg-slate-900">
+            <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-[#fff2ee] text-[#ee4d2d] dark:bg-orange-950/40">
               <Package size={40} />
             </div>
-            <h2 className="mb-2 text-2xl font-black uppercase tracking-tight text-slate-900">
-              Không có đơn hàng nào
+            <h2 className="mb-2 text-2xl font-black uppercase tracking-tight text-slate-900 dark:text-slate-100">
+              {t("orders_empty_title")}
             </h2>
-            <p className="mx-auto max-w-sm text-sm text-slate-500">
+            <p className="mx-auto max-w-sm text-sm text-slate-500 dark:text-slate-400">
               {searchTerm
-                ? "Không tìm thấy đơn hàng phù hợp với từ khóa bạn đang tìm."
-                : "Bạn chưa có đơn hàng nào trong trạng thái này."}
+                ? t("orders_search_empty")
+                : t("orders_empty_status")}
             </p>
           </div>
         ) : (
@@ -480,9 +482,9 @@ const OrderHistoryPage = () => {
             {filteredOrders.map((order) => (
                 <div
                   key={order.id}
-                  className="overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-[0_12px_26px_rgba(15,23,42,0.05)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_32px_rgba(15,23,42,0.08)]"
+                  className="overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-[0_12px_26px_rgba(15,23,42,0.05)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_32px_rgba(15,23,42,0.08)] dark:border-slate-700 dark:bg-slate-900"
                 >
-                  <div className="border-b border-slate-200 bg-[#fffaf8] px-4 py-3 md:px-5">
+                  <div className="border-b border-slate-200 bg-[#fffaf8] px-4 py-3 dark:border-slate-700 dark:bg-slate-800 md:px-5">
                     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                       <div className="flex flex-wrap items-center gap-2 md:gap-4">
                         <div className="flex items-center gap-2 rounded-full border border-[#ffd9cc] bg-[#fff3ef] px-2.5 py-1.5 text-[#ee4d2d]">
@@ -510,7 +512,7 @@ const OrderHistoryPage = () => {
                       <div
                         className={`inline-flex items-center justify-center rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] ${getStatusColor(order.status)}`}
                       >
-                        {getOrderStatusLabel(order.status)}
+                        {getOrderStatusLabel(order.status, language)}
                       </div>
                     </div>
                   </div>
@@ -532,9 +534,9 @@ const OrderHistoryPage = () => {
                               onClick={() =>
                                 navigate(`/products/${product?.slug || product?.id || item.product_id}`)
                               }
-                              className="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-[#f8fafc] p-3 transition-all duration-200 hover:border-[#ee4d2d]/40 hover:bg-[#fff7f5]"
+                              className="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-[#f8fafc] p-3 transition-all duration-200 hover:border-[#ee4d2d]/40 hover:bg-[#fff7f5] dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
                             >
-                              <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                              <div                               className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
                                 <img
                                   src={
                                     imageUrl.startsWith("http") || imageUrl.startsWith("data:")
@@ -548,26 +550,26 @@ const OrderHistoryPage = () => {
 
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-start justify-between gap-3">
-                                  <p className="line-clamp-2 text-sm font-bold leading-5 text-slate-800">
+                                  <p className="line-clamp-2 text-sm font-bold leading-5 text-slate-800 dark:text-slate-100">
                                     {item.product_name || product?.name}
                                   </p>
-                                  <span className="text-sm font-black text-slate-800">
+                                  <span className="text-sm font-black text-slate-800 dark:text-slate-100">
                                     {Number(item.unit_price).toLocaleString()}₫
                                   </span>
                                 </div>
 
                                 {(item.size || item.color) && (
                                   <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
-                                    Phân loại: {item.size || "Mặc định"}{item.color ? ` / ${item.color}` : ""}
+                                    {t("orders_item_type")} {item.size || t("orders_default_variant")}{item.color ? ` / ${item.color}` : ""}
                                   </p>
                                 )}
 
                                 <div className="mt-2 flex items-center justify-between text-xs font-bold text-slate-500">
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-1 text-slate-600 ring-1 ring-slate-200">
-                                    Số lượng: {item.quantity}
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-1 text-slate-600 ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700">
+                                    {t("orders_quantity")} {item.quantity}
                                   </span>
                                   <span className="text-[10px] font-black uppercase tracking-[0.12em] text-[#ee4d2d]">
-                                    Mua hàng
+                                    {t("orders_buy")}
                                   </span>
                                 </div>
                               </div>
@@ -579,40 +581,40 @@ const OrderHistoryPage = () => {
                           <button
                             type="button"
                             onClick={() => navigate(`/orders/${order.id}`)}
-                            className="inline-flex w-fit items-center gap-2 rounded-full bg-slate-100 px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-700 transition-colors hover:bg-slate-200"
+                            className="inline-flex w-fit items-center gap-2 rounded-full bg-slate-100 px-3 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                           >
-                            +{(order.items?.length || 0) - 2} sản phẩm khác
+                            +{(order.items?.length || 0) - 2} {t("orders_more_products")}
                             <ChevronRight size={14} />
                           </button>
                         )}
                       </div>
 
-                      <div className="rounded-[20px] border border-slate-200 bg-[#f8fafc] p-4">
+                      <div className="rounded-[20px] border border-slate-200 bg-[#f8fafc] p-4 dark:border-slate-700 dark:bg-slate-800">
                         <div className="flex items-center justify-between gap-3">
                           <span className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
-                            Tổng tiền
+                            {t("orders_total")}
                           </span>
                           <span className="text-xl font-black tracking-[-0.04em] text-slate-900">
                             {Number(order.final_amount || order.total_amount || 0).toLocaleString()}₫
                           </span>
                         </div>
 
-                        <div className="mt-4 space-y-2 border-t border-slate-200 pt-3 text-xs font-medium text-slate-600">
+                        <div className="mt-4 space-y-2 border-t border-slate-200 pt-3 text-xs font-medium text-slate-600 dark:border-slate-700 dark:text-slate-300">
                           {Number(order.points_earned) > 0 && (
                             <div className="flex items-center justify-between">
-                              <span className="text-slate-500">Điểm thưởng</span>
+                              <span className="text-slate-500 dark:text-slate-400">{t("orders_points_earned")}</span>
                               <span className="font-black text-emerald-600">+{order.points_earned}</span>
                             </div>
                           )}
                           {Number(order.points_used) > 0 && (
                             <div className="flex items-center justify-between">
-                              <span className="text-slate-500">Đã dùng</span>
+                              <span className="text-slate-500 dark:text-slate-400">{t("orders_points_used")}</span>
                               <span className="font-black text-red-500">-{order.points_used}</span>
                             </div>
                           )}
                           <div className="flex items-center justify-between pt-1">
-                            <span className="text-slate-500">Phương thức</span>
-                            <span className="font-black text-slate-700">{order.payment_method || "COD"}</span>
+                            <span className="text-slate-500 dark:text-slate-400">{t("orders_payment_method")}</span>
+                            <span className="font-black text-slate-700 dark:text-slate-200">{order.payment_method || "COD"}</span>
                           </div>
                         </div>
                       </div>
@@ -621,7 +623,7 @@ const OrderHistoryPage = () => {
                     <div className="mt-5">{renderTimeline(order.status, order)}</div>
                   </div>
 
-                  <div className="flex flex-wrap items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 p-4 md:p-5">
+                  <div className="flex flex-wrap items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800 md:p-5">
                     {(() => {
                       const isUnpaidVNPay =
                         order.parentOrder?.payment_method === "VNPAY" &&
@@ -651,7 +653,7 @@ const OrderHistoryPage = () => {
                             disabled={cancelOrderMutation.isPending}
                             className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-5 py-3 text-[10px] font-black uppercase tracking-[0.16em] text-red-500 transition-all hover:bg-red-100 disabled:opacity-50"
                           >
-                            <XCircle size={14} /> {isRequest ? "Gửi yêu cầu hủy" : "Hủy đơn hàng"}
+                            <XCircle size={14} /> {isRequest ? t("orders_cancel_request") : t("orders_cancel")}
                           </button>
                         );
                       }
@@ -663,14 +665,14 @@ const OrderHistoryPage = () => {
                         {order.returnRequests && order.returnRequests.length > 0 ? (
                           <span className="inline-flex items-center justify-center rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10px] font-black uppercase tracking-[0.14em] text-red-500">
                             {order.returnRequests[0].status === "PENDING"
-                              ? "Đã yêu cầu trả hàng"
+                              ? t("orders_return_requested")
                               : order.returnRequests[0].status === "APPROVED_BY_SHOP"
-                                ? "Yêu cầu trả hàng đã duyệt"
+                                ? t("orders_return_approved")
                                 : order.returnRequests[0].status === "REJECTED"
-                                  ? "Trả hàng bị từ chối"
+                                  ? t("orders_return_rejected")
                                   : order.returnRequests[0].status === "RESOLVED_BY_ADMIN"
-                                    ? "Admin đã xử lý"
-                                    : "Hoàn thành trả hàng"}
+                                    ? t("orders_admin_resolved")
+                                    : t("orders_return_completed")}
                           </span>
                         ) : (
                           <>
@@ -678,14 +680,14 @@ const OrderHistoryPage = () => {
                               onClick={() => handleOpenReturnModal(order)}
                               className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-5 py-3 text-[10px] font-black uppercase tracking-[0.16em] text-red-500 transition-all hover:bg-red-50"
                             >
-                              Trả hàng / Hoàn tiền
+                              {t("orders_return_refund")}
                             </button>
                             <button
                               onClick={() => handleConfirmReceipt(order.id)}
                               disabled={isConfirming !== null}
                               className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 text-[10px] font-black uppercase tracking-[0.16em] text-white transition-all hover:bg-emerald-600 disabled:opacity-50"
                             >
-                              {isConfirming === order.id ? "Đang xử lý..." : "Đã nhận hàng"}
+                              {isConfirming === order.id ? t("orders_processing") : t("orders_received")}
                             </button>
                           </>
                         )}
@@ -695,7 +697,7 @@ const OrderHistoryPage = () => {
                         onClick={() => navigate(`/orders/${order.id}`)}
                         className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-[10px] font-black uppercase tracking-[0.16em] text-slate-700 transition-all hover:border-slate-900 hover:text-slate-900"
                       >
-                        Xem chi tiết đơn hàng
+                        {t("orders_view_details")}
                       </button>
                     ) : order.status === "CANCELLED" || order.status === "CANCEL_REQUESTED" ? (
                       <>
@@ -703,14 +705,14 @@ const OrderHistoryPage = () => {
                           onClick={() => navigate(`/orders/${order.id}`)}
                           className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-[10px] font-black uppercase tracking-[0.16em] text-slate-700 transition-all hover:border-slate-900 hover:text-slate-900"
                         >
-                          Xem chi tiết đơn
+                          {t("orders_view_details")}
                         </button>
                         <button
                           onClick={() => handleRepurchase(order.items || [])}
                           disabled={addToCartMutation.isPending}
                           className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#ee4d2d] px-5 py-3 text-[10px] font-black uppercase tracking-[0.16em] text-white transition-all hover:bg-[#d9461c] disabled:opacity-50"
                         >
-                          Mua lại
+                          {t("orders_repurchase")}
                         </button>
                       </>
                     ) : (
@@ -718,7 +720,7 @@ const OrderHistoryPage = () => {
                         onClick={() => navigate(`/orders/${order.id}`)}
                         className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-[10px] font-black uppercase tracking-[0.16em] text-slate-700 transition-all hover:border-slate-900 hover:text-slate-900"
                       >
-                        Xem chi tiết đơn
+                        {t("orders_view_details")}
                       </button>
                     )}
                   </div>
@@ -731,20 +733,20 @@ const OrderHistoryPage = () => {
       {/* Cancel Order Modal */}
       {cancelModalOpen && orderToCancel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white border-2 border-black rounded-[2rem] w-full max-w-md p-6 relative animate-in fade-in zoom-in duration-200">
+          <div className="relative w-full max-w-md animate-in fade-in zoom-in rounded-[2rem] border-2 border-black bg-white p-6 duration-200 dark:border-slate-700 dark:bg-slate-900">
             <button
               onClick={() => setCancelModalOpen(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-black hover:rotate-90 transition-all"
+              className="absolute top-4 right-4 text-gray-400 transition-all hover:rotate-90 hover:text-black dark:hover:text-white"
             >
               <XCircle size={24} />
             </button>
             <h2 className="text-2xl font-black uppercase tracking-tighter mb-2">
               {orderToCancel.status === "PREPARING"
-                ? "Yêu cầu hủy đơn"
-                : "Hủy đơn hàng"}
+                ? t("orders_cancel_title")
+                : t("orders_cancel")}
             </h2>
             <p className="text-sm text-gray-500 mb-6 font-medium">
-              Vui lòng cho chúng tôi biết lý do bạn muốn hủy đơn hàng này.
+              {t("orders_cancel_modal_desc")}
             </p>
             <div className="flex flex-wrap gap-2 mb-3">
               {cancelledSuggestions.map((reason, idx) => (
@@ -752,7 +754,7 @@ const OrderHistoryPage = () => {
                   key={idx}
                   type="button"
                   onClick={() => setCancelReason(reason)}
-                  className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-full transition-colors border border-gray-200 active:scale-95 text-left"
+                  className="rounded-full border border-gray-200 bg-gray-100 px-3 py-1.5 text-left text-xs font-bold text-gray-700 transition-colors hover:bg-gray-200 active:scale-95 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                 >
                   {reason}
                 </button>
@@ -761,8 +763,8 @@ const OrderHistoryPage = () => {
             <textarea
               value={cancelReason}
               onChange={(e) => setCancelReason(e.target.value)}
-              placeholder="Nhập lý do hủy đơn..."
-              className="w-full h-32 p-4 rounded-xl border-2 border-gray-200 focus:border-black focus:ring-4 focus:ring-primary/10 outline-none resize-none mb-6 font-medium text-sm transition-all"
+              placeholder={t("orders_cancel_reason_placeholder")}
+              className="mb-6 h-32 w-full resize-none rounded-xl border-2 border-gray-200 p-4 text-sm font-medium outline-none transition-all focus:border-black focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:border-slate-400"
             ></textarea>
             <button
               onClick={submitCancelOrder}
@@ -770,8 +772,8 @@ const OrderHistoryPage = () => {
               className="w-full py-4 bg-black text-white font-black text-xs uppercase tracking-widest rounded-xl hover:bg-red-600 transition-colors disabled:opacity-50"
             >
               {cancelOrderMutation.isPending
-                ? "Đang xử lý..."
-                : "Xác nhận hủy đơn"}
+                ? t("orders_processing")
+                : t("orders_cancel_confirm")}
             </button>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Controller, useForm } from "react-hook-form";
 import * as yup from "yup";
@@ -55,30 +55,6 @@ interface IUpdateProfileData {
   gender: string;
 }
 
-const addressSchema = yup.object().shape({
-  recipient_name: yup.string().required("Vui lòng nhập tên người nhận"),
-  phone_number: yup.string().required("Vui lòng nhập số điện thoại"),
-  address_line: yup.string().required("Vui lòng nhập địa chỉ chi tiết"),
-});
-
-const schema = yup.object({
-  full_name: yup.string().required("Tên không được để trống"),
-  phone: yup
-    .string()
-    .matches(/^[0-9]{10}$/, "Số điện thoại phải có đúng 10 chữ số")
-    .required("Số điện thoại không được để trống"),
-  date_of_birth: yup
-    .string()
-    .required("Ngày sinh không được để trống")
-    .test("is-valid-age", "Người dùng phải ít nhất 5 tuổi", (value) => {
-      if (!value) return false;
-      const fiveYearsAgo = new Date();
-      fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
-      return new Date(value) <= fiveYearsAgo;
-    }),
-  gender: yup.string().required("Giới tính không được để trống"),
-});
-
 const Profile = () => {
   const { handleLogout } = useAuth();
   const user = useAppSelector((state) => state.auth.user);
@@ -86,7 +62,29 @@ const Profile = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { t, language } = useLanguage();
 
+  const addressSchema = useMemo(() => yup.object().shape({
+    recipient_name: yup.string().required(t("profile_recipient_required")),
+    phone_number: yup.string().required(t("profile_address_phone_required")),
+    address_line: yup.string().required(t("profile_address_line_required")),
+  }), [language, t]);
 
+  const schema = useMemo(() => yup.object({
+    full_name: yup.string().required(t("profile_name_required")),
+    phone: yup
+      .string()
+      .matches(/^[0-9]{10}$/, t("profile_phone_digits_error"))
+      .required(t("profile_phone_required")),
+    date_of_birth: yup
+      .string()
+      .required(t("profile_birthday_required"))
+      .test("is-valid-age", t("profile_min_age_error"), (value) => {
+        if (!value) return false;
+        const fiveYearsAgo = new Date();
+        fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+        return new Date(value) <= fiveYearsAgo;
+      }),
+    gender: yup.string().required(t("profile_gender_required")),
+  }), [language, t]);
 
   const hasShop =
     (typeof user?.role === "string"
@@ -201,7 +199,7 @@ const Profile = () => {
             address_line: data.address_line,
           },
         });
-        alert("Cập nhật địa chỉ thành công!");
+        alert(t("profile_update_address_success"));
       } else {
         await createAddressMutation.mutateAsync({
           recipient_name: data.recipient_name,
@@ -209,13 +207,13 @@ const Profile = () => {
           address_line: data.address_line,
           is_default: addresses?.length === 0,
         });
-        alert("Thêm địa chỉ thành công!");
+        alert(t("profile_add_address_success"));
       }
       setIsAddingAddress(false);
       setEditingAddressId(null);
       resetAddress();
     } catch (error) {
-      alert(editingAddressId ? "Cập nhật địa chỉ thất bại!" : "Thêm địa chỉ thất bại!");
+      alert(editingAddressId ? t("profile_update_failed") : t("profile_add_failed"));
     }
   };
 
@@ -230,12 +228,12 @@ const Profile = () => {
   };
 
   const handleDeleteAddress = async (id: number) => {
-    if (window.confirm("Bạn có chắc chắn muốn xóa địa chỉ này?")) {
+    if (window.confirm(t("profile_delete_address_confirm"))) {
       try {
         await deleteAddressMutation.mutateAsync(id);
-        alert("Xóa địa chỉ thành công!");
+        alert(t("profile_delete_address_success"));
       } catch (error) {
-        alert("Xóa địa chỉ thất bại!");
+        alert(t("profile_delete_address_failed"));
       }
     }
   };
@@ -246,9 +244,9 @@ const Profile = () => {
         id,
         payload: { is_default: true },
       });
-      alert("Đã đặt làm địa chỉ mặc định!");
+      alert(t("profile_default_address_success"));
     } catch (error) {
-      alert("Cập nhật thất bại!");
+      alert(t("profile_update_failed"));
     }
   };
 
@@ -305,10 +303,10 @@ const Profile = () => {
         });
         setAvatarPreview(null);
       }
-      alert("Cập nhật thông tin thành công!");
+      alert(t("profile_update_success"));
       setSelectedFile(null);
     } catch (error) {
-      alert("Cập nhật thông tin thất bại!");
+      alert(t("profile_update_profile_failed"));
     } finally {
       setIsUpdating(false);
     }
@@ -323,7 +321,7 @@ const Profile = () => {
       : `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23a0a0a0"><rect width="24" height="24" fill="%23e4e6eb"/><circle cx="12" cy="8" r="4"/><path d="M12 14c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5z"/></svg>`);
 
   const displayName =
-    (user as any)?.full_name || user?.fullName || user?.username || user?.email?.split("@")[0] || "Khách hàng";
+    (user as any)?.full_name || user?.fullName || user?.username || user?.email?.split("@")[0] || t("profile_customer");
 
   const defaultAddress = addresses?.find((a: any) => a.is_default) || addresses?.[0];
 
@@ -341,7 +339,7 @@ const Profile = () => {
             />
             {/* Edit Cover Button */}
             <button
-              onClick={() => alert("Tính năng đổi ảnh bìa đang được cập nhật!")}
+              onClick={() => alert(t("profile_cover_update_coming"))}
               className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 text-white text-xs font-semibold px-3.5 py-2 rounded-lg flex items-center gap-1.5 backdrop-blur-xs transition-colors cursor-pointer"
             >
               <Camera size={15} />
@@ -369,7 +367,7 @@ const Profile = () => {
                   <button
                     onClick={triggerFileInput}
                     className="absolute bottom-1 right-1 w-9 h-9 rounded-full bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-800 dark:text-slate-100 flex items-center justify-center shadow-md border-2 border-white dark:border-slate-900 cursor-pointer transition-colors"
-                    title="Đổi ảnh đại diện"
+                    title={t("profile_avatar_title")}
                   >
                     <Camera size={18} />
                   </button>
@@ -415,7 +413,7 @@ const Profile = () => {
                 <button
                   onClick={handleLogout}
                   className="bg-red-50 dark:bg-red-950/40 hover:bg-red-100 text-red-600 text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
-                  title="Đăng xuất"
+                  title={t("logout")}
                 >
                   <LogOut size={15} />
                 </button>
@@ -499,11 +497,11 @@ const Profile = () => {
               <div className="space-y-3 text-xs text-gray-600 dark:text-slate-300">
                 <div className="flex items-center gap-3">
                   <Mail size={16} className="text-gray-400 shrink-0" />
-                  <span className="truncate">{user?.email || "Chưa có email"}</span>
+                  <span className="truncate">{user?.email || t("profile_no_email")}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <Phone size={16} className="text-gray-400 shrink-0" />
-                  <span>{(user as any)?.phone || "Chưa thêm số điện thoại"}</span>
+                  <span>{(user as any)?.phone || t("profile_no_phone")}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <Calendar size={16} className="text-gray-400 shrink-0" />
@@ -512,13 +510,13 @@ const Profile = () => {
                       ? new Date(
                           (user as any)?.date_of_birth || (user as any)?.dateOfBirth
                         ).toLocaleDateString(getCurrentLocale())
-                      : "Chưa cập nhật ngày sinh"}
+                      : t("profile_no_birthday")}
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
                   <User size={16} className="text-gray-400 shrink-0" />
                   <span>
-                    {user?.gender === "female" ? "Nữ" : user?.gender === "male" ? "Nam" : "Khác"}
+                    {user?.gender === "female" ? t("gender_female") : user?.gender === "male" ? t("gender_male") : t("gender_other")}
                   </span>
                 </div>
                 {defaultAddress && (
@@ -549,20 +547,20 @@ const Profile = () => {
             <div className="bg-gradient-to-br from-amber-500 to-orange-500 text-white rounded-xl p-5 shadow-xs relative overflow-hidden">
               <div className="relative z-10">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-amber-100">
-                  MeeMart Xu & Điểm Thưởng
+                  {t("profile_reward_points")}
                 </span>
                 <div className="text-3xl font-extrabold mt-1">
-                  {(profile as any)?.loyalty_points || 0} <span className="text-sm font-semibold">Xu</span>
+                  {(profile as any)?.loyalty_points || 0} <span className="text-sm font-semibold">{t("profile_coin_unit")}</span>
                 </div>
                 <p className="text-[11px] text-white/90 mt-1">
-                  Đổi xu giảm ngay đến 100.000₫ cho mỗi đơn hàng.
+                  {t("profile_reward_desc")}
                 </p>
                 <div className="mt-3">
                   <Link
                     to="/vouchers"
                     className="inline-block bg-white text-orange-600 text-xs font-bold px-3 py-1.5 rounded-md hover:bg-amber-50 transition-colors"
                   >
-                    Đổi mã ưu đãi
+                    {t("profile_redeem_voucher")}
                   </Link>
                 </div>
               </div>
@@ -572,7 +570,7 @@ const Profile = () => {
             {/* Lối Tắt Hữu Ích */}
             <div className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-gray-200 dark:border-slate-800 shadow-xs space-y-2">
               <h4 className="font-bold text-xs text-gray-400 uppercase tracking-wider mb-2">
-                Lối tắt
+                {t("profile_shortcuts")}
               </h4>
               <Link
                 to="/orders"
@@ -588,7 +586,7 @@ const Profile = () => {
                 className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 text-xs font-medium text-gray-700 dark:text-slate-300 transition-colors"
               >
                 <span className="flex items-center gap-2">
-                  <Ticket size={15} className="text-amber-500" /> Ví Voucher của tôi
+                  <Ticket size={15} className="text-amber-500" /> {t("profile_my_vouchers")}
                 </span>
                 <span className="text-gray-400">→</span>
               </Link>
@@ -598,7 +596,7 @@ const Profile = () => {
               >
                 <span className="flex items-center gap-2">
                   <Store size={15} className="text-emerald-500" />
-                  {hasShop ? "Kênh Người Bán" : "Đăng ký mở shop"}
+                  {hasShop ? t("profile_seller_channel") : t("profile_register_shop")}
                 </span>
                 <span className="text-gray-400">→</span>
               </Link>
@@ -613,10 +611,10 @@ const Profile = () => {
                 <div className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-slate-800 mb-6">
                   <div>
                     <h2 className="text-base font-bold text-gray-900 dark:text-slate-100">
-                      Hồ Sơ Của Tôi
+                      {t("profile_my_info")}
                     </h2>
                     <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
-                      Quản lý thông tin hồ sơ để bảo mật tài khoản
+                      {t("profile_security_desc")}
                     </p>
                   </div>
                 </div>
@@ -633,7 +631,7 @@ const Profile = () => {
                         <input
                           {...field}
                           className="input-modern"
-                          placeholder="Họ và tên của bạn"
+                          placeholder={t("profile_name_placeholder")}
                         />
                       )}
                     />
@@ -665,7 +663,7 @@ const Profile = () => {
                           <input
                             {...field}
                             className="input-modern"
-                            placeholder="Số điện thoại"
+                            placeholder={t("phone_number")}
                           />
                         )}
                       />
@@ -746,7 +744,7 @@ const Profile = () => {
                       disabled={isUpdating}
                       className="bg-[#ee4d2d] hover:bg-[#d03e1e] text-white text-xs font-semibold px-6 py-2.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
                     >
-                      {isUpdating ? "Đang lưu..." : t("save_changes")}
+                      {isUpdating ? t("profile_saving") : t("save_changes")}
                     </button>
                   </div>
                 </form>
@@ -759,10 +757,10 @@ const Profile = () => {
                 <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-slate-800">
                   <div>
                     <h2 className="text-base font-bold text-gray-900 dark:text-slate-100">
-                      Địa Chỉ Của Tôi
+                      {t("profile_addresses_title")}
                     </h2>
                     <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
-                      Địa chỉ nhận hàng mặc định khi đặt hàng
+                      {t("profile_addresses_desc")}
                     </p>
                   </div>
                   <button
@@ -774,7 +772,7 @@ const Profile = () => {
                     className="bg-[#ee4d2d] hover:bg-[#d03e1e] text-white text-xs font-semibold px-3.5 py-2 rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
                   >
                     <Plus size={15} />
-                    <span>Thêm địa chỉ</span>
+                    <span>{t("profile_add_address")}</span>
                   </button>
                 </div>
 
@@ -785,13 +783,13 @@ const Profile = () => {
                     className="p-4 bg-gray-50 dark:bg-slate-800/60 rounded-xl border border-gray-200 dark:border-slate-700 space-y-3"
                   >
                     <h4 className="text-xs font-bold text-gray-900 dark:text-slate-100">
-                      {editingAddressId ? "Cập nhật địa chỉ" : "Thêm địa chỉ mới"}
+                      {editingAddressId ? t("profile_update_address") : t("profile_new_address")}
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <input
                           {...registerAddress("recipient_name")}
-                          placeholder="Họ và tên người nhận"
+                          placeholder={t("profile_recipient_placeholder")}
                           className="input-modern"
                         />
                         {addressErrors.recipient_name && (
@@ -803,7 +801,7 @@ const Profile = () => {
                       <div>
                         <input
                           {...registerAddress("phone_number")}
-                          placeholder="Số điện thoại"
+                          placeholder={t("phone_number")}
                           className="input-modern"
                         />
                         {addressErrors.phone_number && (
@@ -816,7 +814,7 @@ const Profile = () => {
                     <div>
                       <input
                         {...registerAddress("address_line")}
-                        placeholder="Địa chỉ chi tiết (Số nhà, tên đường, phường/xã, quận/huyện)"
+                        placeholder={t("profile_address_placeholder")}
                         className="input-modern"
                       />
                       {addressErrors.address_line && (
@@ -840,7 +838,7 @@ const Profile = () => {
                         type="submit"
                         className="px-4 py-1.5 rounded-lg bg-[#ee4d2d] text-white text-xs font-medium hover:bg-[#d03e1e]"
                       >
-                        {editingAddressId ? "Cập nhật" : "Lưu địa chỉ"}
+                        {editingAddressId ? t("profile_update_address") : t("profile_save_address")}
                       </button>
                     </div>
                   </form>
@@ -879,7 +877,7 @@ const Profile = () => {
                             onClick={() => handleEditAddress(addr)}
                             className="text-xs text-blue-600 hover:underline font-medium"
                           >
-                            Sửa
+                            {t("profile_edit")}
                           </button>
                           {!addr.is_default && (
                             <>
@@ -887,13 +885,13 @@ const Profile = () => {
                                 onClick={() => handleDeleteAddress(addr.id)}
                                 className="text-xs text-red-500 hover:underline font-medium"
                               >
-                                Xóa
+                                {t("profile_delete")}
                               </button>
                               <button
                                 onClick={() => handleSetDefaultAddress(addr.id)}
                                 className="text-xs text-gray-500 hover:text-[#ee4d2d] font-medium"
                               >
-                                Thiết lập mặc định
+                                {t("profile_set_default")}
                               </button>
                             </>
                           )}
@@ -902,7 +900,7 @@ const Profile = () => {
                     ))
                   ) : (
                     <div className="py-8 text-center text-xs text-gray-500">
-                      Bạn chưa có địa chỉ giao hàng nào.
+                      {t("profile_no_addresses")}
                     </div>
                   )}
                 </div>
@@ -933,14 +931,14 @@ const Profile = () => {
                             f.product.thumbnail ||
                             "/placeholder.jpg"
                           }
-                          category={f.product.category?.name || "Yêu thích"}
+                          category={f.product.category?.name || t("favorites")}
                           rating={Number(f.product.rating || 5.0)}
                           sales={Number(f.product.sold_count || 50)}
                         />
                       ))
                   ) : (
                     <div className="col-span-full py-10 text-center text-xs text-gray-500">
-                      Chưa có sản phẩm yêu thích nào.
+                      {t("profile_favorites_empty")}
                     </div>
                   )}
                 </div>
@@ -951,7 +949,7 @@ const Profile = () => {
             {activeTab === "viewed" && (
               <div className="bg-white dark:bg-slate-900 rounded-xl p-6 border border-gray-200 dark:border-slate-800 shadow-xs">
                 <h2 className="text-base font-bold text-gray-900 dark:text-slate-100 mb-4 pb-3 border-b border-gray-100 dark:border-slate-800">
-                  Sản Phẩm Đã Xem Gần Đây
+                  {t("profile_viewed_title")}
                 </h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {viewedProducts && viewedProducts.length > 0 ? (
@@ -971,14 +969,14 @@ const Profile = () => {
                             v.product.thumbnail ||
                             "/placeholder.jpg"
                           }
-                          category={v.product.category?.name || "Đã xem"}
+                          category={v.product.category?.name || t("viewed_label")}
                           rating={Number(v.product.rating || 5.0)}
                           sales={Number(v.product.sold_count || 30)}
                         />
                       ))
                   ) : (
                     <div className="col-span-full py-10 text-center text-xs text-gray-500">
-                      Bạn chưa xem sản phẩm nào gần đây.
+                      {t("profile_viewed_empty")}
                     </div>
                   )}
                 </div>
@@ -991,13 +989,13 @@ const Profile = () => {
                 <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 rounded-xl p-6 text-white shadow-md flex items-center justify-between">
                   <div>
                     <span className="text-xs font-semibold uppercase tracking-wider text-amber-100">
-                      Điểm tích lũy hiện có
+                      {t("profile_points_available")}
                     </span>
                     <h3 className="text-4xl font-black mt-1">
-                      {(profile as any)?.loyalty_points?.toLocaleString() || 0} Xu
+                      {(profile as any)?.loyalty_points?.toLocaleString() || 0} {t("profile_coin_unit")}
                     </h3>
                     <p className="text-xs text-white/90 mt-1">
-                      Tương đương{" "}
+                      {t("profile_equivalent_to")}{" "}
                       <strong>
                         {(
                           ((profile as any)?.loyalty_points || 0) *
@@ -1005,7 +1003,7 @@ const Profile = () => {
                         ).toLocaleString()}
                         ₫
                       </strong>{" "}
-                      khi khấu trừ vào hóa đơn mua sắm.
+                      {t("profile_points_redeem_desc")}
                     </p>
                   </div>
                   <Star size={70} className="text-white/20" />
@@ -1013,16 +1011,16 @@ const Profile = () => {
 
                 <div className="bg-white dark:bg-slate-900 rounded-xl p-6 border border-gray-200 dark:border-slate-800 shadow-xs">
                   <h4 className="font-bold text-sm text-gray-900 dark:text-slate-100 mb-3">
-                    Ưu đãi đổi xu tại MeeMart
+                    {t("profile_points_offers")}
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="p-3 rounded-lg border border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50">
                       <span className="text-xs font-bold text-orange-600">Voucher 20.000₫</span>
-                      <p className="text-[11px] text-gray-500 mt-0.5">Đổi bằng 200 Xu</p>
+                      <p className="text-[11px] text-gray-500 mt-0.5">{t("profile_points_redeem_200")}</p>
                     </div>
                     <div className="p-3 rounded-lg border border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50">
                       <span className="text-xs font-bold text-orange-600">Voucher 50.000₫</span>
-                      <p className="text-[11px] text-gray-500 mt-0.5">Đổi bằng 500 Xu</p>
+                      <p className="text-[11px] text-gray-500 mt-0.5">{t("profile_points_redeem_500")}</p>
                     </div>
                   </div>
                 </div>
