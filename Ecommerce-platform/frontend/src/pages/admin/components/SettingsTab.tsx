@@ -106,7 +106,7 @@ export const SettingsTab = ({ showToast, showConfirm }: SettingsTabProps) => {
       <div className="space-y-10">
          <div>
             <h1 className="text-3xl font-serif font-black tracking-tighter uppercase">Cấu hình thông số hệ thống</h1>
-            <p className="text-gray-400 font-medium text-sm mt-1 italic">Thiết lập định mức tài chính và danh mục gốc cho sàn thời trang</p>
+            <p className="text-gray-400 font-medium text-sm mt-1 italic">Thiết lập định mức tài chính và danh mục gốc cho sàn thương mại</p>
          </div>
 
          {/* Cấu hình tài chính */}

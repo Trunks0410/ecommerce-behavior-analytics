@@ -314,7 +314,7 @@ const CheckoutPage = () => {
     const shopId = product?.shop?.id || product?.shop_id || "unknown";
     if (!acc[shopId]) {
       acc[shopId] = {
-        shop: product?.shop || { id: product?.shop_id, name: "Cửa hàng thời trang" },
+        shop: product?.shop || { id: product?.shop_id, name: "Cửa hàng MeeMart" },
         items: [],
       };
     }
@@ -716,7 +716,7 @@ const CheckoutPage = () => {
                         <div className="flex items-center gap-1.5 pb-1">
                           <Store className="text-[#ee4d2d] w-4 h-4 shrink-0" />
                           <h4 className="text-xs font-bold uppercase tracking-tight text-[#ee4d2d] truncate">
-                            {group.shop?.shop_name || group.shop?.name || "UTEShop Official"}
+                            {group.shop?.shop_name || group.shop?.name || "MeeMart Official"}
                           </h4>
                         </div>
                         {group.items.map((item: any) => {

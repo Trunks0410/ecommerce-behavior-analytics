@@ -22,6 +22,8 @@ export const UserTab = ({ showToast, showConfirm }: UserTabProps) => {
    const [users, setUsers] = useState<any[]>([]);
    const [loading, setLoading] = useState(true);
    const [showForm, setShowForm] = useState(false);
+   const [showCreatePassword, setShowCreatePassword] = useState(false);
+   const [showUserPassword, setShowUserPassword] = useState(false);
    const [form, setForm] = useState({ email: '', password: '', full_name: '', phone: '', gender: 'MALE' });
    const [submitting, setSubmitting] = useState(false);
    const [shops, setShops] = useState<any[]>([]);
@@ -215,19 +217,32 @@ export const UserTab = ({ showToast, showConfirm }: UserTabProps) => {
                      <input
                         type="email" value={form.email}
                         onChange={e => setForm({ ...form, email: e.target.value })}
-                        placeholder={`${roleTab}@uteshop.vn`}
+                        placeholder={`${roleTab}@meemart.vn`}
                         className="w-full border-2 border-black rounded-xl px-4 py-3 font-bold text-sm focus:outline-none focus:ring-4 focus:ring-red-500/10 text-black"
                      />
                   </div>
                   {roleTab !== 'shipper' ? (
                      <div>
                         <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block">Mật khẩu *</label>
-                        <input
-                           type="password" value={form.password}
-                           onChange={e => setForm({ ...form, password: e.target.value })}
-                           placeholder="••••••••"
-                           className="w-full border-2 border-black rounded-xl px-4 py-3 font-bold text-sm focus:outline-none focus:ring-4 focus:ring-red-500/10 text-black"
-                        />
+                        <div className="relative">
+                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                              <Lock size={16} />
+                           </span>
+                           <input
+                              type={showCreatePassword ? "text" : "password"} value={form.password}
+                              onChange={e => setForm({ ...form, password: e.target.value })}
+                              placeholder="••••••••"
+                              className="w-full border-2 border-black rounded-xl pl-9 pr-10 py-3 font-bold text-sm focus:outline-none focus:ring-4 focus:ring-red-500/10 text-black"
+                           />
+                           <button
+                              type="button"
+                              aria-label={showCreatePassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                              onClick={() => setShowCreatePassword((prev) => !prev)}
+                           >
+                              {showCreatePassword ? <Eye size={18} /> : <LockOpen size={18} />}
+                           </button>
+                        </div>
                      </div>
                   ) : (
                      <>
@@ -467,12 +482,25 @@ export const UserTab = ({ showToast, showConfirm }: UserTabProps) => {
                         </div>
                         <div>
                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">Mật khẩu mới (Để trống nếu không đổi)</label>
-                           <input
-                              type="password" value={userForm.password}
-                              onChange={e => setUserForm({ ...userForm, password: e.target.value })}
-                              placeholder="••••••••"
-                              className="w-full border-2 border-black rounded-xl px-4 py-2 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-red-500 text-black"
-                           />
+                           <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                                 <Lock size={14} />
+                              </span>
+                              <input
+                                 type={showUserPassword ? "text" : "password"} value={userForm.password}
+                                 onChange={e => setUserForm({ ...userForm, password: e.target.value })}
+                                 placeholder="••••••••"
+                                 className="w-full border-2 border-black rounded-xl pl-9 pr-10 py-2 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-red-500 text-black"
+                              />
+                              <button
+                                 type="button"
+                                 aria-label={showUserPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                 onClick={() => setShowUserPassword((prev) => !prev)}
+                              >
+                                 {showUserPassword ? <Eye size={16} /> : <LockOpen size={16} />}
+                              </button>
+                           </div>
                         </div>
                         <div className="flex gap-4 mt-6">
                            <button

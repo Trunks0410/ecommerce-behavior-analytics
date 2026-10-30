@@ -42,7 +42,7 @@ const ShopListPage = () => {
           <Store className="w-8 h-8 text-primary" />
           {keyword ? `KẾT QUẢ TÌM KIẾM SHOP: "${keyword}"` : "TẤT CẢ CÁC SHOP"}
         </h1>
-        <p className="text-gray-500 font-medium">Khám phá các gian hàng uy tín trên UTEShop</p>
+        <p className="text-gray-500 font-medium">Khám phá các gian hàng uy tín trên MeeMart</p>
       </div>
 
       {error ? (

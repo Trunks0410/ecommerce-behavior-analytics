@@ -61,7 +61,7 @@ async function run() {
           await db.Shop.create({
             vendor_id: user.id,
             shop_name: "Cửa hàng của Vendor",
-            description: "Gian hàng bán các sản phẩm thời trang cao cấp",
+            description: "Gian hàng thương mại điện tử đa ngành cho mọi nhu cầu mua sắm",
             status: "APPROVED",
             rating: 5.0
           });

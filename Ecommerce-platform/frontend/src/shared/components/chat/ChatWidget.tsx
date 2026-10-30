@@ -18,6 +18,7 @@ import useAuth from "@/hooks/useAuth";
 import { chatService, ChatMessage, ConversationInfo } from "@/services/chatService";
 import { useNavigate } from "react-router-dom";
 import EmojiPicker from "./EmojiPicker";
+import { getCurrentLocale } from "@/shared/utils/format";
 
 const DEFAULT_SHOP_LOGO = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='128' height='128'><rect width='100' height='100' fill='%23FFE4D6' stroke='black' stroke-width='4'/><path d='M20 40 L50 15 L80 40 L80 85 L20 85 Z' fill='white' stroke='black' stroke-width='4'/><rect x='40' y='55' width='20' height='30' fill='%23D97736' stroke='black' stroke-width='4'/><path d='M15 40 L85 40' stroke='black' stroke-width='4'/></svg>";
 
@@ -94,7 +95,7 @@ const ChatWidget = () => {
     {
       id: "ai-initial",
       sender_id: 0,
-      body: "Xin chào! Tôi là Trợ Lý AI của UTEShop. Bạn có thắc mắc gì về chính sách đổi trả, phương thức thanh toán hoặc đang tìm kiếm sản phẩm nào không?",
+      body: "Xin chào! Tôi là Trợ Lý AI của MeeMart. Bạn có thắc mắc gì về chính sách đổi trả, phương thức thanh toán hoặc đang tìm kiếm sản phẩm nào không?",
       sent_at: new Date().toISOString()
     }
   ]);
@@ -512,7 +513,7 @@ const ChatWidget = () => {
                     onClick={() => {
                       setActiveShop({
                         id: 0,
-                        name: "Trợ Lý AI UTEShop",
+                        name: "Trợ Lý AI MeeMart",
                         logo: null,
                         role: "AI",
                       });
@@ -587,7 +588,7 @@ const ChatWidget = () => {
                             )}
                           </div>
                           <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest shrink-0 pl-2">
-                            {conv.lastMessage ? new Date(conv.lastMessage.sent_at).toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' }) : ""}
+                            {conv.lastMessage ? new Date(conv.lastMessage.sent_at).toLocaleTimeString(getCurrentLocale(), { hour: '2-digit', minute: '2-digit' }) : ""}
                           </span>
                         </div>
                         
@@ -642,7 +643,7 @@ const ChatWidget = () => {
                             {showDateSeparator && (
                               <div className="flex justify-center my-3 select-none">
                                 <span className="bg-white border border-gray-100 px-3.5 py-1.5 rounded-full text-[8px] font-bold uppercase tracking-widest text-gray-400 shadow-sm">
-                                  {new Date(msg.sent_at).toLocaleDateString("vi-VN", {
+                                  {new Date(msg.sent_at).toLocaleDateString(getCurrentLocale(), {
                                     weekday: "long",
                                     day: "numeric",
                                     month: "long",
@@ -734,7 +735,7 @@ const ChatWidget = () => {
                                               {prod.name}
                                             </h5>
                                             <p className="text-[9px] font-extrabold text-primary mt-1">
-                                              {Number(prod.price).toLocaleString("vi-VN")}đ
+                                              {Number(prod.price).toLocaleString(getCurrentLocale())}đ
                                             </p>
                                           </div>
                                         </div>
@@ -743,7 +744,7 @@ const ChatWidget = () => {
                                   )}
                                 </div>
                                 <span className="text-[8px] font-bold text-gray-400 block px-1 select-none">
-                                  {new Date(msg.sent_at).toLocaleTimeString("vi-VN", {
+                                  {new Date(msg.sent_at).toLocaleTimeString(getCurrentLocale(), {
                                     hour: "2-digit",
                                     minute: "2-digit",
                                   })}

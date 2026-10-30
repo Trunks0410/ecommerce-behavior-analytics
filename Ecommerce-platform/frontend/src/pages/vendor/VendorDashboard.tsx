@@ -44,6 +44,7 @@ import { vendorService, ShopProfileData, ProductData, VoucherData } from '@/serv
 import { chatService } from '@/services/chatService';
 import { NotificationDropdown } from '@/shared/components/layout/NotificationDropdown';
 import EmojiPicker from '@/shared/components/chat/EmojiPicker';
+import { getCurrentLocale } from '@/shared/utils/format';
 
 
 const DEFAULT_SHOP_LOGO =
@@ -151,7 +152,7 @@ const VendorDashboard = () => {
     phone: "",
     address: "",
     description: "",
-    industry: "Thời trang Nam"
+    industry: "Điện tử & Công nghệ"
   });
 
   // Overview Stats state
@@ -211,7 +212,7 @@ const VendorDashboard = () => {
     description: "",
     price: 0,
     sale_price: "",
-    gender: "UNISEX",
+    gender: "",
     material: "",
     stock_quantity: 10,
     image_url: "",
@@ -854,7 +855,7 @@ const VendorDashboard = () => {
         price: finalPrice,
         sale_price: finalSalePrice,
 
-        gender: productForm.gender,
+        gender: productForm.gender || "",
         material: productForm.material,
         stock_quantity: totalStock,
         variants: finalVariants,
@@ -895,7 +896,7 @@ const VendorDashboard = () => {
       description: prod.description || "",
       price: prod.price || 0,
       sale_price: prod.sale_price?.toString() || "",
-      gender: prod.gender || "UNISEX",
+      gender: prod.gender || "",
       material: prod.material || "",
       stock_quantity: prod.stock_quantity || 10,
       image_url: prod.images && prod.images[0] ? prod.images[0].image_url : "",
@@ -1618,7 +1619,7 @@ const VendorDashboard = () => {
                   name: shopInfo.shop_name || "",
                   phone: shopInfo.phone || "",
                   address: shopInfo.address || "",
-                  industry: shopInfo.industry || "Thời trang Nam",
+                  industry: shopInfo.industry || "Điện tử & Công nghệ",
                   description: shopInfo.description || ""
                 });
                 setIsRegistered(false);
@@ -1647,7 +1648,7 @@ const VendorDashboard = () => {
               <Store size={32} />
             </div>
             <h1 className="text-4xl font-serif font-black tracking-tighter uppercase">Trở thành Người bán hàng</h1>
-            <p className="text-gray-500 font-medium mt-2">Mở gian hàng của bạn trên UTEShop và bắt đầu kinh doanh ngay hôm nay</p>
+            <p className="text-gray-500 font-medium mt-2">Mở gian hàng của bạn trên MeeMart và bắt đầu kinh doanh ngay hôm nay</p>
           </div>
 
           <div className="bg-white border-2 border-black rounded-[2.5rem] p-10 shadow-brutal">
@@ -1657,7 +1658,7 @@ const VendorDashboard = () => {
                   <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Tên gian hàng</label>
                   <input
                     type="text"
-                    placeholder="Ví dụ: UTEShop Official"
+                    placeholder="Ví dụ: MeeMart Official"
                     className="w-full bg-gray-50 border-2 border-black rounded-xl px-5 py-4 font-bold focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all"
                     value={registerForm.name}
                     onChange={(e) => setRegisterForm({ ...registerForm, name: e.target.value })}
@@ -1681,10 +1682,11 @@ const VendorDashboard = () => {
                     label="Ngành hàng chính"
                     value={registerForm.industry}
                     options={[
-                      { value: "Thời trang Nam", label: "Thời trang Nam" },
-                      { value: "Thời trang Nữ", label: "Thời trang Nữ" },
-                      { value: "Phụ kiện & Trang sức", label: "Phụ kiện & Trang sức" },
-                      { value: "Giày dép", label: "Giày dép" }
+                      { value: "Điện tử & Công nghệ", label: "Điện tử & Công nghệ" },
+                      { value: "Nhà cửa & Đời sống", label: "Nhà cửa & Đời sống" },
+                      { value: "Mẹ & Bé", label: "Mẹ & Bé" },
+                      { value: "Làm đẹp & Sức khỏe", label: "Làm đẹp & Sức khỏe" },
+                      { value: "Phụ kiện & Tiện ích", label: "Phụ kiện & Tiện ích" }
                     ]}
                     onChange={(val) => setRegisterForm({ ...registerForm, industry: val })}
                   />
@@ -1716,7 +1718,7 @@ const VendorDashboard = () => {
                 <div className="flex items-start gap-3 p-4 bg-primary/5 border border-primary/20 rounded-2xl">
                   <input type="checkbox" className="mt-1 w-4 h-4 rounded border-black text-primary focus:ring-primary" required />
                   <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest leading-relaxed">
-                    Tôi đồng ý với các <span className="text-primary underline cursor-pointer">{"Điều khoản & Chính sách"}</span> dành cho Người bán của UTEShop.
+                    Tôi đồng ý với các <span className="text-primary underline cursor-pointer">{"Điều khoản & Chính sách"}</span> dành cho Người bán của MeeMart.
                   </p>
                 </div>
               </div>
@@ -1741,7 +1743,7 @@ const VendorDashboard = () => {
         activities.push({
           title: `Đơn hàng mới #${order.order_code} chờ xác nhận`,
           time: order.created_at
-            ? new Date(order.created_at).toLocaleTimeString("vi-VN", {
+            ? new Date(order.created_at).toLocaleTimeString(getCurrentLocale(), {
               hour: "2-digit",
               minute: "2-digit",
             })
@@ -1752,7 +1754,7 @@ const VendorDashboard = () => {
         activities.push({
           title: `Đơn hàng #${order.order_code} đang được xử lý`,
           time: order.created_at
-            ? new Date(order.created_at).toLocaleDateString("vi-VN")
+            ? new Date(order.created_at).toLocaleDateString(getCurrentLocale())
             : "Gần đây",
           icon: <Clock size={14} className="text-blue-500" />,
         });
@@ -1764,7 +1766,7 @@ const VendorDashboard = () => {
       activities.push({
         title: `Đánh giá ${review.rating} sao từ ${review.user?.profile?.full_name || "khách hàng"}`,
         time: review.created_at
-          ? new Date(review.created_at).toLocaleDateString("vi-VN")
+          ? new Date(review.created_at).toLocaleDateString(getCurrentLocale())
           : "Gần đây",
         icon: <Star size={14} className="text-yellow-500 fill-yellow-500" />,
       });
@@ -1813,7 +1815,7 @@ const VendorDashboard = () => {
             </div>
             <div className="flex flex-col">
               <span className="font-serif text-lg font-black tracking-tighter uppercase leading-none">
-                UTEShop
+                MeeMart
               </span>
               <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mt-1">
                 VENDOR
@@ -2102,7 +2104,7 @@ const VendorDashboard = () => {
                           description: "",
                           price: 0,
                           sale_price: "",
-                          gender: "UNISEX",
+                          gender: "",
                           material: "",
                           stock_quantity: 10,
                           image_url: "",
@@ -2330,11 +2332,11 @@ const VendorDashboard = () => {
                             })
                           }
                           required
-                          placeholder="Ví dụ: Áo thun Oversize Heritage UTEShop"
+                          placeholder="Ví dụ: Máy tính bảng công nghệ MeeMart"
                         />
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
                         <CustomSelect
                           label="Danh mục"
                           value={productForm.category_id}
@@ -2345,19 +2347,6 @@ const VendorDashboard = () => {
                           }))}
                           onChange={(val) =>
                             setProductForm({ ...productForm, category_id: val })
-                          }
-                        />
-                        <CustomSelect
-                          label="Phù hợp với giới tính"
-                          value={productForm.gender}
-                          placeholder="-- Chọn giới tính --"
-                          options={[
-                            { value: "MALE", label: "Nam" },
-                            { value: "FEMALE", label: "Nữ" },
-                            { value: "UNISEX", label: "Unisex (Cả nam và nữ)" },
-                          ]}
-                          onChange={(val) =>
-                            setProductForm({ ...productForm, gender: val })
                           }
                         />
                       </div>

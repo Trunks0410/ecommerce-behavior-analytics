@@ -12,7 +12,7 @@ const RegisterShopPage = () => {
   const [registerForm, setRegisterForm] = useState({
     name: "",
     phone: "",
-    industry: "Thời trang Nam",
+    industry: "Điện tử & Công nghệ",
     address: "",
     description: "",
   });
@@ -56,7 +56,7 @@ const RegisterShopPage = () => {
             Trở thành Người bán hàng
           </h1>
           <p className="text-gray-500 font-medium mt-2">
-            Mở gian hàng của bạn trên UTEShop và bắt đầu kinh doanh ngay hôm nay
+            Mở gian hàng của bạn trên MeeMart và bắt đầu kinh doanh ngay hôm nay
           </p>
         </div>
 
@@ -69,7 +69,7 @@ const RegisterShopPage = () => {
                 </label>
                 <input
                   type="text"
-                  placeholder="Ví dụ: UTEShop Official"
+                  placeholder="Ví dụ: MeeMart Official"
                   className="w-full bg-gray-50 border-2 border-black rounded-xl px-5 py-4 font-bold focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all"
                   value={registerForm.name}
                   onChange={(e) =>
@@ -113,12 +113,11 @@ const RegisterShopPage = () => {
                     }
                     required
                   >
-                    <option value="Thời trang Nam">Thời trang Nam</option>
-                    <option value="Thời trang Nữ">Thời trang Nữ</option>
-                    <option value="Phụ kiện & Trang sức">
-                      Phụ kiện & Trang sức
-                    </option>
-                    <option value="Giày dép">Giày dép</option>
+                    <option value="Điện tử & Công nghệ">Điện tử & Công nghệ</option>
+                    <option value="Nhà cửa & Đời sống">Nhà cửa & Đời sống</option>
+                    <option value="Mẹ & Bé">Mẹ & Bé</option>
+                    <option value="Làm đẹp & Sức khỏe">Làm đẹp & Sức khỏe</option>
+                    <option value="Phụ kiện & Tiện ích">Phụ kiện & Tiện ích</option>
                   </select>
                 </div>
               </div>
@@ -171,7 +170,7 @@ const RegisterShopPage = () => {
                   <span className="text-primary underline cursor-pointer">
                     Điều khoản & Chính sách
                   </span>{" "}
-                  dành cho Người bán của UTEShop.
+                  dành cho Người bán của MeeMart.
                 </p>
               </div>
             </div>

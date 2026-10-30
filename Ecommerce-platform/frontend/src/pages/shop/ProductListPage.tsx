@@ -34,6 +34,8 @@ const ProductListPage = () => {
   const maxPrice = searchParams.get("maxPrice") ? Number(searchParams.get("maxPrice")) : undefined;
   const isFeatured = searchParams.get("isFeatured");
   const isNew = searchParams.get("isNew");
+  const inStock = searchParams.get("inStock") === "true";
+  const minRating = Number(searchParams.get("minRating") || 0);
   const sortBy = searchParams.get("sort") || "newest";
 
   // Trạng thái local cho các ô nhập liệu
@@ -112,6 +114,33 @@ const ProductListPage = () => {
     ? categories?.find((c) => c.slug === categorySlug)?.name
     : t("products_all");
 
+  const visibleProducts = (data?.products ?? []).filter((product) => {
+    if (inStock) {
+      const variantTotal = product.variants?.reduce((sum, variant) => sum + Number(variant.stock_quantity || 0), 0) || 0;
+      const productStock = Number(product.stock_quantity ?? variantTotal ?? 0);
+      if (productStock <= 0) return false;
+    }
+
+    if (minRating > 0) {
+      const rating = Number(product.rating_average || 0);
+      if (rating < minRating) return false;
+    }
+
+    return true;
+  });
+
+  const quickPriceOptions = [
+    { label: t("filter_price_under_200k"), min: 0, max: 200000 },
+    { label: t("filter_price_200k_500k"), min: 200000, max: 500000 },
+    { label: t("filter_price_500k_1m"), min: 500000, max: 1000000 },
+    { label: t("filter_price_over_1m"), min: 1000000, max: 999999999 },
+  ];
+
+  const ratingOptions = [
+    { label: "4.0+", value: 4 },
+    { label: "4.5+", value: 4.5 },
+  ];
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-24 space-y-6">
       {/* 1. BREADCRUMBS */}
@@ -176,22 +205,96 @@ const ProductListPage = () => {
               </div>
             </form>
 
+            {/* Bộ lọc nhanh */}
+            <div className="space-y-3 rounded-2xl border border-[#f3dfd7] bg-[#fffaf8] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)]">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#ee4d2d]">{t("filter_quick")}</p>
+                  <h3 className="mt-1 text-sm font-black text-slate-900">{t("filter_popular")}</h3>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { key: "isFeatured", label: t("filter_deal"), active: isFeatured === "true" },
+                    { key: "isNew", label: t("filter_new"), active: isNew === "true" },
+                    { key: "inStock", label: t("filter_in_stock"), active: inStock },
+                  ].map((item) => (
+                    <button
+                      key={item.key}
+                      type="button"
+                      onClick={() => {
+                        if (item.key === "isFeatured") updateFilters({ isFeatured: isFeatured === "true" ? "" : "true" });
+                        if (item.key === "isNew") updateFilters({ isNew: isNew === "true" ? "" : "true" });
+                        if (item.key === "inStock") updateFilters({ inStock: inStock ? "" : "true" });
+                      }}
+                      className={`rounded-full border px-2.5 py-1.5 text-[10px] font-semibold transition-all ${
+                        item.active
+                          ? "border-[#ee4d2d] bg-[#fff1ee] text-[#ee4d2d]"
+                          : "border-slate-200 bg-white text-slate-600 hover:border-[#ee4d2d]/40 hover:text-[#ee4d2d]"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{t("filter_rating")}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {ratingOptions.map((option) => {
+                      const active = minRating === option.value;
+                      return (
+                        <button
+                          key={option.label}
+                          type="button"
+                          onClick={() => updateFilters({ minRating: active ? "" : option.value })}
+                          className={`rounded-full border px-2.5 py-1.5 text-[10px] font-semibold transition-all ${
+                            active
+                              ? "border-[#ee4d2d] bg-[#fff1ee] text-[#ee4d2d]"
+                              : "border-slate-200 bg-white text-slate-600 hover:border-[#ee4d2d]/40 hover:text-[#ee4d2d]"
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Danh mục sản phẩm */}
-            <div className="space-y-2.5">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-slate-300">
-                {t("filter_category")}
-              </h3>
-              <div className="space-y-1 max-h-56 overflow-y-auto pr-1">
+            <div className="space-y-3 rounded-2xl border border-[#f3dfd7] bg-[#fffaf8] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)]">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#ee4d2d]">
+                    {t("filter_category")}
+                  </p>
+                  <h3 className="mt-1 text-sm font-black text-slate-900">
+                    {t("filter_category_explore")}
+                  </h3>
+                </div>
+              </div>
+
+              <div className="space-y-2">
                 <button
                   onClick={() => updateFilters({ category: "" })}
-                  className={`w-full text-left text-xs py-1.5 px-2.5 rounded-lg transition-colors font-medium flex items-center justify-between ${
+                  className={`group flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left text-xs font-semibold transition-all duration-200 ${
                     !categorySlug
-                      ? "bg-[#fef0ed] dark:bg-[#ee4d2d]/20 text-[#ee4d2d] font-bold"
-                      : "text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700/60"
+                      ? "border-[#ee4d2d] bg-[#ee4d2d] text-white shadow-[0_12px_24px_rgba(238,77,45,0.18)]"
+                      : "border-[#f2e7e2] bg-white text-slate-700 hover:border-[#ee4d2d]/40 hover:text-[#ee4d2d]"
                   }`}
                 >
                   <span>{t("filter_all_categories")}</span>
-                  {!categorySlug && <Check size={13} />}
+                  <span
+                    className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${
+                      !categorySlug ? "bg-white/20 text-white" : "bg-[#fff1ee] text-[#ee4d2d]"
+                    }`}
+                  >
+                    {!categorySlug ? "✓" : "•"}
+                  </span>
                 </button>
 
                 {categories &&
@@ -200,37 +303,40 @@ const ProductListPage = () => {
                     return roots.map((root) => {
                       const children = categories.filter((c) => c.parent_id === root.id);
                       const isRootActive = categorySlug === root.slug;
+
                       return (
-                        <div key={root.id} className="space-y-0.5 pt-0.5">
+                        <div key={root.id} className="rounded-xl border border-[#f5e6e1] bg-white p-2 shadow-sm">
                           <button
                             onClick={() => updateFilters({ category: root.slug })}
-                            className={`w-full text-left text-xs py-1.5 px-2.5 rounded-lg transition-colors font-semibold flex items-center justify-between ${
+                            className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-xs font-bold transition-all duration-200 ${
                               isRootActive
-                                ? "bg-[#fef0ed] dark:bg-[#ee4d2d]/20 text-[#ee4d2d] font-bold"
-                                : "text-gray-800 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700/60"
+                                ? "bg-[#fff2ee] text-[#ee4d2d]"
+                                : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
                             }`}
                           >
                             <span className="truncate">{root.name}</span>
-                            {isRootActive && <Check size={13} />}
                           </button>
 
-                          {children.map((child) => {
-                            const isChildActive = categorySlug === child.slug;
-                            return (
-                              <button
-                                key={child.id}
-                                onClick={() => updateFilters({ category: child.slug })}
-                                className={`w-full text-left text-[11px] py-1 pl-5 pr-2.5 rounded-lg transition-colors flex items-center justify-between ${
-                                  isChildActive
-                                    ? "text-[#ee4d2d] font-bold bg-[#fef0ed]/60 dark:bg-[#ee4d2d]/10"
-                                    : "text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700/40"
-                                }`}
-                              >
-                                <span className="truncate">• {child.name}</span>
-                                {isChildActive && <Check size={11} />}
-                              </button>
-                            );
-                          })}
+                          {children.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-1.5 pl-1">
+                              {children.map((child) => {
+                                const isChildActive = categorySlug === child.slug;
+                                return (
+                                  <button
+                                    key={child.id}
+                                    onClick={() => updateFilters({ category: child.slug })}
+                                    className={`rounded-full border px-2.5 py-1.5 text-[10px] font-semibold transition-all duration-200 ${
+                                      isChildActive
+                                        ? "border-[#ee4d2d] bg-[#fff1ee] text-[#ee4d2d] shadow-sm"
+                                        : "border-slate-200 bg-slate-50 text-slate-600 hover:border-[#ee4d2d]/40 hover:text-[#ee4d2d]"
+                                    }`}
+                                  >
+                                    {child.name}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       );
                     });
@@ -243,6 +349,36 @@ const ProductListPage = () => {
               <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-slate-300">
                 {t("filter_price")}
               </h3>
+
+              <div className="flex flex-wrap gap-1.5">
+                {quickPriceOptions.map((option) => {
+                  const isActive =
+                    minPrice === option.min && maxPrice === option.max;
+
+                  return (
+                    <button
+                      key={option.label}
+                      type="button"
+                      onClick={() => {
+                        setLocalMinPrice(String(option.min));
+                        setLocalMaxPrice(String(option.max === 999999999 ? "" : option.max));
+                        updateFilters({
+                          minPrice: option.min,
+                          maxPrice: option.max === 999999999 ? "" : option.max,
+                        });
+                      }}
+                      className={`rounded-full border px-2.5 py-1.5 text-[10px] font-semibold transition-all ${
+                        isActive
+                          ? "border-[#ee4d2d] bg-[#fff1ee] text-[#ee4d2d]"
+                          : "border-slate-200 bg-white text-slate-600 hover:border-[#ee4d2d]/40 hover:text-[#ee4d2d]"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
                   <input
@@ -273,42 +409,6 @@ const ProductListPage = () => {
                 {t("filter_apply")}
               </button>
             </form>
-
-            {/* Giới tính */}
-            <div className="space-y-2.5 pt-2 border-t border-gray-100 dark:border-slate-700">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-slate-300">
-                {t("filter_gender")}
-              </h3>
-              <div className="space-y-1.5">
-                {[
-                  { id: "MALE", label: t("gender_men") },
-                  { id: "FEMALE", label: t("gender_women") },
-                  { id: "UNISEX", label: t("gender_unisex") },
-                ].map((g) => {
-                  const isChecked = gender === g.id;
-                  return (
-                    <div
-                      key={g.id}
-                      onClick={() => updateFilters({ gender: isChecked ? "" : g.id })}
-                      className="flex items-center gap-2.5 text-xs text-gray-700 dark:text-slate-300 cursor-pointer group py-0.5"
-                    >
-                      <div
-                        className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
-                          isChecked
-                            ? "bg-[#ee4d2d] border-[#ee4d2d] text-white"
-                            : "border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 group-hover:border-[#ee4d2d]"
-                        }`}
-                      >
-                        {isChecked && <Check size={11} strokeWidth={3} />}
-                      </div>
-                      <span className={`group-hover:text-[#ee4d2d] transition-colors ${isChecked ? "text-[#ee4d2d] font-bold" : ""}`}>
-                        {g.label}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
 
             {/* Bộ sưu tập nổi bật */}
             <div className="space-y-2.5 pt-2 border-t border-gray-100 dark:border-slate-700">
@@ -487,7 +587,7 @@ const ProductListPage = () => {
                 <div key={n} className="aspect-[3/4] bg-gray-200 dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700/60" />
               ))}
             </div>
-          ) : !data || data.products.length === 0 ? (
+          ) : !data || visibleProducts.length === 0 ? (
             <div className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700/70 rounded-2xl p-12 text-center space-y-4 shadow-xs">
               <div className="w-16 h-16 bg-[#fef0ed] dark:bg-[#ee4d2d]/20 text-[#ee4d2d] rounded-full flex items-center justify-center mx-auto">
                 <ShoppingBag size={28} />
@@ -514,7 +614,7 @@ const ProductListPage = () => {
                   : "grid-cols-1"
               }`}
             >
-              {data.products.map((product) => (
+              {visibleProducts.map((product) => (
                 <ProductCard
                   key={product.id}
                   id={product.slug || String(product.id)}

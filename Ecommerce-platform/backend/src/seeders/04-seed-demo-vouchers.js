@@ -46,8 +46,8 @@ export default {
       },
       {
         shop_id: null,
-        category_id: 1, // Giả sử 1 là danh mục Thời Trang
-        code: 'FASHION20',
+        category_id: 1, // Giả sử 1 là danh mục điện tử / tổng hợp
+        code: 'SMART20',
         discount_type: 'PERCENT',
         discount_value: 20,
         max_discount: 50000,

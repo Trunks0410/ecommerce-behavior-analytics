@@ -80,24 +80,23 @@ const Register = () => {
             <div className="card-brutal p-0 overflow-hidden bg-[#e6e2db] h-full relative border-[3px]">
               <div className="absolute top-8 left-8 bg-white px-6 py-4 border-2 border-black shadow-brutal z-10">
                 <h3 className="font-serif italic text-xl font-bold">
-                  New Era of Style
+                  Better Everyday Shopping
                 </h3>
                 <p className="text-[10px] font-bold tracking-widest uppercase mt-1">
-                  COLLECTION 2024
+                  MARKETPLACE 2024
                 </p>
               </div>
               <img
-                src="https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=1000&auto=format&fit=crop"
-                alt="Fashion Models"
+                src="https://images.unsplash.com/photo-1524758631624-e2822e304c36?q=80&w=1000&auto=format&fit=crop"
+                alt="Marketplace lifestyle"
                 className="w-full h-full object-cover mix-blend-multiply"
               />
               <div className="absolute bottom-10 left-10 right-10 bg-black text-white p-8 border-2 border-white">
                 <p className="font-bold text-lg mb-4 leading-relaxed">
-                  "Thời trang không chỉ là những gì bạn mặc, mà là cách bạn
-                  khẳng định cá tính riêng biệt."
+                  "Mua sắm đúng nơi, đúng nhu cầu, đúng giá — mỗi lần đặt hàng đều dễ dàng hơn."
                 </p>
                 <p className="text-[10px] font-bold tracking-widest uppercase">
-                  — UTESHOP EDITORIAL
+                  — MEEMART MARKETPLACE
                 </p>
               </div>
             </div>
@@ -111,8 +110,8 @@ const Register = () => {
                   Tạo tài khoản
                 </h1>
                 <p className="text-gray-600 text-sm leading-relaxed">
-                  Tham gia cộng đồng UTEShop để nhận những ưu đãi đặc quyền và
-                  bộ sưu tập mới nhất.
+                  Tham gia cộng đồng MeeMart để nhận những ưu đãi đặc quyền và
+                  hàng ngàn deal mới mỗi ngày.
                 </p>
               </div>
 
@@ -138,7 +137,7 @@ const Register = () => {
                     label="Địa chỉ email"
                     id="email"
                     type="email"
-                    placeholder="example@uteshop.vn"
+                    placeholder="example@meemart.vn"
                     value={formData.email}
                     onChange={handleChange}
                     required
@@ -203,10 +202,8 @@ const Register = () => {
               </div>
             </Card>
 
-            <div className="flex justify-between px-8 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-              <span className="flex items-center gap-1">• BẢO MẬT 256-BIT</span>
-              <span className="flex items-center gap-1">• HỖ TRỢ 24/7</span>
-              <span className="flex items-center gap-1">• ĐỔI TRẢ 30 NGÀY</span>
+            <div className="px-8 text-center text-[10px] font-bold uppercase tracking-widest text-gray-500">
+              Tận hưởng trải nghiệm mua sắm an toàn, nhanh chóng và tiện lợi.
             </div>
           </div>
         </div>
@@ -222,7 +219,7 @@ const Register = () => {
             </h3>
             <p className="text-sm text-gray-600 leading-relaxed">
               Giảm ngay 10% cho đơn hàng đầu tiên sau khi đăng ký thành công tài
-              khoản UTEShop.
+              khoản MeeMart.
             </p>
           </Card>
 
@@ -245,8 +242,7 @@ const Register = () => {
             </div>
             <h3 className="font-serif text-xl font-bold mb-3">Quyền lợi VIP</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              Ưu tiên mua sắm các bộ sưu tập Limited và tham gia các sự kiện
-              thời trang độc quyền.
+              Ưu tiên mua sắm các deal hot, bộ sưu tập giới hạn và các chương trình khuyến mãi độc quyền.
             </p>
           </Card>
         </div>

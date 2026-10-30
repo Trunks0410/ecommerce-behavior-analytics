@@ -14,6 +14,7 @@ import { useSystemSettings } from '@/hooks/useSystemSettings';
 import { useAddToCart } from '@/hooks/useCart';
 import { ReturnOrderModal } from '@/shared/components/modals/ReturnOrderModal';
 import orderService from '@/services/orderService';
+import { useLanguage } from '@/shared/context/LanguageContext';
 import { getOrderStatusLabel, getShipmentStatusLabel } from '@/shared/utils/statusUtils';
 
 const OrderDetailPage = () => {
@@ -21,6 +22,8 @@ const OrderDetailPage = () => {
   const { data: order, isLoading, isError } = useOrderDetail(Number(id));
   const { data: shipment, isLoading: isShipmentLoading } = useShipmentDetail(Number(id));
   const { data: systemSettings } = useSystemSettings() as any;
+  const { language, t } = useLanguage();
+  const locale = language === 'vi' ? 'vi-VN' : 'en-US';
   const navigate = useNavigate();
 
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
@@ -40,24 +43,35 @@ const OrderDetailPage = () => {
   const retryPaymentMutation = useRetryPayment();
   const addToCartMutation = useAddToCart();
 
-  const reviewSuggestions = [
-    "Chất lượng sản phẩm tuyệt vời",
-    "Đóng gói đẹp và chắc chắn",
-    "Giao hàng nhanh",
-    "Shop phục vụ rất tốt",
-    "Sản phẩm giống mô tả",
-  ];
+  const reviewSuggestions = language === 'vi'
+    ? [
+        'Chất lượng sản phẩm tuyệt vời',
+        'Đóng gói đẹp và chắc chắn',
+        'Giao hàng nhanh',
+        'Shop phục vụ rất tốt',
+        'Sản phẩm giống mô tả',
+      ]
+    : [
+        'Excellent product quality',
+        'Well-packaged and secure',
+        'Fast delivery',
+        'Great shop service',
+        'Product matches the description',
+      ];
 
   const handleSuggestionClick = (suggestion: string) => {
     setComment((prev) => (prev ? `${prev}. ${suggestion}` : suggestion));
   };
 
   const handleConfirmReceipt = async () => {
-    if (!window.confirm("Bạn xác nhận đã nhận đầy đủ hàng và muốn hoàn tất đơn hàng?")) return;
+    const confirmText = language === 'vi'
+      ? 'Bạn xác nhận đã nhận đầy đủ hàng và muốn hoàn tất đơn hàng?'
+      : 'Do you confirm that you received the full order and want to complete this purchase?';
+    if (!window.confirm(confirmText)) return;
     setIsConfirming(true);
     try {
       await orderService.updateOrderStatus(Number(id), 'COMPLETED');
-      alert("Xác nhận nhận hàng và hoàn tất đơn hàng thành công!");
+      alert(language === 'vi' ? 'Xác nhận nhận hàng và hoàn tất đơn hàng thành công!' : 'Order received and completed successfully!');
       queryClient.invalidateQueries({ queryKey: ["order", Number(id)] });
     } catch (error: any) {
       alert("Lỗi: " + (error.response?.data?.message || error.message));
@@ -98,7 +112,7 @@ const OrderDetailPage = () => {
       await Promise.all(promises);
       navigate("/cart");
     } catch (error) {
-      alert("Có lỗi xảy ra khi thêm vào giỏ hàng");
+      alert(language === 'vi' ? 'Có lỗi xảy ra khi thêm vào giỏ hàng' : 'Something went wrong while adding items to cart');
     }
   };
 
@@ -170,13 +184,21 @@ const OrderDetailPage = () => {
     }
   };
 
-  const orderStatuses = [
-    { key: "PENDING", label: "Đơn mới" },
-    { key: "CONFIRMED", label: "Đã xác nhận" },
-    { key: "PREPARING", label: "Chuẩn bị hàng" },
-    { key: "SHIPPING", label: "Đang giao" },
-    { key: "COMPLETED", label: "Hoàn thành" },
-  ];
+  const orderStatuses = language === 'vi'
+    ? [
+        { key: "PENDING", label: "Đơn mới" },
+        { key: "CONFIRMED", label: "Đã xác nhận" },
+        { key: "PREPARING", label: "Chuẩn bị hàng" },
+        { key: "SHIPPING", label: "Đang giao" },
+        { key: "COMPLETED", label: "Hoàn thành" },
+      ]
+    : [
+        { key: "PENDING", label: "New order" },
+        { key: "CONFIRMED", label: "Confirmed" },
+        { key: "PREPARING", label: "Preparing" },
+        { key: "SHIPPING", label: "Shipping" },
+        { key: "COMPLETED", label: "Completed" },
+      ];
 
 
 
@@ -432,7 +454,7 @@ const OrderDetailPage = () => {
                     <img src={h.proof_image_url} alt="Proof" className="mt-3 rounded-lg border border-gray-200 max-w-[200px] h-auto object-cover" />
                   )}
                   <p className="text-xs font-bold text-gray-400 mt-2">
-                    {new Date(h.created_at).toLocaleString('vi-VN')}
+                    {new Date(h.created_at).toLocaleString(locale)}
                   </p>
                 </div>
               </div>
@@ -526,7 +548,7 @@ const OrderDetailPage = () => {
                     <Calendar size={12} /> Ngày đặt
                   </span>
                   <span className="font-bold text-sm text-black">
-                    {new Date(order.created_at).toLocaleString("vi-VN")}
+                    {new Date(order.created_at).toLocaleString(locale)}
                   </span>
                 </div>
               </div>

@@ -17,26 +17,26 @@ export default {
 
     // 2. Insert Users
     await queryInterface.bulkInsert('users', [
-      { id: 1, role_id: 1, email: 'admin@uteshop.com', phone: '0100000001', password: passwordHash, status: 'ACTIVE', created_at: now, updated_at: now },
-      { id: 2, role_id: 3, email: 'nike@uteshop.com', phone: '0200000002', password: passwordHash, status: 'ACTIVE', created_at: now, updated_at: now },
-      { id: 3, role_id: 3, email: 'uniqlo@uteshop.com', phone: '0300000003', password: passwordHash, status: 'ACTIVE', created_at: now, updated_at: now },
-      { id: 4, role_id: 4, email: 'shipper1@uteshop.com', phone: '0400000004', password: passwordHash, status: 'ACTIVE', created_at: now, updated_at: now },
-      { id: 5, role_id: 5, email: 'customer@uteshop.com', phone: '0500000005', password: passwordHash, status: 'ACTIVE', created_at: now, updated_at: now }
+      { id: 1, role_id: 1, email: 'admin@meemart.com', phone: '0100000001', password: passwordHash, status: 'ACTIVE', created_at: now, updated_at: now },
+      { id: 2, role_id: 3, email: 'techmart@meemart.com', phone: '0200000002', password: passwordHash, status: 'ACTIVE', created_at: now, updated_at: now },
+      { id: 3, role_id: 3, email: 'homeplus@meemart.com', phone: '0300000003', password: passwordHash, status: 'ACTIVE', created_at: now, updated_at: now },
+      { id: 4, role_id: 4, email: 'shipper1@meemart.com', phone: '0400000004', password: passwordHash, status: 'ACTIVE', created_at: now, updated_at: now },
+      { id: 5, role_id: 5, email: 'customer@meemart.com', phone: '0500000005', password: passwordHash, status: 'ACTIVE', created_at: now, updated_at: now }
     ], { ignoreDuplicates: true });
 
     // 3. Insert User Profiles
     await queryInterface.bulkInsert('user_profiles', [
       { user_id: 1, full_name: 'Super Admin', gender: 'MALE' },
-      { user_id: 2, full_name: 'Nike Official', gender: 'OTHER' },
-      { user_id: 3, full_name: 'Uniqlo Store', gender: 'OTHER' },
+      { user_id: 2, full_name: 'TechMart Hub', gender: 'OTHER' },
+      { user_id: 3, full_name: 'HomePlus Store', gender: 'OTHER' },
       { user_id: 4, full_name: 'Shipper Giao Hàng Nhanh', gender: 'MALE' },
       { user_id: 5, full_name: 'Khách Hàng Vip', gender: 'FEMALE' }
     ], { ignoreDuplicates: true });
 
     // 4. Insert Shops for Vendors (users 2 & 3)
     await queryInterface.bulkInsert('shops', [
-      { id: 1, vendor_id: 2, shop_name: 'Nike Official', description: 'Gian hàng chính hãng Nike', status: 'APPROVED', rating: 4.8, created_at: now, updated_at: now },
-      { id: 2, vendor_id: 3, shop_name: 'Uniqlo VN', description: 'Gian hàng chính hãng Uniqlo', status: 'APPROVED', rating: 4.9, created_at: now, updated_at: now }
+      { id: 1, vendor_id: 2, shop_name: 'TechMart Hub', description: 'Gian hàng điện tử & công nghệ uy tín', status: 'APPROVED', rating: 4.8, created_at: now, updated_at: now },
+      { id: 2, vendor_id: 3, shop_name: 'HomePlus Store', description: 'Gian hàng gia dụng & tiện ích cho ngôi nhà', status: 'APPROVED', rating: 4.9, created_at: now, updated_at: now }
     ], { ignoreDuplicates: true });
 
     // 5. Insert User Address (for Customer 5)

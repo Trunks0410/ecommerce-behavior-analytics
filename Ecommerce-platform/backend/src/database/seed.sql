@@ -21,7 +21,7 @@ INSERT INTO `system_settings` (`setting_key`, `setting_value`, `description`) VA
   ('payment_gateway_vnpay',   'enabled',     'Trạng thái cổng thanh toán VNPay'),
   ('payment_gateway_momo',    'enabled',     'Trạng thái cổng thanh toán MoMo'),
   ('payment_gateway_card',    'enabled',     'Trạng thái cổng thanh toán Thẻ tín dụng'),
-  ('platform_name',           'FashionHub',  'Tên thương hiệu sàn thương mại'),
+  ('platform_name',           'MeeMart',     'Tên thương hiệu sàn thương mại'),
   ('min_payout_amount',       '100000',      'Số tiền tối thiểu Vendor được rút (VNĐ)'),
   ('payment_gateway_fee',     '1.00',        'Phí cổng thanh toán trực tuyến (%)'),
   ('tax_rate',                '0.25',        'Thuế giao dịch thành công (%)'),

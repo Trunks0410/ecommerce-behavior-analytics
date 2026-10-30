@@ -65,8 +65,8 @@ const getSystemPromptAndProducts = async (userMessage) => {
     }
   }
 
-  const systemPrompt = `Bạn là một nhân viên tư vấn bán hàng chuyên nghiệp, thân thiện và nhiệt tình của sàn thời trang UTEShop.
-Dưới đây là một số thông tin chính sách của sàn thời trang UTEShop:
+  const systemPrompt = `Bạn là một nhân viên tư vấn bán hàng chuyên nghiệp, thân thiện và nhiệt tình của sàn thương mại MeeMart.
+Dưới đây là một số thông tin chính sách của sàn thương mại MeeMart:
 - Thanh toán: Hỗ trợ thanh toán tiền mặt khi nhận hàng (COD), thẻ tín dụng (Visa, Master) và cổng VNPay.
 - Đổi trả hàng: Khách hàng được đổi trả sản phẩm trong vòng 7 ngày kể từ khi nhận hàng thành công đối với sản phẩm lỗi nhà sản xuất hoặc nhầm kích thước. Sản phẩm đổi trả phải còn nguyên tem mác.
 - Phí vận chuyển: Giao hàng nhanh toàn quốc với mức phí đồng giá 30.000đ. Với các đơn hàng có giá trị thanh toán từ 500.000đ trở lên, hệ thống sẽ tự động miễn phí vận chuyển.
@@ -78,7 +78,7 @@ Quy định trả lời khách hàng:
 1. Đóng vai là một nhân viên bán hàng chu đáo, vui vẻ, chào đón khách hàng nhiệt tình.
 2. Trả lời bằng tiếng Việt lịch sự, ngắn gọn và tập trung giải quyết câu hỏi.
 3. Nếu tìm thấy sản phẩm trong danh sách trên, hãy giới thiệu sản phẩm kèm giá bán và dẫn link chính xác theo định dạng [Tên sản phẩm](http://localhost:5173/products/ID) như được cung cấp để khách hàng có thể click vào xem chi tiết ngay lập tức.
-4. Nếu danh sách trên báo "Không tìm thấy sản phẩm nào khớp chính xác", hãy khéo léo thông báo cho khách là hiện tại sàn chưa có dòng sản phẩm này, sau đó gợi ý họ xem các sản phẩm thời trang khác và không tự bịa ra link sản phẩm.`;
+4. Nếu danh sách trên báo "Không tìm thấy sản phẩm nào khớp chính xác", hãy khéo léo thông báo cho khách là hiện tại sàn chưa có dòng sản phẩm này, sau đó gợi ý họ xem các sản phẩm phù hợp với nhu cầu và không tự bịa ra link sản phẩm.`;
 
   return { systemPrompt, products: matchedProducts };
 };
@@ -143,7 +143,7 @@ const generateLocalFallbackResponse = async (message) => {
     lowercaseMsg.includes("phí")
   ) {
     return {
-      reply: `Dạ chào bạn! Hiện tại UTEShop hỗ trợ giao hàng nhanh toàn quốc đồng giá chỉ **30.000đ** thôi ạ.
+      reply: `Dạ chào bạn! Hiện tại MeeMart hỗ trợ giao hàng nhanh toàn quốc đồng giá chỉ **30.000đ** thôi ạ.
 Đặc biệt hơn, nếu đơn hàng của mình có giá trị từ **500.000đ** trở lên, hệ thống bên mình sẽ tự động **miễn phí vận chuyển (Freeship)** luôn đó nha! Bạn có cần mình hỗ trợ chọn mẫu sản phẩm nào không ạ?`,
       products: []
     };
@@ -158,7 +158,7 @@ const generateLocalFallbackResponse = async (message) => {
     lowercaseMsg.includes("size")
   ) {
     return {
-      reply: `Dạ chào bạn! Về chính sách đổi trả bên UTEShop rất linh hoạt để hỗ trợ khách hàng tốt nhất ạ:
+      reply: `Dạ chào bạn! Về chính sách đổi trả bên MeeMart rất linh hoạt để hỗ trợ khách hàng tốt nhất ạ:
 - Bạn sẽ được hỗ trợ đổi hoặc trả hàng trong vòng **7 ngày** kể từ khi nhận sản phẩm thành công.
 - Áp dụng khi sản phẩm bị lỗi sản xuất, bị rách hoặc nhầm size/mẫu ạ.
 - Bạn lưu ý giữ sản phẩm còn nguyên tem mác, chưa qua giặt ủi hay sử dụng giúp shop nhé!`,
@@ -174,7 +174,7 @@ const generateLocalFallbackResponse = async (message) => {
     lowercaseMsg.includes("chuyển khoản")
   ) {
     return {
-      reply: `Dạ bên UTEShop hỗ trợ rất nhiều phương thức thanh toán tiện lợi cho mình lựa chọn ạ:
+      reply: `Dạ bên MeeMart hỗ trợ rất nhiều phương thức thanh toán tiện lợi cho mình lựa chọn ạ:
 1. **COD:** Nhận hàng rồi mới thanh toán tiền mặt trực tiếp cho shipper.
 2. **Thanh toán trực tuyến qua cổng VNPay:** Quét mã QR hoặc dùng Internet Banking.
 3. **Thẻ quốc tế:** Hỗ trợ thẻ Visa, Mastercard.
@@ -219,7 +219,7 @@ Bạn thích phương thức nào thì cứ chọn lúc đặt hàng nhé ạ!`,
           image_url: p.images?.[0]?.image_url || null
         }));
 
-        let reply = `Dạ chào bạn! UTEShop rất vui được phục vụ bạn ạ. Mình tìm thấy một số sản phẩm phù hợp với nhu cầu của bạn đây nhé:\n\n`;
+        let reply = `Dạ chào bạn! MeeMart rất vui được phục vụ bạn ạ. Mình tìm thấy một số sản phẩm phù hợp với nhu cầu của bạn đây nhé:\n\n`;
         productMatches.forEach((p) => {
           reply += `- **[${p.name}](http://localhost:5173/products/${p.slug})** | Giá: ${Number(p.price).toLocaleString("vi-VN")}đ\n`;
         });
@@ -234,7 +234,7 @@ Bạn thích phương thức nào thì cứ chọn lúc đặt hàng nhé ạ!`,
 
   // 5. Câu trả lời mặc định nếu không khớp từ khóa nào
   return {
-    reply: `Dạ xin chào! Em là trợ lý tư vấn bán hàng của UTEShop ạ. Chị/Anh cần em hỗ trợ thông tin gì thế ạ?
+    reply: `Dạ xin chào! Em là trợ lý tư vấn bán hàng của MeeMart ạ. Chị/Anh cần em hỗ trợ thông tin gì thế ạ?
 - **Chính sách đổi trả:** Trong vòng 7 ngày (giữ nguyên tem mác).
 - **Vận chuyển:** Đồng giá 30k toàn quốc, đơn từ 500k được Freeship ạ.
 - **Thanh toán:** Hỗ trợ nhận hàng thanh toán (COD) hoặc qua cổng VNPay/thẻ Visa.

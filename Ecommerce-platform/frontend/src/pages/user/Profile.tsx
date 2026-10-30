@@ -43,6 +43,7 @@ import { useProfile, useFavorites, useViewedProducts } from "@/hooks/useUser";
 import { useSystemSettings } from "@/hooks/useSystemSettings";
 import { formatPrice } from "@/shared/utils/format";
 import { useLanguage } from "@/shared/context/LanguageContext";
+import { getCurrentLocale } from "@/shared/utils/format";
 import ProductCard from "@/shared/components/ui/ProductCard";
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8088";
@@ -349,12 +350,12 @@ const Profile = () => {
           </div>
 
           {/* Profile Bar: Avatar + Name + Buttons */}
-          <div className="px-6 pb-4">
-            <div className="flex flex-col md:flex-row items-center md:items-end justify-between gap-4 -mt-16 sm:-mt-20">
+          <div className="px-6 pb-4 pt-4">
+            <div className="flex flex-col md:flex-row items-center md:items-end justify-between gap-4">
               {/* Left: Circular Avatar & Name */}
               <div className="flex flex-col md:flex-row items-center md:items-end gap-4 text-center md:text-left">
                 {/* Avatar with Camera badge */}
-                <div className="relative group">
+                <div className="relative group -mt-16 sm:-mt-20 z-10">
                   <div
                     onClick={triggerFileInput}
                     className="w-32 h-32 sm:w-36 sm:h-36 rounded-full border-4 border-white dark:border-slate-900 overflow-hidden shadow-xl bg-white dark:bg-slate-800 cursor-pointer"
@@ -382,7 +383,7 @@ const Profile = () => {
                 </div>
 
                 {/* Name & Bio */}
-                <div className="mb-2">
+                <div className="mb-2 pt-2 md:pt-0">
                   <div className="flex items-center justify-center md:justify-start gap-2">
                     <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-slate-100">
                       {displayName}
@@ -464,7 +465,7 @@ const Profile = () => {
                     : "border-transparent text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800/60 rounded-t-lg"
                 }`}
               >
-                {language === "vi" ? "Đã xem" : "Viewed"} ({viewedProducts?.length || 0})
+                {t("viewed_label")} ({viewedProducts?.length || 0})
               </button>
 
               <button
@@ -510,7 +511,7 @@ const Profile = () => {
                     {(user as any)?.date_of_birth || (user as any)?.dateOfBirth
                       ? new Date(
                           (user as any)?.date_of_birth || (user as any)?.dateOfBirth
-                        ).toLocaleDateString("vi-VN")
+                        ).toLocaleDateString(getCurrentLocale())
                       : "Chưa cập nhật ngày sinh"}
                   </span>
                 </div>
