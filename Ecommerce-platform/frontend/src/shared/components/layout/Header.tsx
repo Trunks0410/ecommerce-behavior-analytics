@@ -168,7 +168,7 @@ const Header = () => {
               className="hover:text-[#ee4d2d] transition-colors flex items-center gap-1 font-medium"
             >
               <Flame size={13} className="text-[#ee4d2d]" />
-              <span>Flash Sale</span>
+              <span>{t("nav_flash_sale")}</span>
             </Link>
             <span className="text-gray-300 dark:text-slate-700">|</span>
             <div className="hidden sm:flex items-center space-x-1.5 font-medium">
@@ -207,7 +207,7 @@ const Header = () => {
               title={isDark ? t("theme_light") : t("theme_dark")}
             >
               {isDark ? <Sun size={13} className="text-amber-400" /> : <Moon size={13} className="text-slate-600" />}
-              <span className="hidden md:inline">{isDark ? (language === "vi" ? "Sáng" : "Light") : (language === "vi" ? "Tối" : "Dark")}</span>
+              <span className="hidden md:inline">{isDark ? t("theme_light_short") : t("theme_dark_short")}</span>
             </button>
 
             {/* Notifications */}
@@ -244,7 +244,7 @@ const Header = () => {
                 className="flex items-center gap-1 hover:text-[#ee4d2d] transition-colors py-1 cursor-pointer font-medium"
               >
                 <Globe size={13} />
-                <span>{language === "vi" ? "Tiếng Việt" : "English"}</span>
+                <span>{language === "vi" ? t("language_vi") : t("language_en")}</span>
                 <ChevronDown
                   size={11}
                   className={`transition-transform duration-200 ${
@@ -273,7 +273,7 @@ const Header = () => {
                           : "text-gray-700 dark:text-slate-200"
                       }`}
                     >
-                      <span>Tiếng Việt</span>
+                      <span>{t("language_vi")}</span>
                       {language === "vi" && <Check size={13} className="text-[#ee4d2d]" />}
                     </button>
                     <button
@@ -288,7 +288,7 @@ const Header = () => {
                           : "text-gray-700 dark:text-slate-200"
                       }`}
                     >
-                      <span>English</span>
+                      <span>{t("language_en")}</span>
                       {language === "en" && <Check size={13} className="text-[#ee4d2d]" />}
                     </button>
                   </div>

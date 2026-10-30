@@ -93,7 +93,7 @@ const ForgotPassword = () => {
                   label="Địa chỉ email"
                   id="email"
                   type="email"
-                  placeholder="example@uteshop.vn"
+                  placeholder="example@meemart.vn"
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
                   disabled={recovery.loading}

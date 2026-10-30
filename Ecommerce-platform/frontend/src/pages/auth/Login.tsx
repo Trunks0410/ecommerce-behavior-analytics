@@ -124,17 +124,16 @@ const Login = () => {
           <div className="w-full md:w-1/2 relative">
             <div className="card-brutal p-0 overflow-hidden bg-[#d2bba3] aspect-[4/5] relative">
               <img
-                src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=1000&auto=format&fit=crop"
-                alt="Fashion Editorial"
+                src="https://images.unsplash.com/photo-1524758631624-e2822e304c36?q=80&w=1000&auto=format&fit=crop"
+                alt="Marketplace Editorial"
                 className="w-full h-full object-cover opacity-90 mix-blend-multiply"
               />
               <div className="absolute bottom-10 left-10 right-10 bg-white p-8 border-[3px] border-black shadow-brutal">
                 <p className="font-serif italic text-xl mb-4 leading-relaxed">
-                  "Thời trang không chỉ là quần áo, đó là cách bạn kể câu chuyện
-                  của chính mình."
+                  "Mua sắm thông minh là cách bạn tối ưu thời gian, chi phí và trải nghiệm mỗi ngày."
                 </p>
                 <p className="text-xs font-bold tracking-widest uppercase">
-                  — UTESHOP EDITORIAL
+                  — MEEMART MARKETPLACE
                 </p>
               </div>
             </div>
@@ -145,7 +144,7 @@ const Login = () => {
             <Card className="p-8 sm:p-10 rounded-xs sm:rounded-sm shadow-sm">
               <div className="mb-10 text-center">
                 <h1 className="font-serif text-4xl font-bold mb-3">
-                  Đăng nhập UTEShop
+                  Đăng nhập MeeMart
                 </h1>
                 <p className="text-gray-600 text-sm">
                   Chào mừng bạn quay trở lại. Hãy đăng nhập để tiếp tục trải

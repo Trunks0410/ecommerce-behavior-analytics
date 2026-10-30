@@ -296,7 +296,7 @@ export const BlogTab: React.FC<BlogTabProps> = ({ addNotification }) => {
                     </label>
                     <input
                       type="text"
-                      placeholder="Ví dụ: Xu hướng thời trang, Mẹo mua sắm..."
+                      placeholder="Ví dụ: Xu hướng mua sắm, Mẹo tiết kiệm..."
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
                       className="w-full bg-gray-50 border-2 border-black rounded-xl p-3 text-xs font-bold"

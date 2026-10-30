@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Calendar, Eye, User, ArrowLeft, Loader2 } from "lucide-react";
 import managerService from "@/services/managerService";
+import { getCurrentLocale } from "@/shared/utils/format";
 
 export const BlogDetailPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -63,7 +64,7 @@ export const BlogDetailPage = () => {
   }
 
   const fmtDate = (d: string) => {
-    return new Date(d).toLocaleDateString("vi-VN", {
+    return new Date(d).toLocaleDateString(getCurrentLocale(), {
       year: "numeric",
       month: "long",
       day: "numeric",

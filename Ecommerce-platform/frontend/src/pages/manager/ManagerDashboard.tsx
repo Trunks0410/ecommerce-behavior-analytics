@@ -75,7 +75,7 @@ const ManagerDashboard = () => {
             </div>
             <div className="flex flex-col">
               <span className="font-serif text-lg font-black tracking-tighter uppercase leading-none">
-                UTEShop
+                MeeMart
               </span>
               <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mt-1">
                 MANAGER

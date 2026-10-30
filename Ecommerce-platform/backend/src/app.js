@@ -54,11 +54,11 @@ app.get("/brands", (req, res) => {
   return res.status(200).json({
     message: "Success",
     data: [
-      { id: 1, name: "Nike" },
-      { id: 2, name: "Adidas" },
-      { id: 3, name: "Puma" },
-      { id: 4, name: "New Balance" },
-      { id: 5, name: "UTEShop Original" },
+      { id: 1, name: "Apple" },
+      { id: 2, name: "Samsung" },
+      { id: 3, name: "Sony" },
+      { id: 4, name: "Philips" },
+      { id: 5, name: "MeeMart Original" },
     ],
   });
 });

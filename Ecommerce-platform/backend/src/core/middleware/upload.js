@@ -14,7 +14,7 @@ cloudinary.config({
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: "fashion_marketplace/avatars",
+    folder: "ecommerce_platform/avatars",
     allowed_formats: ["jpg", "jpeg", "png", "webp"],
   },
 });
@@ -22,7 +22,7 @@ const storage = new CloudinaryStorage({
 const chatStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: "fashion_marketplace/chats",
+    folder: "ecommerce_platform/chats",
     allowed_formats: ["jpg", "jpeg", "png", "webp", "pdf", "doc", "docx", "xls", "xlsx", "txt"],
     resource_type: "auto",
   },

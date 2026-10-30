@@ -10,7 +10,7 @@ export const adminService = {
     const response = await axiosClient.post("/admin/users", { 
       ...data, 
       role: "manager", 
-      password: data.password || "uteshop_manager" 
+      password: data.password || "meemart_manager" 
     });
     return response.data;
   },
@@ -19,7 +19,7 @@ export const adminService = {
   createUser: async (data: { email: string; password?: string; full_name?: string; role: string; phone?: string; gender?: string; shipper_shop_id?: string | number }) => {
     const payload: any = { ...data };
     if (data.role !== "shipper" && !data.password) {
-      payload.password = "uteshop_123456";
+      payload.password = "meemart_123456";
     }
     const response = await axiosClient.post("/admin/users", payload);
     return response.data;

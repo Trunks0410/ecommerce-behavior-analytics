@@ -152,7 +152,7 @@ const VendorShopPage: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-24 text-center">
         <div className="animate-spin inline-block w-10 h-10 border-4 border-[#ee4d2d] border-t-transparent rounded-full mb-4" />
         <h2 className="text-base font-bold text-gray-700 dark:text-slate-300">
-          {language === "vi" ? "Đang tải thông tin cửa hàng..." : "Loading shop profile..."}
+          {t("shop_loading")}
         </h2>
       </div>
     );
@@ -163,18 +163,16 @@ const VendorShopPage: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-24 text-center space-y-4">
         <AlertTriangle className="w-14 h-14 mx-auto text-amber-500" />
         <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100">
-          {language === "vi" ? "Không tìm thấy cửa hàng!" : "Shop Not Found!"}
+          {t("shop_not_found")}
         </h2>
         <p className="text-xs text-gray-500 dark:text-slate-400">
-          {language === "vi"
-            ? "Cửa hàng có thể đã tạm khóa hoặc đường dẫn không đúng."
-            : "The shop might be temporarily unavailable or the link is invalid."}
+          {t("shop_not_found_desc")}
         </p>
         <Link
           to="/products"
           className="inline-flex items-center px-6 py-2.5 bg-[#ee4d2d] hover:bg-[#d03e1e] text-white text-xs font-bold rounded-lg transition-colors shadow-xs"
         >
-          {language === "vi" ? "Quay lại mua sắm" : "Back to Shopping"}
+          {t("back_to_shopping")}
         </Link>
       </div>
     );
@@ -206,7 +204,7 @@ const VendorShopPage: React.FC = () => {
                   {shop.shop_name || shop.name}
                 </h1>
                 <span className="bg-[#fef0ed] dark:bg-[#ee4d2d]/20 text-[#ee4d2d] text-[10px] font-bold px-2 py-0.5 rounded">
-                  {language === "vi" ? "Yêu thích" : "Preferred"}
+                  {t("preferred_label")}
                 </span>
               </div>
               <p className="text-xs text-gray-500 dark:text-slate-400 line-clamp-1 max-w-md">
@@ -226,12 +224,12 @@ const VendorShopPage: React.FC = () => {
                   {isFollowed ? (
                     <>
                       <Check size={13} />
-                      <span>{language === "vi" ? "Đã theo dõi" : "Following"}</span>
+                      <span>{t("following_label")}</span>
                     </>
                   ) : (
                     <>
                       <Plus size={13} />
-                      <span>{language === "vi" ? "Theo dõi" : "Follow"}</span>
+                      <span>{t("follow_label")}</span>
                     </>
                   )}
                 </button>
@@ -304,7 +302,7 @@ const VendorShopPage: React.FC = () => {
           <div className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700/60 rounded-xl p-4 shadow-xs space-y-3">
             <div className="flex items-center gap-1.5 text-xs font-bold text-gray-800 dark:text-slate-200 uppercase">
               <Ticket size={14} className="text-[#ee4d2d]" />
-              <span>{language === "vi" ? "Voucher Khuyến Mãi Của Shop" : "Shop Promo Vouchers"}</span>
+              <span>{t("shop_voucher_title")}</span>
             </div>
             <div className="flex gap-3 overflow-x-auto pb-1 no-scrollbar">
               {vouchers.map((v: any) => (
@@ -352,8 +350,8 @@ const VendorShopPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between gap-4">
           <div className="flex gap-2 overflow-x-auto no-scrollbar">
             {[
-              { id: "home", label: language === "vi" ? "Trang chủ Shop" : "Shop Home" },
-              { id: "all", label: language === "vi" ? "Tất cả sản phẩm" : "All Products" },
+              { id: "home", label: t("shop_home") },
+              { id: "all", label: t("all_products") },
               ...shopCategories.map((cat) => ({ id: cat.slug, label: cat.name })),
             ].map((tab) => {
               const isActive = activeTab === tab.id;
@@ -383,7 +381,7 @@ const VendorShopPage: React.FC = () => {
               type="text"
               value={searchVal}
               onChange={(e) => setSearchVal(e.target.value)}
-              placeholder={language === "vi" ? "Tìm tại shop này..." : "Search in shop..."}
+              placeholder={t("shop_search_placeholder")}
               className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-gray-800 dark:text-slate-100 placeholder-gray-400 focus:outline-none focus:border-[#ee4d2d]"
             />
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={13} />
@@ -407,7 +405,7 @@ const VendorShopPage: React.FC = () => {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                 <div className="relative z-10 p-6 sm:p-8 text-white space-y-2">
                   <span className="bg-[#ee4d2d] text-white px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider inline-block">
-                    {language === "vi" ? "BỘ SƯU TẬP MỚI" : "NEW ARRIVALS"}
+                    {t("new_arrivals_label")}
                   </span>
                   <h2 className="text-2xl sm:text-3xl font-extrabold text-white leading-tight">
                     {shop.shop_name || shop.name}
@@ -417,7 +415,7 @@ const VendorShopPage: React.FC = () => {
                     onClick={() => setActiveTab("all")}
                     className="px-5 py-2 bg-white text-gray-900 rounded-lg font-bold text-xs hover:bg-[#ee4d2d] hover:text-white transition-colors shadow-sm cursor-pointer mt-2"
                   >
-                    {language === "vi" ? "Khám phá tất cả sản phẩm" : "Explore All Products"}
+                    {t("explore_all_products")}
                   </button>
                 </div>
               </div>
@@ -459,7 +457,7 @@ const VendorShopPage: React.FC = () => {
                 <div className="flex items-center justify-between border-b border-gray-200 dark:border-slate-700 pb-2">
                   <h3 className="text-sm sm:text-base font-bold text-gray-900 dark:text-slate-100 uppercase tracking-tight flex items-center gap-1.5">
                     <Flame size={16} className="text-[#ee4d2d]" />
-                    <span>{language === "vi" ? "Khuyến Mãi Cực Hời" : "Hot Promotions"}</span>
+                    <span>{t("hot_promotions")}</span>
                   </h3>
                   <div className="flex gap-1.5">
                     <button
@@ -516,7 +514,7 @@ const VendorShopPage: React.FC = () => {
                 <div className="flex items-center justify-between border-b border-gray-200 dark:border-slate-700 pb-2">
                   <h3 className="text-sm sm:text-base font-bold text-gray-900 dark:text-slate-100 uppercase tracking-tight flex items-center gap-1.5">
                     <Sparkles size={16} className="text-amber-500" />
-                    <span>{language === "vi" ? "Sản Phẩm Bán Chạy" : "Best Selling Products"}</span>
+                    <span>{t("best_selling_products")}</span>
                   </h3>
                   <div className="flex gap-1.5">
                     <button
@@ -574,14 +572,14 @@ const VendorShopPage: React.FC = () => {
             <div className="bg-white dark:bg-slate-800 border border-black/[0.06] dark:border-slate-700/60 rounded-xs sm:rounded-sm p-3.5 sm:p-4 shadow-[0_1px_1px_0_rgba(0,0,0,0.05)] flex flex-wrap items-center justify-between gap-4">
               <h3 className="text-sm sm:text-base font-bold text-gray-900 dark:text-slate-100 uppercase tracking-tight">
                 {activeTab === "all"
-                  ? (language === "vi" ? "Tất Cả Sản Phẩm" : "All Products")
+                  ? t("all_products_title")
                   : shopCategories.find((c) => c.slug === activeTab)?.name || "Danh Mục"}
               </h3>
 
               {/* Sắp xếp chuẩn Shopee */}
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs text-gray-500 dark:text-slate-400 font-medium hidden sm:inline">
-                  {language === "vi" ? "Sắp xếp theo:" : "Sort by:"}
+                  {t("sort_by_label")}
                 </span>
 
                 <button
@@ -593,7 +591,7 @@ const VendorShopPage: React.FC = () => {
                       : "bg-gray-100 dark:bg-slate-900 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700"
                   }`}
                 >
-                  {language === "vi" ? "Mới nhất" : "Newest"}
+                  {t("sort_newest")}
                 </button>
 
                 <button
@@ -605,21 +603,21 @@ const VendorShopPage: React.FC = () => {
                       : "bg-gray-100 dark:bg-slate-900 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700"
                   }`}
                 >
-                  {language === "vi" ? "Bán chạy" : "Best Sellers"}
+                  {t("sort_best_sellers")}
                 </button>
 
                 {/* Dropdown sắp xếp Giá */}
                 <ShopeeSelect
                   value={sortType.startsWith("price_") ? sortType : ""}
                   onChange={(val) => setSortType(val)}
-                  placeholder={language === "vi" ? "Giá" : "Price"}
+                  placeholder={t("sort_price")}
                   size="sm"
                   menuWidth="w-40"
                   align="right"
                   buttonClassName={sortType.startsWith("price_") ? "border-[#ee4d2d] text-[#ee4d2d] font-medium" : ""}
                   options={[
-                    { value: "price_asc", label: language === "vi" ? "Giá: Thấp đến Cao" : "Price: Low to High" },
-                    { value: "price_desc", label: language === "vi" ? "Giá: Cao đến Thấp" : "Price: High to Low" },
+                    { value: "price_asc", label: t("price_low_to_high") },
+                    { value: "price_desc", label: t("price_high_to_low") },
                   ]}
                 />
               </div>
@@ -627,7 +625,7 @@ const VendorShopPage: React.FC = () => {
 
             {searchKeyword && (
               <div className="text-xs text-gray-500 dark:text-slate-400">
-                <span>{language === "vi" ? "Kết quả tìm kiếm cho:" : "Search results for:"} </span>
+                <span>{t("search_results_for")} </span>
                 <strong className="text-gray-900 dark:text-slate-100">"{searchKeyword}"</strong>
                 <button
                   type="button"
@@ -637,7 +635,7 @@ const VendorShopPage: React.FC = () => {
                   }}
                   className="text-red-500 hover:underline ml-2 cursor-pointer"
                 >
-                  {language === "vi" ? "Xóa tìm kiếm" : "Clear"}
+                  {t("clear_search")}
                 </button>
               </div>
             )}
@@ -667,7 +665,7 @@ const VendorShopPage: React.FC = () => {
             ) : (
               <div className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700/60 rounded-xl p-12 text-center text-gray-400 space-y-1">
                 <p className="text-xs font-bold text-gray-600 dark:text-slate-300">
-                  {language === "vi" ? "Không tìm thấy sản phẩm nào trong mục này." : "No products found in this section."}
+                  {t("no_products_in_section")}
                 </p>
               </div>
             )}

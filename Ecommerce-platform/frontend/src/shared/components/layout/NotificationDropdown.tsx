@@ -32,7 +32,8 @@ export const NotificationDropdown = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const prevUnreadCountRef = useRef<number>(0);
   const isInitialLoad = useRef<boolean>(true);
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
+  const locale = language === "vi" ? "vi-VN" : "en-US";
 
   const fetchNotifications = async () => {
     try {
@@ -176,7 +177,7 @@ export const NotificationDropdown = ({
               </span>
             )}
           </div>
-          <span>{language === "vi" ? "Thông Báo" : "Notifications"}</span>
+          <span>{t("notification_title")}</span>
         </button>
       ) : (
         <button
@@ -206,9 +207,7 @@ export const NotificationDropdown = ({
             {/* Header */}
             <div className="px-4 py-3 border-b border-gray-100 dark:border-slate-700/80 bg-white dark:bg-slate-800 flex items-center justify-between">
               <span className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">
-                {language === "vi"
-                  ? "Thông Báo Mới Nhận"
-                  : "Recent Notifications"}
+                {t("notification_recent")}
               </span>
               {unreadCount > 0 && (
                 <button
@@ -217,9 +216,7 @@ export const NotificationDropdown = ({
                   className="text-[11px] font-medium text-[#ee4d2d] hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   <Check size={12} />
-                  <span>
-                    {language === "vi" ? "Đánh dấu đã đọc" : "Mark all as read"}
-                  </span>
+                  <span>{t("notification_mark_all_read")}</span>
                 </button>
               )}
             </div>
@@ -235,7 +232,7 @@ export const NotificationDropdown = ({
                     : "text-gray-600 dark:text-slate-400 border-transparent hover:text-gray-900"
                 }`}
               >
-                {language === "vi" ? "Tất cả" : "All"} ({notifications.length})
+                {t("notification_all")} ({notifications.length})
               </button>
               <button
                 type="button"
@@ -246,7 +243,7 @@ export const NotificationDropdown = ({
                     : "text-gray-600 dark:text-slate-400 border-transparent hover:text-gray-900"
                 }`}
               >
-                {language === "vi" ? "Chưa đọc" : "Unread"} ({unreadCount})
+                {t("notification_unread")} ({unreadCount})
               </button>
             </div>
 
@@ -258,9 +255,7 @@ export const NotificationDropdown = ({
                     <Bell size={20} />
                   </div>
                   <p className="text-xs text-gray-500 dark:text-slate-400">
-                    {language === "vi"
-                      ? "Chưa có thông báo nào"
-                      : "No notifications yet"}
+                    {t("notification_no_new")}
                   </p>
                 </div>
               ) : (
@@ -288,7 +283,7 @@ export const NotificationDropdown = ({
                         {notif.content}
                       </p>
                       <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-1.5">
-                        {new Date(notif.created_at).toLocaleString("vi-VN", {
+                        {new Date(notif.created_at).toLocaleString(locale, {
                           hour: "2-digit",
                           minute: "2-digit",
                           day: "2-digit",
@@ -309,9 +304,7 @@ export const NotificationDropdown = ({
                 onClick={() => setIsOpen(false)}
                 className="text-xs font-medium text-gray-700 dark:text-slate-300 hover:text-[#ee4d2d] dark:hover:text-[#ee4d2d] inline-flex items-center gap-1 transition-colors py-1 px-3"
               >
-                <span>
-                  {language === "vi" ? "Xem tất cả" : "View all notifications"}
-                </span>
+                <span>{t("notification_view_all")}</span>
                 <ChevronRight size={13} />
               </Link>
             </div>
@@ -350,9 +343,9 @@ export const NotificationDropdown = ({
             </div>
 
             <div className="border-t border-gray-100 dark:border-slate-700/80 pt-3 flex justify-between items-center text-[11px] text-gray-400">
-              <span>{language === "vi" ? "Thời gian gửi:" : "Time:"}</span>
+              <span>{t("notification_time")}</span>
               <span className="font-medium text-gray-700 dark:text-slate-300">
-                {new Date(selectedNotif.created_at).toLocaleString("vi-VN")}
+                {new Date(selectedNotif.created_at).toLocaleString(locale)}
               </span>
             </div>
 
@@ -362,7 +355,7 @@ export const NotificationDropdown = ({
                 onClick={() => setSelectedNotif(null)}
                 className="px-5 py-2 text-xs font-semibold rounded-xs bg-[#ee4d2d] hover:bg-[#d03e1e] text-white transition-colors cursor-pointer"
               >
-                {language === "vi" ? "Đóng" : "Close"}
+                {t("notification_close")}
               </button>
             </div>
           </div>

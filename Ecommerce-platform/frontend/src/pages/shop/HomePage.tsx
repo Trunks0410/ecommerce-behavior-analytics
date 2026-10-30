@@ -42,10 +42,10 @@ const categories = [
   },
   {
     nameKey: "cat_fashion",
-    defaultName: "Thời trang",
-    icon: <Shirt size={22} className="text-pink-500" />,
+    defaultName: "Phụ kiện",
+    icon: <Glasses size={22} className="text-pink-500" />,
     bgColor: "bg-pink-50 dark:bg-pink-950/40",
-    slug: "thoi-trang",
+    slug: "phu-kien",
   },
   {
     nameKey: "cat_home",

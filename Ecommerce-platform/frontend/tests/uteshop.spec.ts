@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('UTEShop E2E Test Suite', () => {
+test.describe('MeeMart E2E Test Suite', () => {
 
   // Trước mỗi test case, tự động điều hướng về trang chủ
   test.beforeEach(async ({ page }) => {
@@ -8,11 +8,11 @@ test.describe('UTEShop E2E Test Suite', () => {
   });
 
   test('TC01: Trang chủ tải thành công và hiển thị đầy đủ thông tin chính', async ({ page }) => {
-    // 1. Kiểm tra tiêu đề trang chứa chữ "UTEShop"
-    await expect(page).toHaveTitle(/UTEShop/i);
+    // 1. Kiểm tra tiêu đề trang chứa chữ "MeeMart"
+    await expect(page).toHaveTitle(/MeeMart/i);
 
-    // 2. Kiểm tra xem Logo thương hiệu có hiển thị và chứa text "UTEShop" không
-    const logo = page.locator('header a:has-text("UTEShop")');
+    // 2. Kiểm tra xem Logo thương hiệu có hiển thị và chứa text "MeeMart" không
+    const logo = page.locator('header a:has-text("MeeMart")');
     await expect(logo).toBeVisible();
 
     // 3. Kiểm tra xem nút "Khám phá ngay" trên Hero banner có hiển thị không
@@ -34,7 +34,7 @@ test.describe('UTEShop E2E Test Suite', () => {
     await expect(page).toHaveURL(/\/auth\/login/);
 
     // 3. Kiểm tra tiêu đề biểu mẫu đăng nhập
-    await expect(page.getByRole('heading', { name: 'Đăng nhập UTEShop' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Đăng nhập MeeMart' })).toBeVisible();
 
     // 4. Nhập email/phone không hợp lệ và mật khẩu
     await page.locator('#email_or_phone').fill('wronguser@gmail.com');

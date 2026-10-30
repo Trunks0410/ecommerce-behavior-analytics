@@ -77,7 +77,7 @@ export const VendorTab = ({ showToast, showConfirm }: VendorTabProps) => {
          <div className="flex justify-between items-center">
             <div>
                <h1 className="text-3xl font-serif font-black tracking-tighter uppercase">Phê duyệt gian hàng Vendor</h1>
-               <p className="text-gray-400 font-medium text-sm mt-1 italic">Kiểm soát đầu vào các shop thời trang trên sàn</p>
+               <p className="text-gray-400 font-medium text-sm mt-1 italic">Kiểm soát đầu vào các shop trên sàn thương mại</p>
             </div>
             <button onClick={fetchShops} className="p-3 border-2 border-black rounded-xl hover:bg-gray-50 transition-all active:translate-y-1">
                <RefreshCw size={18} />

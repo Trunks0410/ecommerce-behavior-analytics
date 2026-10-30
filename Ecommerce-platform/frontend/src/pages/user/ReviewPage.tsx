@@ -21,7 +21,7 @@ const ReviewPage = () => {
           <div className="relative z-10">
             <div className="mb-12">
               <h1 className="text-4xl font-serif font-black tracking-tighter uppercase mb-3">Đánh giá trải nghiệm</h1>
-              <p className="text-gray-500 font-medium max-w-lg">Cảm ơn bạn đã tin tưởng UTEShop. Những nhận xét của bạn sẽ giúp chúng tôi hoàn thiện hơn mỗi ngày.</p>
+              <p className="text-gray-500 font-medium max-w-lg">Cảm ơn bạn đã tin tưởng MeeMart. Những nhận xét của bạn sẽ giúp chúng tôi hoàn thiện hơn mỗi ngày.</p>
             </div>
 
             <div className="space-y-12">
@@ -113,7 +113,7 @@ const ReviewPage = () => {
                    GỬI ĐÁNH GIÁ NGAY <Send size={18} />
                 </button>
                 <p className="text-center mt-6 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                   Bạn sẽ nhận được <span className="text-primary">+200 điểm UTEShop</span> sau khi đánh giá thành công
+                   Bạn sẽ nhận được <span className="text-primary">+200 điểm MeeMart</span> sau khi đánh giá thành công
                 </p>
               </div>
             </div>

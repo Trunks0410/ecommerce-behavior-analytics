@@ -184,11 +184,7 @@ const Footer = () => {
         {/* Bottom Copyright Notice */}
         <div className="border-t border-gray-200 dark:border-slate-800 mt-10 pt-6 text-center space-y-1 text-gray-500 dark:text-slate-500 text-[11px]">
           <p>{t("copyright")}</p>
-          <p>
-            {language === "vi"
-              ? "Địa chỉ văn phòng: Tòa nhà Tech Innovation, Số 1, Đường Lê Lợi, Quận 1, TP. Hồ Chí Minh."
-              : "Office Address: Tech Innovation Building, No. 1, Le Loi Street, District 1, Ho Chi Minh City."}
-          </p>
+          <p>{t("office_address")}</p>
         </div>
       </div>
     </footer>

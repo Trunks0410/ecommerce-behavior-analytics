@@ -18,6 +18,9 @@ import {
    AlertCircle,
    Wallet,
    Ticket,
+   Eye,
+   EyeOff,
+   Lock,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
@@ -27,7 +30,7 @@ import { adminService } from '@/services/adminService';
 import type { RootState } from '@/app/stores/store';
 import useAuth from '@/hooks/useAuth';
 import { NotificationDropdown } from '@/shared/components/layout/NotificationDropdown';
-import { getAvatarUrl } from '@/shared/utils/format';
+import { getAvatarUrl, getCurrentLocale } from '@/shared/utils/format';
 
 import { UserTab } from './components/UserTab';
 import { VendorTab } from './components/VendorTab';
@@ -52,6 +55,7 @@ const AdminDashboard = () => {
    const [showAdminProfileModal, setShowAdminProfileModal] = useState(false);
    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
    const [isEditingAdmin, setIsEditingAdmin] = useState(false);
+   const [showAdminPassword, setShowAdminPassword] = useState(false);
    const [adminAvatarFile, setAdminAvatarFile] = useState<File | null>(null);
    const [adminForm, setAdminForm] = useState({
       full_name: '',
@@ -189,7 +193,7 @@ const AdminDashboard = () => {
                      <ShieldAlert size={24} />
                   </div>
                   <div className="flex flex-col">
-                     <span className="font-serif text-lg font-black tracking-tighter uppercase leading-none text-red-600">UTEShop</span>
+                     <span className="font-serif text-lg font-black tracking-tighter uppercase leading-none text-red-600">MeeMart</span>
                      <span className="text-[10px] font-black uppercase tracking-[0.2em] mt-1 text-black">ADMIN</span>
                   </div>
                </Link>
@@ -272,7 +276,7 @@ const AdminDashboard = () => {
                               </div>
                               <div>
                                  <p className="text-xs font-black uppercase text-black line-clamp-1">{currentUser?.fullName || currentUser?.profile?.full_name || "Admin"}</p>
-                                 <p className="text-[10px] text-red-500 font-bold line-clamp-1">{currentUser?.email || "admin@uteshop.vn"}</p>
+                                 <p className="text-[10px] text-red-500 font-bold line-clamp-1">{currentUser?.email || "admin@meemart.vn"}</p>
                               </div>
                            </div>
                            <div className="space-y-1">
@@ -334,7 +338,7 @@ const AdminDashboard = () => {
                               )}
                            </div>
                            <h3 className="text-xl font-black uppercase text-center text-black">{currentUser?.fullName || currentUser?.profile?.full_name || "Admin"}</h3>
-                           <p className="text-xs font-bold text-gray-500 mt-1">{currentUser?.email || "admin@uteshop.vn"}</p>
+                           <p className="text-xs font-bold text-gray-500 mt-1">{currentUser?.email || "admin@meemart.vn"}</p>
                            <span className="mt-3 px-3 py-1.5 bg-black text-white text-[9px] font-black uppercase tracking-widest rounded-full border border-black">
                               {typeof currentUser?.role === 'object' && currentUser?.role !== null
                                  ? currentUser.role.role_name
@@ -351,7 +355,7 @@ const AdminDashboard = () => {
                               <span className="text-xs font-black uppercase text-gray-400">Ngày sinh</span>
                               <span className="text-sm font-bold">
                                  {currentUser?.dateOfBirth || currentUser?.profile?.birthday
-                                    ? new Date(currentUser?.dateOfBirth || currentUser?.profile?.birthday).toLocaleDateString("vi-VN")
+                                    ? new Date(currentUser?.dateOfBirth || currentUser?.profile?.birthday).toLocaleDateString(getCurrentLocale())
                                     : "Chưa cập nhật"}
                               </span>
                            </div>
@@ -453,12 +457,25 @@ const AdminDashboard = () => {
                         </div>
                         <div>
                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">Mật khẩu mới (Để trống nếu không đổi)</label>
-                           <input
-                              type="password" value={adminForm.password}
-                              onChange={e => setAdminForm({ ...adminForm, password: e.target.value })}
-                              placeholder="••••••••"
-                              className="w-full border-2 border-black rounded-xl px-4 py-2 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-red-500 text-black"
-                           />
+                           <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                                 <Lock size={14} />
+                              </span>
+                              <input
+                                 type={showAdminPassword ? "text" : "password"} value={adminForm.password}
+                                 onChange={e => setAdminForm({ ...adminForm, password: e.target.value })}
+                                 placeholder="••••••••"
+                                 className="w-full border-2 border-black rounded-xl pl-9 pr-10 py-2 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-red-500 text-black"
+                              />
+                              <button
+                                 type="button"
+                                 aria-label={showAdminPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                 onClick={() => setShowAdminPassword((prev) => !prev)}
+                              >
+                                 {showAdminPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                              </button>
+                           </div>
                         </div>
                         <div className="flex gap-4 mt-6">
                            <button

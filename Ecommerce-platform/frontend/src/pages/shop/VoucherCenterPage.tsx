@@ -140,13 +140,13 @@ const VoucherCenterPage: React.FC = () => {
         <div className="bg-gradient-to-r from-primary to-orange-400 rounded-3xl p-10 md:p-16 text-white relative overflow-hidden shadow-premium">
           <div className="relative z-10">
             <span className="text-white/80 font-black uppercase tracking-[0.2em] mb-4 block flex items-center gap-2">
-              <Gift size={18} /> UTEShop Rewards
+              <Gift size={18} /> MeeMart Rewards
             </span>
             <h1 className="text-4xl md:text-6xl font-serif font-black mb-4 tracking-tight leading-tight">
               Trung Tâm <br /> Khuyến Mãi
             </h1>
             <p className="text-lg opacity-90 max-w-md font-medium">
-              Săn ngay các mã giảm giá hấp dẫn nhất từ UTEShop và các gian hàng
+              Săn ngay các mã giảm giá hấp dẫn nhất từ MeeMart và các gian hàng
               đối tác. Số lượng có hạn!
             </p>
           </div>

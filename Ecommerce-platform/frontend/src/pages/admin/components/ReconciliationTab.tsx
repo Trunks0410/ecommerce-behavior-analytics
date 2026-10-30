@@ -154,7 +154,7 @@ export const ReconciliationTab = ({ showToast, showConfirm }: ReconciliationTabP
       const netAmount = Math.round(amount * (1 - totalDeductionRate));
 
       const bankBin = BANK_BINS[shop.bank_name] || "970436";
-      const transferContent = `UTESHOP ${shop.shop_name} rut tien`.slice(0, 50);
+      const transferContent = `MEEMART ${shop.shop_name} rut tien`.slice(0, 50);
       const qrUrl = `https://img.vietqr.io/image/${bankBin}-${shop.bank_account_no}-qr_only.png?amount=${netAmount}&addInfo=${encodeURIComponent(transferContent)}&accountName=${encodeURIComponent(shop.bank_account_name || "")}`;
 
       setQrModal({

@@ -208,7 +208,7 @@ const ProductDetailPage = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-20 text-center">
         <div className="animate-spin inline-block w-10 h-10 border-4 border-[#ee4d2d] border-t-transparent rounded-full mb-4" />
         <h2 className="text-base font-bold text-gray-700 dark:text-slate-300">
-          {language === "vi" ? "Đang tải thông tin sản phẩm..." : "Loading product details..."}
+          {t("loading_product_details")}
         </h2>
       </div>
     );
@@ -219,18 +219,16 @@ const ProductDetailPage = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-20 text-center space-y-4">
         <AlertTriangle className="w-14 h-14 mx-auto text-amber-500" />
         <h2 className="text-xl font-bold text-gray-900 dark:text-slate-100">
-          {language === "vi" ? "Không tìm thấy sản phẩm!" : "Product Not Found!"}
+          {t("product_not_found")}
         </h2>
         <p className="text-xs text-gray-500 dark:text-slate-400">
-          {language === "vi"
-            ? "Sản phẩm có thể đã ngừng kinh doanh hoặc đường dẫn không đúng."
-            : "The product might be discontinued or the link is invalid."}
+          {t("product_not_found_desc")}
         </p>
         <Link
           to="/products"
           className="inline-flex items-center px-6 py-2.5 bg-[#ee4d2d] hover:bg-[#d03e1e] text-white text-xs font-bold rounded-lg transition-colors shadow-xs"
         >
-          {language === "vi" ? "Quay lại cửa hàng" : "Back to Products"}
+          {t("back_to_products")}
         </Link>
       </div>
     );
@@ -840,18 +838,18 @@ const ProductDetailPage = () => {
                 {product.name}
               </h3>
               <p className="text-xs sm:text-sm text-gray-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
-                {product.description || (language === "vi" ? "Chưa có mô tả chi tiết cho sản phẩm này." : "No detailed description available.")}
+                {product.description || t("product_description_missing")}
               </p>
               <div className="pt-4 border-t border-gray-100 dark:border-slate-700 space-y-2">
                 <h4 className="text-xs font-bold uppercase text-gray-900 dark:text-slate-200">
-                  {language === "vi" ? "Đặc điểm nổi bật:" : "Key Highlights:"}
+                  {t("product_highlights")}
                 </h4>
                 <ul className="space-y-2 text-xs text-gray-600 dark:text-slate-300">
                   {[
-                    language === "vi" ? "Thiết kế hiện đại, tinh tế và dễ phối đồ" : "Modern, elegant and versatile design",
-                    language === "vi" ? "Chất liệu cao cấp được kiểm định nghiêm ngặt" : "Premium materials strictly quality inspected",
-                    language === "vi" ? "Đường may tỉ mỉ, độ hoàn thiện cao" : "Carefully stitched with durable finishing",
-                    language === "vi" ? "Hàng chính hãng phân phối tại MeeMart" : "Genuine merchandise distributed on MeeMart",
+                    t("product_highlight_1"),
+                    t("product_highlight_2"),
+                    t("product_highlight_3"),
+                    t("product_highlight_4"),
                   ].map((item, i) => (
                     <li key={i} className="flex items-center gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#ee4d2d]" />
@@ -874,7 +872,7 @@ const ProductDetailPage = () => {
                   <tbody>
                     <tr className="border-b border-gray-100 dark:border-slate-700/60 bg-gray-50/50 dark:bg-slate-900/40">
                       <td className="py-2.5 px-4 font-semibold text-gray-500 dark:text-slate-400 w-1/3">
-                        {language === "vi" ? "Thương hiệu" : "Brand"}
+                        {t("product_brand")}
                       </td>
                       <td className="py-2.5 px-4 text-gray-900 dark:text-slate-100 font-medium">
                         {product.brand?.name || "MeeMart Fashion"}
@@ -882,23 +880,27 @@ const ProductDetailPage = () => {
                     </tr>
                     <tr className="border-b border-gray-100 dark:border-slate-700/60">
                       <td className="py-2.5 px-4 font-semibold text-gray-500 dark:text-slate-400 w-1/3">
-                        {language === "vi" ? "Chất liệu" : "Material"}
+                        {t("product_material")}
                       </td>
                       <td className="py-2.5 px-4 text-gray-900 dark:text-slate-100 font-medium">
-                        {product.material || (language === "vi" ? "Chất liệu cao cấp" : "Premium Fabric")}
+                        {product.material || t("product_material_default")}
                       </td>
                     </tr>
                     <tr className="border-b border-gray-100 dark:border-slate-700/60 bg-gray-50/50 dark:bg-slate-900/40">
                       <td className="py-2.5 px-4 font-semibold text-gray-500 dark:text-slate-400 w-1/3">
-                        {language === "vi" ? "Giới tính" : "Gender"}
+                        {t("product_audience")}
                       </td>
                       <td className="py-2.5 px-4 text-gray-900 dark:text-slate-100 font-medium">
-                        {product.gender || "Unisex"}
+                        {product.gender === "MALE"
+                          ? "Nam"
+                          : product.gender === "FEMALE"
+                            ? "Nữ"
+                            : "Dành cho mọi đối tượng"}
                       </td>
                     </tr>
                     <tr className="border-b border-gray-100 dark:border-slate-700/60">
                       <td className="py-2.5 px-4 font-semibold text-gray-500 dark:text-slate-400 w-1/3">
-                        {language === "vi" ? "Danh mục" : "Category"}
+                        {t("product_category")}
                       </td>
                       <td className="py-2.5 px-4 text-gray-900 dark:text-slate-100 font-medium">
                         {product.category?.name || "MeeMart Store"}
@@ -950,9 +952,9 @@ const ProductDetailPage = () => {
 
                 <div className="text-xs text-gray-500 dark:text-slate-400 space-y-1">
                   <p className="font-semibold text-gray-800 dark:text-slate-200">
-                    {language === "vi" ? "100% đánh giá từ người mua thực tế" : "100% verified customer ratings"}
+                    {t("verified_customer_ratings")}
                   </p>
-                  <p>{language === "vi" ? "MeeMart cam kết tính khách quan và minh bạch trong mọi phản hồi." : "MeeMart ensures authentic and objective reviews."}</p>
+                  <p>{t("review_policy")}</p>
                 </div>
               </div>
 
@@ -1056,17 +1058,13 @@ const ProductDetailPage = () => {
               <h3 className="text-base font-bold text-gray-900 dark:text-slate-100 uppercase tracking-tight">
                 {t("tab_returns")}
               </h3>
-              <p>
-                {language === "vi"
-                  ? "Tại MeeMart, quyền lợi của bạn luôn là ưu tiên số 1 với chính sách bảo đảm:"
-                  : "At MeeMart, your satisfaction is our top priority with our guarantee policy:"}
-              </p>
+              <p>{t("return_policy_intro")}</p>
               <ul className="space-y-2.5 pt-2">
                 {[
-                  language === "vi" ? "Đổi trả miễn phí trong vòng 15 ngày kể từ khi nhận hàng." : "Free 15-day returns from delivery date.",
-                  language === "vi" ? "Sản phẩm còn nguyên tem mác, chưa qua sử dụng hoặc giặt tẩy." : "Item must be unused with original tags intact.",
-                  language === "vi" ? "Hỗ trợ thu hồi tận nhà, miễn phí 100% cước đổi trả do lỗi kỹ thuật." : "Doorstep pickup supported, 100% free return fee for defects.",
-                  language === "vi" ? "Hoàn tiền nhanh chóng qua ví hoặc tài khoản ngân hàng." : "Fast refund via wallet or bank transfer.",
+                  t("return_policy_1"),
+                  t("return_policy_2"),
+                  t("return_policy_3"),
+                  t("return_policy_4"),
                 ].map((item, i) => (
                   <li key={i} className="flex items-start gap-2">
                     <Check size={14} className="text-emerald-500 shrink-0 mt-0.5" />

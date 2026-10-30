@@ -45,10 +45,10 @@ export const BlogListPage = () => {
             Trang Tin Tức & Xu Hướng
           </span>
           <h1 className="font-serif text-5xl font-black uppercase tracking-tight text-black">
-            UTEShop Blog
+            MeeMart Blog
           </h1>
           <p className="text-gray-500 text-xs font-bold uppercase tracking-widest leading-relaxed">
-            Khám phá xu hướng thời trang mới nhất, hướng dẫn phối đồ và tin tức sự kiện khuyến mãi toàn sàn.
+            Khám phá xu hướng mua sắm mới nhất, mẹo tiết kiệm và thông tin khuyến mãi trên sàn.
           </p>
         </div>
 
@@ -128,7 +128,7 @@ export const BlogListPage = () => {
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center font-black text-gray-300 text-lg uppercase bg-gradient-to-br from-gray-100 to-gray-200">
-                      UTEShop Blog
+                      MeeMart Blog
                     </div>
                   )}
                   <span className="absolute top-4 left-4 bg-purple-100 text-purple-700 border border-purple-200 text-[8px] font-black uppercase px-2.5 py-1 rounded-md shadow-subtle select-none">

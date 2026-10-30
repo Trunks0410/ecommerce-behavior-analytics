@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Ticket, Store, Clock, CheckCircle, Search, ArrowRight } from "lucide-react";
 import toast from "react-hot-toast";
 import { useMyVoucherWallet, useSaveCouponByCode } from "@/hooks/useCoupons";
+import { getCurrentLocale } from "@/shared/utils/format";
 
 export default function VoucherWalletPage() {
   const [activeTab, setActiveTab] = useState<"VALID" | "HISTORY">("VALID");
@@ -204,8 +205,8 @@ function CouponCard({ coupon, isValid, navigate }: { coupon: any, isValid: boole
           <div className={`text-[10px] font-bold flex items-center gap-1 ${isExpiringSoon ? 'text-red-500' : 'text-gray-400'}`}>
             <Clock size={12} /> 
             {isValid 
-              ? (isExpiringSoon ? `Sắp hết hạn: còn ${diffDays} ngày` : `HSD: ${endDate.toLocaleDateString('vi-VN')}`) 
-              : `Đã lưu từ: ${new Date(coupon.created_at).toLocaleDateString('vi-VN')}`
+              ? (isExpiringSoon ? `Sắp hết hạn: còn ${diffDays} ngày` : `HSD: ${endDate.toLocaleDateString(getCurrentLocale())}`) 
+              : `Đã lưu từ: ${new Date(coupon.created_at).toLocaleDateString(getCurrentLocale())}`
             }
           </div>
         </div>
