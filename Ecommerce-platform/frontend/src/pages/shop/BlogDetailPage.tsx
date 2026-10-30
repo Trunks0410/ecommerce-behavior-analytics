@@ -1,24 +1,31 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Calendar, Eye, User, ArrowLeft, Loader2 } from "lucide-react";
 import managerService from "@/services/managerService";
-import { getCurrentLocale } from "@/shared/utils/format";
+import { useLanguage } from "@/shared/context/LanguageContext";
 
 export const BlogDetailPage = () => {
   const { slug } = useParams<{ slug: string }>();
+  const { language, t } = useLanguage();
   const [blog, setBlog] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     const fetchBlogDetail = async () => {
-      if (!slug) return;
+      if (!slug) {
+        setHasError(true);
+        setLoading(false);
+        return;
+      }
       setLoading(true);
+      setHasError(false);
       try {
         const data = await managerService.getBlogBySlug(slug);
         setBlog(data);
-      } catch (err: any) {
-        setError(err.response?.data?.message || "Lỗi tải bài viết chi tiết");
+      } catch (err) {
+        console.error("Failed to load blog post:", err);
+        setHasError(true);
       } finally {
         setLoading(false);
       }
@@ -28,24 +35,24 @@ export const BlogDetailPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F4F4F0] flex flex-col items-center justify-center py-36">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-[#F4F4F0] py-36 dark:bg-slate-950">
         <Loader2 className="animate-spin text-primary mb-4" size={40} />
-        <p className="text-sm font-black uppercase tracking-wider text-black">Đang tải nội dung bài viết...</p>
+        <p className="text-sm font-black uppercase tracking-wider text-black dark:text-slate-100">{t("blog_detail_loading")}</p>
       </div>
     );
   }
 
-  if (error || !blog) {
+  if (hasError || !blog) {
     return (
-      <div className="min-h-screen bg-[#F4F4F0] flex flex-col items-center justify-center py-36 px-6">
-        <div className="bg-white border-2 border-black rounded-[2rem] p-8 max-w-md w-full text-center shadow-brutal">
-          <h3 className="text-xl font-serif font-black uppercase text-red-600 mb-2">Đã xảy ra lỗi</h3>
-          <p className="text-xs text-gray-500 font-bold mb-6">{error || "Bài viết không tồn tại hoặc đã bị ẩn"}</p>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-[#F4F4F0] px-6 py-36 dark:bg-slate-950">
+        <div className="w-full max-w-md rounded-[2rem] border-2 border-black bg-white p-8 text-center shadow-brutal dark:border-slate-700 dark:bg-slate-900">
+          <h3 className="mb-2 font-serif text-xl font-black uppercase text-red-600">{t("blog_detail_error_title")}</h3>
+          <p className="mb-6 text-xs font-bold text-gray-500 dark:text-slate-400">{t("blog_detail_unavailable")}</p>
           <Link
             to="/blogs"
-            className="inline-flex items-center gap-2 px-6 py-3 border-2 border-black rounded-xl font-black text-xs uppercase bg-black text-white hover:bg-primary transition-all active:translate-y-0.5"
+            className="inline-flex items-center gap-2 rounded-xl border-2 border-black bg-black px-6 py-3 text-xs font-black uppercase text-white transition-all hover:bg-primary hover:text-black active:translate-y-0.5 dark:border-primary dark:bg-primary dark:text-black"
           >
-            <ArrowLeft size={14} /> Quay lại danh sách
+            <ArrowLeft size={14} /> {t("blog_back_to_list")}
           </Link>
         </div>
       </div>
@@ -64,7 +71,7 @@ export const BlogDetailPage = () => {
   }
 
   const fmtDate = (d: string) => {
-    return new Date(d).toLocaleDateString(getCurrentLocale(), {
+    return new Date(d).toLocaleDateString(language === "vi" ? "vi-VN" : "en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -72,40 +79,40 @@ export const BlogDetailPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F4F0] pt-12 pb-24 px-6 md:px-12 animate-in fade-in duration-300">
+    <div className="min-h-screen bg-[#F4F4F0] px-6 pt-12 pb-24 text-slate-900 animate-in fade-in duration-300 dark:bg-slate-950 dark:text-slate-100 md:px-12">
       <div className="max-w-3xl mx-auto space-y-8">
         {/* Back navigation */}
         <Link
           to="/blogs"
-          className="inline-flex items-center gap-2 px-4 py-2 border-2 border-black rounded-xl font-black text-[10px] uppercase tracking-wider bg-white hover:bg-gray-50 active:translate-y-[2px] transition-all shadow-subtle text-black"
+          className="inline-flex items-center gap-2 rounded-xl border-2 border-black bg-white px-4 py-2 text-[10px] font-black uppercase tracking-wider text-black shadow-subtle transition-all hover:bg-gray-50 active:translate-y-[2px] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
         >
-          <ArrowLeft size={12} /> Quay lại Blog
+          <ArrowLeft size={12} /> {t("blog_back_to_blog")}
         </Link>
 
         {/* Article Container */}
-        <article className="bg-white border-2 border-black rounded-[2.5rem] p-8 md:p-12 shadow-brutal space-y-6">
+        <article className="space-y-6 rounded-[2.5rem] border-2 border-black bg-white p-8 shadow-brutal dark:border-slate-700 dark:bg-slate-900 md:p-12">
           {/* Metadata */}
-          <div className="flex flex-wrap items-center gap-3 border-b border-gray-100 pb-4">
+          <div className="flex flex-wrap items-center gap-3 border-b border-gray-100 pb-4 dark:border-slate-700">
             <span className="bg-purple-100 text-purple-700 text-[9px] font-black uppercase px-2.5 py-1 rounded">
               {blog.category}
             </span>
-            <span className="text-[10px] font-bold text-gray-400 uppercase flex items-center gap-1">
+            <span className="flex items-center gap-1 text-[10px] font-bold uppercase text-gray-400 dark:text-slate-400">
               <Calendar size={12} /> {fmtDate(blog.created_at)}
             </span>
-            <span className="text-[10px] font-bold text-gray-400 uppercase flex items-center gap-1">
-              <Eye size={12} /> {blog.views_count} lượt xem
+            <span className="flex items-center gap-1 text-[10px] font-bold uppercase text-gray-400 dark:text-slate-400">
+              <Eye size={12} /> {blog.views_count} {t("blog_views")}
             </span>
           </div>
 
           {/* Heading Title */}
-          <h1 className="font-serif text-3xl md:text-4xl font-black uppercase text-black leading-tight">
+          <h1 className="font-serif text-3xl font-black uppercase leading-tight text-black dark:text-slate-100 md:text-4xl">
             {blog.title}
           </h1>
 
           {/* Summary / Introduction */}
           {blog.summary && (
-            <div className="border-l-4 border-primary pl-4 py-1 bg-gray-50 rounded-r-xl">
-              <p className="text-xs md:text-sm text-gray-500 font-bold italic leading-relaxed">
+            <div className="rounded-r-xl border-l-4 border-primary bg-gray-50 py-1 pl-4 dark:bg-slate-800">
+              <p className="text-xs font-bold italic leading-relaxed text-gray-500 dark:text-slate-300 md:text-sm">
                 {blog.summary}
               </p>
             </div>
@@ -113,10 +120,10 @@ export const BlogDetailPage = () => {
 
           {/* Large Header Banner if present */}
           {blog.thumbnail_url && (
-            <div className="w-full overflow-hidden rounded-[2rem] border-2 border-black bg-gray-50">
+            <div className="w-full overflow-hidden rounded-[2rem] border-2 border-black bg-gray-50 dark:border-slate-700 dark:bg-slate-800">
               <img
                 src={blog.thumbnail_url}
-                alt="banner"
+                alt={t("blog_banner_alt")}
                 className="w-full h-80 object-cover"
               />
             </div>
@@ -130,7 +137,7 @@ export const BlogDetailPage = () => {
                   return (
                     <h2
                       key={block.id}
-                      className="text-lg md:text-xl font-black text-black leading-tight border-l-4 border-blue-500 pl-3 pt-1"
+                      className="border-l-4 border-blue-500 pl-3 pt-1 text-lg font-black leading-tight text-black dark:text-slate-100 md:text-xl"
                     >
                       {block.content}
                     </h2>
@@ -139,7 +146,7 @@ export const BlogDetailPage = () => {
                   return (
                     <h3
                       key={block.id}
-                      className="text-sm md:text-base font-bold text-black leading-snug"
+                      className="text-sm font-bold leading-snug text-black dark:text-slate-100 md:text-base"
                     >
                       {block.content}
                     </h3>
@@ -148,7 +155,7 @@ export const BlogDetailPage = () => {
                   return (
                     <p
                       key={block.id}
-                      className="text-xs md:text-sm font-semibold text-gray-700 leading-relaxed whitespace-pre-wrap"
+                      className="whitespace-pre-wrap text-xs font-semibold leading-relaxed text-gray-700 dark:text-slate-300 md:text-sm"
                     >
                       {block.content}
                     </p>
@@ -159,12 +166,12 @@ export const BlogDetailPage = () => {
                       {block.content && (
                         <img
                           src={block.content}
-                          alt={block.caption || "blog photo"}
-                          className="max-h-96 mx-auto object-cover rounded-2xl border border-black/10 shadow-sm"
+                          alt={block.caption || t("blog_photo_alt")}
+                          className="mx-auto max-h-96 rounded-2xl border border-black/10 object-cover shadow-sm dark:border-slate-600"
                         />
                       )}
                       {block.caption && (
-                        <p className="text-[10px] md:text-xs text-gray-500 font-bold italic">
+                        <p className="text-[10px] font-bold italic text-gray-500 dark:text-slate-400 md:text-xs">
                           {block.caption}
                         </p>
                       )}
@@ -177,12 +184,12 @@ export const BlogDetailPage = () => {
           </div>
 
           {/* Author footer banner */}
-          <div className="mt-12 pt-6 border-t border-dashed border-gray-200 flex items-center justify-between text-xs font-bold text-gray-500">
+          <div className="mt-12 flex items-center justify-between border-t border-dashed border-gray-200 pt-6 text-xs font-bold text-gray-500 dark:border-slate-700 dark:text-slate-400">
             <span className="flex items-center gap-2">
               <User size={14} className="text-gray-400" />
-              Đăng bởi:{" "}
-              <span className="text-black font-black uppercase">
-                {blog.author?.profile?.full_name || blog.author?.email || "Quản lý"}
+              {t("blog_posted_by")}{" "}
+              <span className="font-black uppercase text-black dark:text-slate-100">
+                {blog.author?.profile?.full_name || blog.author?.email || t("blog_manager")}
               </span>
             </span>
           </div>

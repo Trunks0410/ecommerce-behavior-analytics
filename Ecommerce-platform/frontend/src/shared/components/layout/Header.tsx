@@ -423,7 +423,10 @@ const Header = () => {
       {/* 2. MAIN HEADER (LOGO + WIDE SEARCH + CART) */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-6 sm:gap-10">
         {/* Brand Logo - MeeMart Clean Crop */}
-        <Link to="/" className="flex items-center gap-2 shrink-0 group">
+        <Link
+          to="/"
+          className="group flex shrink-0 items-center gap-2 rounded-2xl bg-white px-2.5 py-1.5 shadow-[0_0_0_1px_rgba(238,77,45,0.18),0_4px_14px_rgba(238,77,45,0.1)] transition-shadow dark:shadow-[0_0_0_2px_rgba(238,77,45,0.5),0_0_18px_rgba(238,77,45,0.28)]"
+        >
           <img
             src="/logo-meemart.png"
             alt="MeeMart"
