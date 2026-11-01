@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Shipment & Shipper Microservice (Backend API & Shipper Dashboard Frontend)",
   "scripts": {
+    "dev": "node dev.js",
     "dev:backend": "npm --prefix backend run dev",
     "dev:frontend": "npm --prefix frontend run dev",
     "build:frontend": "npm --prefix frontend run build"

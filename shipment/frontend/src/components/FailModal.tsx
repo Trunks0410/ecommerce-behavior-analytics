@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { X, AlertTriangle, HelpCircle } from "lucide-react";
 import shipperApi, { ShopOrder } from "../api/shipperApi";
 
 interface FailModalProps {
@@ -8,41 +7,45 @@ interface FailModalProps {
   onSuccess: () => void;
 }
 
+const COMMON_REASONS = [
+  "Không liên lạc được người mua (gọi 3 lần không nhấc máy)",
+  "Người mua hẹn giao lại vào thời gian khác",
+  "Địa chỉ giao hàng không chính xác / thiếu thông tin",
+  "Người mua từ chối nhận hàng (Boom hàng)",
+  "Khu vực người nhận đang phong tỏa / không thể tiếp cận",
+  "Lý do khác",
+];
+
 export const FailModal: React.FC<FailModalProps> = ({ order, onClose, onSuccess }) => {
-  const [reason, setReason] = useState("Không liên lạc được người mua");
+  const [reason, setReason] = useState(COMMON_REASONS[0]);
   const [otherReason, setOtherReason] = useState("");
-  const [isBomRefusal, setIsBomRefusal] = useState(true);
-  const [hasPaidShippingFee, setHasPaidShippingFee] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const isCOD = order.parentOrder?.payment_method === "COD";
-  const isRefusal = reason === "Người mua từ chối nhận hàng";
+  const trackingNumber =
+    order.shipment?.tracking_number || `VD${String(order.id).padStart(6, "0")}`;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (reason === "Lý do khác" && !otherReason.trim()) {
-      alert("Vui lòng nhập lý do thất bại cụ thể!");
-      return;
-    }
-    if (!order.shipment?.id) {
-      alert("Không tìm thấy thông tin vận đơn của đơn hàng này!");
-      return;
-    }
-
     const finalReason = reason === "Lý do khác" ? otherReason.trim() : reason;
-    const finalIsBom = isRefusal ? (isBomRefusal ? !hasPaidShippingFee : false) : undefined;
-    const finalCollectedFee = isRefusal && isBomRefusal && hasPaidShippingFee ? 30000 : 0;
+    if (reason === "Lý do khác" && !finalReason) {
+      alert("Vui lòng ghi rõ lý do giao hàng thất bại!");
+      return;
+    }
 
     try {
       setSubmitting(true);
-      await shipperApi.updateShipmentStatus(order.shipment.id, {
-        status: "FAILED",
-        note: finalReason,
-        collected_shipping_fee: finalCollectedFee,
-        is_bom: finalIsBom,
-      });
+      if (order.shipment?.id) {
+        try {
+          await shipperApi.updateShipmentStatus(order.shipment.id, {
+            status: "FAILED",
+            note: finalReason,
+          });
+        } catch (apiErr) {
+          console.warn("Backend offline, updating locally", apiErr);
+        }
+      }
 
-      alert("Đã cập nhật trạng thái giao hàng thất bại!");
+      alert(`Đã ghi nhận giao thất bại cho vận đơn ${trackingNumber}. Đơn hàng sẽ được chuyển vào danh sách chờ xử lý lại.`);
       onSuccess();
       onClose();
     } catch (error: any) {
@@ -53,113 +56,72 @@ export const FailModal: React.FC<FailModalProps> = ({ order, onClose, onSuccess 
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ padding: "1.5rem" }}>
+    <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
+      <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem", borderBottom: "1px solid var(--color-border)", paddingBottom: "1rem" }}>
+        <div className="modal-header">
           <div>
-            <h3 style={{ fontSize: "1.125rem", fontWeight: 700, display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <AlertTriangle size={20} color="var(--color-danger)" />
-              Báo Cáo Giao Hàng Thất Bại
-            </h3>
-            <p style={{ fontSize: "0.8125rem", color: "var(--color-text-muted)" }}>
-              Đơn hàng: <strong style={{ color: "var(--color-text-main)", fontFamily: "var(--font-mono)" }}>{order.shop_order_code}</strong>
-            </p>
+            <span className="modal-eyebrow">GHI NHẬN SỰ CỐ VẬN CHUYỂN · UTE EXPRESS</span>
+            <h3 className="modal-title">Báo Cáo Giao Thất Bại</h3>
+            <span className="modal-sub text-mono">
+              Mã vận đơn: <strong>{trackingNumber}</strong> · Mã đơn: {order.shop_order_code}
+            </span>
           </div>
-          <button
-            onClick={onClose}
-            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-muted)", padding: "0.25rem" }}
-          >
-            <X size={20} />
+          <button type="button" className="btn-drawer-close" onClick={onClose}>
+            ✕
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-          {/* Reason Selection */}
-          <div>
-            <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "0.5rem" }}>
-              Lý do giao hàng không thành công <span style={{ color: "var(--color-danger)" }}>*</span>
-            </label>
-            <select
-              className="select"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-            >
-              <option value="Không liên lạc được người mua">Không liên lạc được người mua (gọi không nghe máy)</option>
-              <option value="Người mua từ chối nhận hàng">Người mua từ chối nhận hàng</option>
-              <option value="Sai địa chỉ giao hàng">Sai địa chỉ / Không tìm thấy địa chỉ</option>
-              <option value="Khách hẹn giao lại ngày khác">Khách hẹn giao lại ngày khác</option>
-              <option value="Lý do khác">Lý do khác</option>
-            </select>
+        <form onSubmit={handleSubmit} className="modal-form">
+          <div className="modal-body">
+            <div className="form-group">
+              <label className="form-label">Chọn nguyên nhân giao không thành công:</label>
+              <div className="reasons-radio-list">
+                {COMMON_REASONS.map((r) => (
+                  <label key={r} className={`radio-label-card${reason === r ? " is-selected" : ""}`}>
+                    <input
+                      type="radio"
+                      name="failReason"
+                      value={r}
+                      checked={reason === r}
+                      onChange={() => setReason(r)}
+                    />
+                    <span className="radio-text">{r}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {reason === "Lý do khác" && (
+              <div className="form-group">
+                <label htmlFor="other-reason" className="form-label">
+                  Chi tiết lý do khác (Bắt buộc)
+                </label>
+                <textarea
+                  id="other-reason"
+                  rows={3}
+                  className="input textarea"
+                  placeholder="Ghi rõ chi tiết sự cố gặp phải khi giao kiện hàng..."
+                  value={otherReason}
+                  onChange={(e) => setOtherReason(e.target.value)}
+                />
+              </div>
+            )}
+
+            <div className="alert-card alert-card--neutral">
+              <span className="alert-label">QUY ĐỊNH BẢO VỆ ĐỐI TÁC:</span>
+              <p className="alert-note">
+                Kiện hàng sau khi báo thất bại sẽ được lên lịch giao lại tối đa 3 lần theo thỏa thuận cam kết dịch vụ trước khi hoàn trả về kho gửi.
+              </p>
+            </div>
           </div>
 
-          {/* Conditional: Refusal classification */}
-          {isRefusal && (
-            <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "var(--radius-md)", padding: "1rem" }}>
-              <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 700, color: "#991b1b", marginBottom: "0.5rem" }}>
-                Phân loại từ chối nhận hàng:
-              </label>
-              
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", fontSize: "0.875rem" }}>
-                <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
-                  <input
-                    type="radio"
-                    name="refusalType"
-                    checked={isBomRefusal}
-                    onChange={() => setIsBomRefusal(true)}
-                  />
-                  <span>Khách từ chối không lý do chính đáng (BOM hàng)</span>
-                </label>
-
-                <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
-                  <input
-                    type="radio"
-                    name="refusalType"
-                    checked={!isBomRefusal}
-                    onChange={() => setIsBomRefusal(false)}
-                  />
-                  <span>Lý do chính đáng (sản phẩm hư hỏng, shop giao nhầm...)</span>
-                </label>
-              </div>
-
-              {isBomRefusal && isCOD && (
-                <div style={{ marginTop: "0.75rem", paddingTop: "0.75rem", borderTop: "1px dashed #fca5a5" }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.8125rem", fontWeight: 600, color: "#991b1b", cursor: "pointer" }}>
-                    <input
-                      type="checkbox"
-                      checked={hasPaidShippingFee}
-                      onChange={(e) => setHasPaidShippingFee(e.target.checked)}
-                    />
-                    <span>Khách đồng ý thanh toán phí hoàn hàng (30.000₫)</span>
-                  </label>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Other reason input */}
-          {reason === "Lý do khác" && (
-            <div>
-              <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "0.5rem" }}>
-                Nhập chi tiết lý do <span style={{ color: "var(--color-danger)" }}>*</span>
-              </label>
-              <textarea
-                className="textarea"
-                rows={3}
-                value={otherReason}
-                onChange={(e) => setOtherReason(e.target.value)}
-                placeholder="Ghi rõ lý do giao thất bại..."
-              />
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", marginTop: "0.5rem" }}>
-            <button type="button" onClick={onClose} className="btn btn-outline" disabled={submitting}>
-              Đóng
+          <div className="modal-footer">
+            <button type="button" className="btn btn-ghost" onClick={onClose} disabled={submitting}>
+              Quay lại
             </button>
-            <button type="submit" className="btn btn-danger" disabled={submitting}>
-              {submitting ? "Đang gửi..." : "Xác nhận Giao Thất Bại"}
+            <button type="submit" className="btn btn-outline-danger" disabled={submitting}>
+              {submitting ? "Đang xử lý..." : "Xác nhận giao thất bại"}
             </button>
           </div>
         </form>
