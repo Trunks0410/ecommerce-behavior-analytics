@@ -1,203 +1,128 @@
 import React, { useState } from "react";
+import axios from "axios";
+import { Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { Truck, Lock, Phone, ArrowRight, ShieldCheck, AlertCircle } from "lucide-react";
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
-
   const [emailOrPhone, setEmailOrPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setError(null);
-    if (!emailOrPhone || !password) {
-      setError("Vui lòng nhập đầy đủ thông tin đăng nhập!");
+
+    if (!emailOrPhone.trim() || !password) {
+      setError("Vui lòng nhập email/số điện thoại và mật khẩu.");
       return;
     }
 
     try {
       setLoading(true);
-      await login(emailOrPhone, password);
-      navigate("/");
-    } catch (err: any) {
-      setError(err.response?.data?.message || err.message || "Đăng nhập thất bại");
+      await login(emailOrPhone.trim(), password);
+      navigate("/", { replace: true });
+    } catch (loginError) {
+      if (axios.isAxiosError(loginError) && !loginError.response) {
+        setError("Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối và thử lại.");
+      } else if (axios.isAxiosError(loginError) && loginError.response?.status === 400) {
+        setError("Email/số điện thoại hoặc mật khẩu chưa chính xác.");
+      } else {
+        setError("Đăng nhập chưa thành công. Vui lòng thử lại.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleFillDemo = (demoAccount: string) => {
-    setEmailOrPhone(demoAccount);
-    setPassword("123456");
-  };
-
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "1.5rem",
-      color: "#ffffff"
-    }}>
-      <div style={{
-        maxWidth: "440px",
-        width: "100%",
-        background: "rgba(30, 41, 59, 0.7)",
-        backdropFilter: "blur(16px)",
-        borderRadius: "var(--radius-xl)",
-        border: "1px solid rgba(255, 255, 255, 0.1)",
-        padding: "2.5rem 2rem",
-        boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)"
-      }}>
-        {/* Header Branding */}
-        <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-          <div style={{
-            width: "4rem",
-            height: "4rem",
-            borderRadius: "1rem",
-            background: "linear-gradient(135deg, #2563eb, #3b82f6)",
-            color: "#ffffff",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            margin: "0 auto 1rem",
-            boxShadow: "0 10px 15px -3px rgba(37, 99, 235, 0.4)"
-          }}>
-            <Truck size={32} />
-          </div>
-          <h1 style={{ fontSize: "1.5rem", fontWeight: 800, letterSpacing: "-0.025em" }}>
-            UTE Express Partner
-          </h1>
-          <p style={{ fontSize: "0.875rem", color: "#94a3b8", marginTop: "0.25rem" }}>
-            Cổng điều phối & giao nhận (Shipment Microservice)
+    <main className="login-screen-wrapper">
+      <section className="login-card" aria-labelledby="login-heading">
+        <div className="login-brand">
+          <img
+            src="/logo-ute-express.png"
+            alt="UTE Express"
+            className="login-brand-logo"
+          />
+          <span className="login-brand-caption">Hệ thống vận chuyển</span>
+        </div>
+
+        <div className="login-card-head">
+          <h1 className="login-heading" id="login-heading">Đăng nhập</h1>
+          <p className="login-subheading">
+            Đăng nhập để quản lý đơn hàng và ca giao nhận của bạn.
           </p>
         </div>
 
-        {/* Error Alert */}
         {error && (
-          <div style={{
-            background: "rgba(239, 68, 68, 0.15)",
-            border: "1px solid rgba(239, 68, 68, 0.3)",
-            color: "#fca5a5",
-            borderRadius: "var(--radius-md)",
-            padding: "0.75rem 1rem",
-            marginBottom: "1.5rem",
-            fontSize: "0.875rem",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.5rem"
-          }}>
-            <AlertCircle size={18} />
-            <span>{error}</span>
+          <div className="login-error" id="login-error" role="alert">
+            {error}
           </div>
         )}
 
-        {/* Login Form */}
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-          <div>
-            <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.5rem" }}>
-              Số điện thoại hoặc Email
+        <form onSubmit={handleLogin} className="login-form-inner">
+          <div className="login-form-group">
+            <label className="login-form-label" htmlFor="identity">
+              Email hoặc số điện thoại
             </label>
-            <div style={{ position: "relative" }}>
-              <input
-                type="text"
-                className="input"
-                style={{
-                  background: "rgba(15, 23, 42, 0.6)",
-                  borderColor: "rgba(255, 255, 255, 0.15)",
-                  color: "#ffffff",
-                  paddingLeft: "2.5rem"
-                }}
-                placeholder="Nhập email hoặc số điện thoại..."
-                value={emailOrPhone}
-                onChange={(e) => setEmailOrPhone(e.target.value)}
-              />
-              <Phone size={18} style={{ position: "absolute", left: "0.875rem", top: "50%", transform: "translateY(-50%)", color: "#64748b" }} />
-            </div>
+            <input
+              id="identity"
+              type="text"
+              className="login-input"
+              placeholder="Nhập email hoặc số điện thoại"
+              value={emailOrPhone}
+              onChange={(event) => setEmailOrPhone(event.target.value)}
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
+              required
+            />
           </div>
 
-          <div>
-            <label style={{ display: "block", fontSize: "0.8125rem", fontWeight: 600, color: "#cbd5e1", marginBottom: "0.5rem" }}>
-              Mật khẩu
-            </label>
-            <div style={{ position: "relative" }}>
+          <div className="login-form-group">
+            <label className="login-form-label" htmlFor="password">Mật khẩu</label>
+            <div className="login-password-field">
               <input
-                type="password"
-                className="input"
-                style={{
-                  background: "rgba(15, 23, 42, 0.6)",
-                  borderColor: "rgba(255, 255, 255, 0.15)",
-                  color: "#ffffff",
-                  paddingLeft: "2.5rem"
-                }}
-                placeholder="Nhập mật khẩu..."
+                id="password"
+                type={showPassword ? "text" : "password"}
+                className="login-input"
+                placeholder="Nhập mật khẩu"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(event) => setPassword(event.target.value)}
+                autoComplete="current-password"
+                required
               />
-              <Lock size={18} style={{ position: "absolute", left: "0.875rem", top: "50%", transform: "translateY(-50%)", color: "#64748b" }} />
+              <button
+                type="button"
+                className="login-password-toggle"
+                onClick={() => setShowPassword((visible) => !visible)}
+                aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                aria-pressed={showPassword}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
           </div>
 
           <button
             type="submit"
-            className="btn btn-primary btn-lg"
+            className="login-submit"
             disabled={loading}
-            style={{ marginTop: "0.5rem", width: "100%", gap: "0.5rem" }}
           >
-            {loading ? "Đang xác thực..." : "Đăng nhập Shipper"}
-            <ArrowRight size={18} />
+            {loading ? "Đang đăng nhập..." : "Đăng nhập"}
           </button>
         </form>
 
-        {/* Demo Accounts Pill */}
-        <div style={{ marginTop: "2rem", paddingTop: "1.5rem", borderTop: "1px solid rgba(255, 255, 255, 0.1)" }}>
-          <div style={{ fontSize: "0.75rem", color: "#94a3b8", textAlign: "center", marginBottom: "0.75rem", fontWeight: 600 }}>
-            TÀI KHOẢN SHIPPER THỬ NGHIỆM:
-          </div>
-          <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", flexWrap: "wrap" }}>
-            <button
-              type="button"
-              onClick={() => handleFillDemo("shipper@gmail.com")}
-              style={{
-                background: "rgba(255, 255, 255, 0.08)",
-                border: "1px solid rgba(255, 255, 255, 0.15)",
-                color: "#e2e8f0",
-                padding: "0.375rem 0.75rem",
-                borderRadius: "var(--radius-md)",
-                fontSize: "0.75rem",
-                cursor: "pointer",
-                transition: "all 0.15s ease"
-              }}
-            >
-              shipper@gmail.com
-            </button>
-            <button
-              type="button"
-              onClick={() => handleFillDemo("shipper1@gmail.com")}
-              style={{
-                background: "rgba(255, 255, 255, 0.08)",
-                border: "1px solid rgba(255, 255, 255, 0.15)",
-                color: "#e2e8f0",
-                padding: "0.375rem 0.75rem",
-                borderRadius: "var(--radius-md)",
-                fontSize: "0.75rem",
-                cursor: "pointer",
-                transition: "all 0.15s ease"
-              }}
-            >
-              shipper1@gmail.com
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+        <footer className="login-card-footer">
+          <p>Cần hỗ trợ đăng nhập?</p>
+          <a href="tel:1900xxxx">Liên hệ bộ phận điều hành · 1900 xxxx</a>
+        </footer>
+      </section>
+    </main>
   );
 };
 

@@ -1,4 +1,4 @@
-import db from "../../../Ecommerce-platform/backend/src/database/models/index.js";
+import db from "../../../../Ecommerce-platform/backend/src/database/models/index.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
@@ -31,12 +31,9 @@ const login = async (emailOrPhone, password) => {
     throw new Error("Tài khoản không có quyền truy cập hệ thống giao hàng (Shipper Portal)");
   }
 
-  const isMatch = await bcrypt.compare(password, user.password_hash);
+  const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
-    // In dev environment, check if plaintext matches (some test seeders)
-    if (password !== user.password_hash) {
-      throw new Error("Mật khẩu không chính xác");
-    }
+    throw new Error("Mật khẩu không chính xác");
   }
 
   const tokenPayload = {
@@ -151,7 +148,12 @@ const getShipperOrders = async (shipperId, { page = 1, limit = 50, status, searc
   const where = {};
 
   if (status) {
-    if (status === 'SHIPPING' || status === 'PENDING_PICKUP') {
+    if (status === 'IN_TRANSIT') {
+      where.status = {
+        [db.Sequelize.Op.in]: ['SHIPPING', 'IN_TRANSIT', 'OUT_FOR_DELIVERY']
+      };
+      where.shipper_id = shipperId;
+    } else if (status === 'SHIPPING' || status === 'PENDING_PICKUP') {
       where[db.Sequelize.Op.and] = [
         { status },
         {

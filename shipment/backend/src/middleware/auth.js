@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
-import db from "../../../Ecommerce-platform/backend/src/database/models/index.js";
+import db from "../../../../Ecommerce-platform/backend/src/database/models/index.js";
 
 dotenv.config();
 
