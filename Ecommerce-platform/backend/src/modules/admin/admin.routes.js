@@ -1,54 +1,57 @@
 import express from "express";
 import adminController from "./admin.controller.js";
-import { verifyToken, isManager } from "../../core/middleware/auth.js";
+import iamRouter from "../iam/iam.routes.js";
+import { verifyToken, requirePermission } from "../../core/middleware/auth.js";
 import upload from "../../core/middleware/upload.js";
 
 const router = express.Router();
 
-// Tất cả route admin đều cần verifyToken + isManager
-router.use(verifyToken, isManager);
+// Tất cả route admin đều cần xác thực đăng nhập
+router.use(verifyToken);
 
-// ---- 1. Quản lý Tài khoản (Manager, Customer, Vendor, Shipper) ----
-router.post("/users", adminController.createUser);
-router.get("/users", adminController.getUsersByRole);
-router.put("/users/:id", upload.single("avatar"), adminController.updateUserProfile);
-router.put("/users/:id/lock", adminController.lockUser);
-router.put("/users/:id/unlock", adminController.unlockUser);
+// ---- 0. Phân hệ Quản trị IAM Roles & Policies (Chỉ dành riêng cho Root Admin) ----
+router.use("/iam", iamRouter);
+
+// ---- 1. Quản lý Tài khoản (Manager/Staff, Customer, Vendor, Shipper) ----
+router.post("/users", requirePermission("user:create"), adminController.createUser);
+router.get("/users", requirePermission("user:read"), adminController.getUsersByRole);
+router.put("/users/:id", requirePermission("user:update"), upload.single("avatar"), adminController.updateUserProfile);
+router.put("/users/:id/lock", requirePermission("user:lock"), adminController.lockUser);
+router.put("/users/:id/unlock", requirePermission("user:unlock"), adminController.unlockUser);
 
 // ---- 2. Phê duyệt Vendor ----
-router.get("/shops", adminController.getAllShops);
-router.get("/shops/pending", adminController.getPendingShops);
-router.put("/shops/:id/approve", adminController.approveShop);
-router.put("/shops/:id/reject", adminController.rejectShop);
+router.get("/shops", requirePermission("shop:read"), adminController.getAllShops);
+router.get("/shops/pending", requirePermission("shop:read"), adminController.getPendingShops);
+router.put("/shops/:id/approve", requirePermission("shop:approve"), adminController.approveShop);
+router.put("/shops/:id/reject", requirePermission("shop:reject"), adminController.rejectShop);
 
-// ---- 3. Cấu hình hệ thống ----
-router.get("/settings", adminController.getSystemSettings);
-router.put("/settings/:key", adminController.updateSystemSetting);
+// ---- 3. Cấu hình hệ thống & Danh mục ----
+router.get("/settings", requirePermission("system:settings:read"), adminController.getSystemSettings);
+router.put("/settings/:key", requirePermission("system:settings:update"), adminController.updateSystemSetting);
 router.get("/categories", adminController.getCategories);
-router.post("/categories", adminController.createCategory);
-router.put("/categories/:id", adminController.updateCategory);
-router.delete("/categories/:id", adminController.deleteCategory);
+router.post("/categories", requirePermission("category:create"), adminController.createCategory);
+router.put("/categories/:id", requirePermission("category:update"), adminController.updateCategory);
+router.delete("/categories/:id", requirePermission("category:delete"), adminController.deleteCategory);
 
 // ---- 4. Báo cáo tài chính ----
-router.get("/financial-report", adminController.getFinancialReport);
+router.get("/financial-report", requirePermission("finance:report:read"), adminController.getFinancialReport);
 
-// ---- 5. Đối soát thanh toán ----
-router.get("/reconciliation", adminController.getPaymentReconciliation);
-router.put("/payouts/:id/approve", adminController.approveShopPayout);
-router.put("/payouts/:id/reject", adminController.rejectShopPayout);
-router.get("/shipper-reconciliations", adminController.getPendingShipperReconciliations);
-router.put("/shipper-reconciliations/:id/approve", adminController.approveShipperReconciliation);
-router.put("/shipper-reconciliations/:id/reject", adminController.rejectShipperReconciliation);
-router.get("/shop-wallets", adminController.getShopWalletBreakdown);
-router.post("/shop-wallets/:id/disburse", adminController.disburseShopWallet);
+// ---- 5. Đối soát thanh toán & Giải ngân ví ----
+router.get("/reconciliation", requirePermission("finance:reconciliation:read"), adminController.getPaymentReconciliation);
+router.put("/payouts/:id/approve", requirePermission("finance:payout:approve"), adminController.approveShopPayout);
+router.put("/payouts/:id/reject", requirePermission("finance:payout:reject"), adminController.rejectShopPayout);
+router.get("/shipper-reconciliations", requirePermission("finance:shipper_reconciliation:approve"), adminController.getPendingShipperReconciliations);
+router.put("/shipper-reconciliations/:id/approve", requirePermission("finance:shipper_reconciliation:approve"), adminController.approveShipperReconciliation);
+router.put("/shipper-reconciliations/:id/reject", requirePermission("finance:shipper_reconciliation:reject"), adminController.rejectShipperReconciliation);
+router.get("/shop-wallets", requirePermission("finance:disburse"), adminController.getShopWalletBreakdown);
+router.post("/shop-wallets/:id/disburse", requirePermission("finance:disburse"), adminController.disburseShopWallet);
 
-
-// ---- 6. Lịch sử thanh toán ----
-router.get("/payment-logs", adminController.getPaymentLogs);
-router.get("/withdrawal-logs", adminController.getWithdrawalLogs);
-router.get("/orders/by-code/:code", adminController.getOrderByCode);
+// ---- 6. Lịch sử thanh toán & Đơn hàng ----
+router.get("/payment-logs", requirePermission("finance:logs:read"), adminController.getPaymentLogs);
+router.get("/withdrawal-logs", requirePermission("finance:logs:read"), adminController.getWithdrawalLogs);
+router.get("/orders/by-code/:code", requirePermission("order:read"), adminController.getOrderByCode);
 
 // ---- 7. Nhật ký hệ thống ----
-router.get("/activity-logs", adminController.getActivityLogs);
+router.get("/activity-logs", requirePermission("system:settings:read"), adminController.getActivityLogs);
 
 export default router;

@@ -373,7 +373,7 @@ const ProductDetailPage = () => {
                       : "border-gray-200 dark:border-slate-700 hover:border-[#ee4d2d]/60 opacity-80 hover:opacity-100"
                   }`}
                 >
-                  <img src={img} alt={`Thumb ${i}`} className="w-full h-full object-cover" />
+                  <img src={img} alt={`Thumb ${i}`} className="max-h-full max-w-full object-contain" />
                 </button>
               ))}
             </div>

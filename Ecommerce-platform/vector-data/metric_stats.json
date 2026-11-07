@@ -1,0 +1,18 @@
+{
+  "dataset_name": "Amazon Berkeley Objects (ABO) Multimodal Index",
+  "model_name": "Qwen/Qwen3-VL-Embedding-2B",
+  "device": "CUDA (NVIDIA A100-SXM4-40GB)",
+  "precision": "torch.bfloat16",
+  "total_records": 5000,
+  "vector_dimension": 2048,
+  "metric_space": "Cosine Distance / L2-Normalized Inner Product",
+  "average_l2_norm": 1.000477,
+  "embedding_time_seconds": 62.68,
+  "records_per_second": 79.77,
+  "diversity_metric_sample": {
+    "mean_similarity": 0.25073009729385376,
+    "std_similarity": 0.16468410193920135,
+    "min_similarity": -0.037370551377534866,
+    "max_similarity": 0.845490038394928
+  }
+}
