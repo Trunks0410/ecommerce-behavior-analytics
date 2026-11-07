@@ -13,10 +13,55 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- ************************************************************
 
 CREATE TABLE `roles` (
-  `id`        INT         NOT NULL AUTO_INCREMENT,
-  `role_name` VARCHAR(50) NOT NULL COMMENT 'admin | manager | vendor | shipper | user',
+  `id`          INT          NOT NULL AUTO_INCREMENT,
+  `role_name`   VARCHAR(50)  NOT NULL COMMENT 'admin | vendor | shipper | user | or custom staff roles',
+  `description` VARCHAR(255) DEFAULT NULL,
+  `is_system`   TINYINT(1)   NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_roles_name` (`role_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- IAM: Policies (AWS IAM-style PBAC)
+CREATE TABLE `policies` (
+  `id`          BIGINT       NOT NULL AUTO_INCREMENT,
+  `code`        VARCHAR(100) NOT NULL,
+  `name`        VARCHAR(255) NOT NULL,
+  `description` TEXT         DEFAULT NULL,
+  `effect`      ENUM('ALLOW','DENY') NOT NULL DEFAULT 'ALLOW',
+  `actions`     JSON         NOT NULL COMMENT 'JSON array of actions, e.g. ["order:*", "product:read"]',
+  `is_system`   TINYINT(1)   NOT NULL DEFAULT 0,
+  `created_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_policies_code` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- IAM: Role Policies (Many-to-Many between roles and policies)
+CREATE TABLE `role_policies` (
+  `id`         BIGINT   NOT NULL AUTO_INCREMENT,
+  `role_id`    INT      NOT NULL,
+  `policy_id`  BIGINT   NOT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_role_policy` (`role_id`, `policy_id`),
+  KEY `idx_rp_role` (`role_id`),
+  KEY `idx_rp_policy` (`policy_id`),
+  CONSTRAINT `fk_rp_role` FOREIGN KEY (`role_id`) REFERENCES `roles`(`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_rp_policy` FOREIGN KEY (`policy_id`) REFERENCES `policies`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- IAM: Direct User Policies (Inline policies attached to users)
+CREATE TABLE `user_policies` (
+  `id`         BIGINT   NOT NULL AUTO_INCREMENT,
+  `user_id`    BIGINT   NOT NULL,
+  `policy_id`  BIGINT   NOT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_user_policy` (`user_id`, `policy_id`),
+  KEY `idx_up_user` (`user_id`),
+  KEY `idx_up_policy` (`policy_id`),
+  CONSTRAINT `fk_up_user` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_up_policy` FOREIGN KEY (`policy_id`) REFERENCES `policies`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `users` (

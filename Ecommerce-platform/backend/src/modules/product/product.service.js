@@ -1,5 +1,6 @@
 import db from "../../database/models/index.js";
-import { Op } from "sequelize";
+import { Op, Sequelize } from "sequelize";
+import vectorSearchService from "./vectorSearch.service.js";
 
 const enrichProductRating = async (product) => {
   if (!product) return null;
@@ -83,8 +84,19 @@ const getProducts = async (filters) => {
 
   // 1. Xây dựng where clause động
   const where = { approval_status: "APPROVED" };
+  let vectorRankedIds = null;
 
-  if (keyword) {
+  if (keyword && vectorSearchService.isReady()) {
+    const semanticIds = vectorSearchService.searchProductsBySemantic(keyword, 40);
+    if (semanticIds && semanticIds.length > 0) {
+      vectorRankedIds = semanticIds;
+      console.log(`🔍 [SEMANTIC SEARCH] Query: "${keyword}" -> Khớp ${semanticIds.length} vector tương đồng nhất.`);
+    }
+  }
+
+  if (vectorRankedIds && vectorRankedIds.length > 0) {
+    where.id = { [Op.in]: vectorRankedIds };
+  } else if (keyword) {
     where.name = { [Op.like]: `%${keyword}%` };
   }
   if (shopId) {
@@ -170,7 +182,14 @@ const getProducts = async (filters) => {
     most_viewed: [["view_count", "DESC"]],
   };
 
-  const order = orderMap[sortBy] || [["created_at", "DESC"]];
+  let order = orderMap[sortBy];
+  if (!order) {
+    if (vectorRankedIds && vectorRankedIds.length > 0) {
+      order = [Sequelize.literal(`FIELD(\`Product\`.\`id\`, ${vectorRankedIds.join(",")})`)];
+    } else {
+      order = [["created_at", "DESC"]];
+    }
+  }
 
   //4. Phân trang
   const offset = (page - 1) * limit;
