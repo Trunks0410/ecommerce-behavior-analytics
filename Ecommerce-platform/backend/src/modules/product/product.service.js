@@ -87,10 +87,10 @@ const getProducts = async (filters) => {
   let vectorRankedIds = null;
 
   if (keyword && vectorSearchService.isReady()) {
-    const semanticIds = vectorSearchService.searchProductsBySemantic(keyword, 40);
+    const semanticIds = await vectorSearchService.searchProductsBySemantic(keyword, 40);
     if (semanticIds && semanticIds.length > 0) {
       vectorRankedIds = semanticIds;
-      console.log(`🔍 [SEMANTIC SEARCH] Query: "${keyword}" -> Khớp ${semanticIds.length} vector tương đồng nhất.`);
+      console.log(`🔍 [SEMANTIC SEARCH - ${vectorSearchService.getMode().toUpperCase()}] Query: "${keyword}" -> Khớp ${semanticIds.length} vector tương đồng nhất.`);
     }
   }
 
@@ -175,6 +175,9 @@ const getProducts = async (filters) => {
 
   // 3. Xác định ORDER BY
   const orderMap = {
+    relevance: vectorRankedIds && vectorRankedIds.length > 0
+      ? [Sequelize.literal(`FIELD(\`Product\`.\`id\`, ${vectorRankedIds.join(",")})`)]
+      : [["created_at", "DESC"]],
     price_asc: [["price", "ASC"]],
     price_desc: [["price", "DESC"]],
     newest: [["created_at", "DESC"]],
@@ -262,6 +265,38 @@ const getProductBySlug = async (slug) => {
 };
 
 const getSimilarProducts = async (categoryId, excludeProductId, limit = 6) => {
+  // Ưu tiên lấy sản phẩm tương tự theo Cosine Vector Similarity (nếu có)
+  if (vectorSearchService.isReady() && excludeProductId) {
+    const similarVectorIds = await vectorSearchService.getSimilarProductIds(excludeProductId, limit);
+    if (similarVectorIds && similarVectorIds.length > 0) {
+      const vectorProducts = await db.Product.findAll({
+        where: {
+          id: { [Op.in]: similarVectorIds },
+          approval_status: "APPROVED",
+        },
+        include: [
+          {
+            model: db.Category,
+            as: "category",
+            attributes: ["id", "name", "slug"],
+          },
+          {
+            model: db.ProductImage,
+            as: "images",
+            where: { is_primary: true },
+            required: false,
+          },
+        ],
+        order: [Sequelize.literal(`FIELD(\`Product\`.\`id\`, ${similarVectorIds.join(",")})`)],
+        limit,
+      });
+
+      if (vectorProducts && vectorProducts.length > 0) {
+        return await enrichProductsRating(vectorProducts);
+      }
+    }
+  }
+
   const products = await db.Product.findAll({
     where: {
       category_id: categoryId,
@@ -538,6 +573,73 @@ const recordView = async (userId, productId) => {
   return true;
 };
 
+// GET /products/recommendations
+const getRecommendedProducts = async (userId, viewedIdsParam, limit = 10) => {
+  const parsedLimit = Number(limit) || 10;
+  let viewedIds = [];
+
+  if (Array.isArray(viewedIdsParam) && viewedIdsParam.length > 0) {
+    viewedIds = viewedIdsParam.map(Number).filter((n) => !isNaN(n) && n > 0);
+  } else if (typeof viewedIdsParam === "string" && viewedIdsParam.trim()) {
+    viewedIds = viewedIdsParam
+      .split(",")
+      .map((s) => Number(s.trim()))
+      .filter((n) => !isNaN(n) && n > 0);
+  }
+
+  if (userId && viewedIds.length === 0) {
+    const history = await db.UserViewedProduct.findAll({
+      where: { user_id: userId },
+      order: [["viewed_at", "DESC"]],
+      limit: 15,
+      attributes: ["product_id"],
+      raw: true,
+    });
+    viewedIds = history.map((h) => Number(h.product_id));
+  }
+
+  if (viewedIds.length > 0 && vectorSearchService.isReady()) {
+    const recommendedIds = await vectorSearchService.getRecommendationsByUserHistory(
+      viewedIds,
+      parsedLimit
+    );
+    if (recommendedIds && recommendedIds.length > 0) {
+      const products = await db.Product.findAll({
+        where: {
+          id: { [Op.in]: recommendedIds },
+          approval_status: "APPROVED",
+        },
+        include: [
+          {
+            model: db.Category,
+            as: "category",
+            attributes: ["id", "name", "slug"],
+          },
+          {
+            model: db.ProductImage,
+            as: "images",
+            where: { is_primary: true },
+            required: false,
+          },
+          {
+            model: db.Shop,
+            as: "shop",
+            attributes: ["id", "shop_name", "status", "rating", "shop_logo"],
+            required: false,
+          },
+        ],
+        order: [Sequelize.literal(`FIELD(\`Product\`.\`id\`, ${recommendedIds.join(",")})`)],
+        limit: parsedLimit,
+      });
+      if (products.length > 0) {
+        return await enrichProductsRating(products);
+      }
+    }
+  }
+
+  return await getFeaturedProducts(parsedLimit);
+};
+
 export default {
   getProducts,
   getProductBySlug,
@@ -546,6 +648,7 @@ export default {
   getNewestProducts,
   getBestSellerProducts,
   getMostViewedProducts,
+  getRecommendedProducts,
   toggleFavorite,
   recordView,
 };

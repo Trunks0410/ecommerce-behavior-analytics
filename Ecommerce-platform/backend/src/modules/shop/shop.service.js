@@ -1,6 +1,7 @@
 import db from "../../database/models/index.js";
 import { Op } from "sequelize";
 import notificationService from "../notification/notification.service.js";
+import vectorSearchService from "../product/vectorSearch.service.js";
 
 const registerShop = async (userId, shopData) => {
   const transaction = await db.sequelize.transaction();
@@ -411,6 +412,9 @@ const createShopProduct = async (shopId, productData) => {
 
     await transaction.commit();
 
+    // Đồng bộ vector sản phẩm mới sang Vector Microservice (nếu đang chạy mode microservice)
+    vectorSearchService.upsertProductVector(product.id).catch(() => {});
+
     try {
       const shop = await db.Shop.findByPk(shopId);
       await notificationService.createNotificationForRole(
@@ -561,6 +565,9 @@ const updateShopProduct = async (shopId, productId, productData) => {
 
     await transaction.commit();
 
+    // Đồng bộ lại vector sản phẩm sau khi cập nhật sang Vector Microservice
+    vectorSearchService.upsertProductVector(product.id).catch(() => {});
+
     try {
       if (finalApprovalStatus === "PENDING") {
         const shop = await db.Shop.findByPk(shopId);
@@ -588,7 +595,9 @@ const deleteShopProduct = async (shopId, productId) => {
   });
   if (!product) throw new Error("Product not found or not owned by shop");
   await db.ProductVariant.destroy({ where: { product_id: product.id } });
-  return await product.destroy();
+  const deleted = await product.destroy();
+  vectorSearchService.deleteProductVector(productId).catch(() => {});
+  return deleted;
 };
 
 const getShopReviews = async (shopId) => {

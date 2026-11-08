@@ -36,7 +36,7 @@ const ProductListPage = () => {
   const isNew = searchParams.get("isNew");
   const inStock = searchParams.get("inStock") === "true";
   const minRating = Number(searchParams.get("minRating") || 0);
-  const sortBy = searchParams.get("sort") || "newest";
+  const sortBy = searchParams.get("sort") || (keyword ? "relevance" : "newest");
 
   // Trạng thái local cho các ô nhập liệu
   const [localKeyword, setLocalKeyword] = useState(keyword);
@@ -498,6 +498,20 @@ const ProductListPage = () => {
 
               {/* Nút Tab Sắp xếp Shopee */}
               <div className="flex items-center gap-1.5 flex-wrap">
+                {keyword && (
+                  <button
+                    type="button"
+                    onClick={() => updateFilters({ sort: "relevance" })}
+                    className={`px-3.5 py-1.5 text-xs font-medium rounded-xs transition-colors cursor-pointer ${
+                      sortBy === "relevance"
+                        ? "bg-[#ee4d2d] text-white shadow-xs"
+                        : "bg-gray-100 dark:bg-slate-900 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700"
+                    }`}
+                  >
+                    {t("sort_relevance", "Liên quan")}
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={() => updateFilters({ sort: "newest" })}

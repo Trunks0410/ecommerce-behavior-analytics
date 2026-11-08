@@ -11,9 +11,12 @@ import morgan from "morgan";
 import { errorHandler } from "./core/middleware/errorHandler.js";
 import iamService from "./modules/iam/iam.service.js";
 import vectorSearchService from "./modules/product/vectorSearch.service.js";
+import { logContextMiddleware, isSilentLogPath } from "./core/utils/logContext.js";
 
 let app = express();
-app.use(morgan("dev"));
+// Đánh dấu request polling (vd: /chats/unread-count) để tắt log morgan / API / SQL
+app.use(logContextMiddleware);
+app.use(morgan("dev", { skip: (req) => isSilentLogPath(req.originalUrl) }));
 
 // Cải thiện xử lý lỗi - exit an toàn để process manager (PM2/Docker) có thể khởi động lại
 process.on("uncaughtException", (error) => {
@@ -52,8 +55,8 @@ app.use((req, res, next) => {
   const startTime = Date.now();
   const url = req.originalUrl;
 
-  // Bỏ qua log cho static files
-  if (url.startsWith("/public")) {
+  // Bỏ qua log cho static files và các route polling
+  if (url.startsWith("/public") || isSilentLogPath(url)) {
     return next();
   }
 
