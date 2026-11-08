@@ -1,4 +1,5 @@
 import productService from "./product.service.js";
+import vectorSearchService from "./vectorSearch.service.js";
 
 // GET /products?keyword=&categorySlug=&gender=&minPrice=&maxPrice=&sortBy=&page=
 const getProducts = async (req, res, next) => {
@@ -119,6 +120,55 @@ const recordView = async (req, res, next) => {
   }
 };
 
+// GET /products/recommendations
+const getRecommendedProducts = async (req, res, next) => {
+  try {
+    const userId = req.user ? req.user.id : null;
+    const { viewedIds, limit = 10 } = req.query;
+    const products = await productService.getRecommendedProducts(userId, viewedIds, limit);
+    return res.status(200).json({ message: "Success", data: products });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+// GET /products/vector/status
+const getVectorStatus = async (req, res, next) => {
+  try {
+    const status = await vectorSearchService.getStatus();
+    return res.status(200).json({ message: "Success", data: status });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+// POST /products/vector/mode
+const switchVectorMode = async (req, res, next) => {
+  try {
+    const { mode } = req.body;
+    const status = await vectorSearchService.setMode(mode);
+    return res.status(200).json({
+      message: `Đã chuyển chế độ Vector Search sang ${status.mode.toUpperCase()}`,
+      data: status,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+// POST /products/vector/sync
+const syncVectorDatabase = async (req, res, next) => {
+  try {
+    const result = await vectorSearchService.syncDatabaseVectors();
+    return res.status(200).json({
+      message: "Đồng bộ Vector từ Database hoàn tất",
+      data: result,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 export default {
   getProducts,
   getProductBySlug,
@@ -127,6 +177,10 @@ export default {
   getNewestProducts,
   getBestSellerProducts,
   getMostViewedProducts,
+  getRecommendedProducts,
+  getVectorStatus,
+  switchVectorMode,
+  syncVectorDatabase,
   toggleFavorite,
   recordView,
 };

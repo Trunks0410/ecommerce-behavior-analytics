@@ -1,12 +1,13 @@
 import "dotenv/config";
+import { isLogSilenced } from "../utils/logContext.js";
 
 const shouldLogSql = process.env.DB_LOGGING !== "false";
 
 const dbConfig = {
-  username: process.env.DB_USER || "root",
+  username: process.env.DB_USER || "admin",
   password: process.env.DB_PASSWORD !== undefined ? process.env.DB_PASSWORD : "",
   database: process.env.DB_NAME || "ecommerce_platform",
-  host: process.env.DB_HOST || "127.0.0.1",
+  host: process.env.DB_HOST || "database-1.c3oq6oqssh7j.ap-southeast-2.rds.amazonaws.com",
   port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306,
   dialect: process.env.DB_DIALECT || "mysql",
   benchmark: true,
@@ -17,7 +18,8 @@ const dbConfig = {
           sql.includes("INFORMATION_SCHEMA") ||
           sql.includes("SHOW INDEX") ||
           sql.includes("SHOW TABLES") ||
-          sql.includes("SELECT 1+1")
+          sql.includes("SELECT 1+1") ||
+          isLogSilenced() // Query phát sinh từ route polling (vd: /chats/unread-count)
         ) {
           return;
         }
