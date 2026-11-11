@@ -2,73 +2,87 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import morgan from "morgan";
-import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
-import path from "path";
-import { connectDB } from "../../Ecommerce-platform/backend/src/core/config/DBConfig.js";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import sequelize from "./src/db/sequelize.js";
+import { migrate } from "./src/db/migrate.js";
 import shipmentRoutes from "./src/routes/shipment.routes.js";
 import shipperRoutes from "./src/routes/shipper.routes.js";
 
 const app = express();
-const PORT = process.env.PORT_SHIPMENT || 8090;
+const port = Number(process.env.PORT_SHIPMENT || 8090);
+const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
+
+const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5174,http://127.0.0.1:5174")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 app.use(morgan("dev"));
-
-const allowedOrigins = process.env.CORS_ORIGIN 
-  ? process.env.CORS_ORIGIN.split(',') 
-  : ['http://localhost:5173', 'http://localhost:5174', 'http://127.0.0.1:5174', 'http://localhost:3000'];
-
-app.use(cors({ 
-  origin: function(origin, callback) {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  }, 
-  credentials: true 
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error("Origin is not allowed by shipment service CORS policy."));
+  },
+  credentials: true,
 }));
-
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 app.use(cookieParser());
+app.use("/uploads", express.static(path.join(currentDirectory, "uploads")));
 
-// Static folder for uploaded delivery proofs if stored locally
-app.use("/uploads", express.static(path.resolve("public/uploads")));
-
-// Microservice Health Check
-app.get("/health", (req, res) => {
-  return res.status(200).json({
-    status: "UP",
-    service: "Shipment & Shipper Microservice",
-    timestamp: new Date().toISOString()
-  });
+app.get("/health", async (_req, res) => {
+  try {
+    await sequelize.authenticate();
+    return res.status(200).json({
+      status: "UP",
+      service: "UTE Express Shipment Service",
+      database: "UP",
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("UTE Express health check database failure:", error);
+    return res.status(503).json({
+      status: "DEGRADED",
+      service: "UTE Express Shipment Service",
+      database: "DOWN",
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
 
-// Microservice Routes
 app.use("/api/v1/shipments", shipmentRoutes);
 app.use("/api/v1/shipper", shipperRoutes);
-
-// Error Handler
-app.use((err, req, res, next) => {
-  console.error("[Shipment Microservice Error]:", err);
-  res.status(500).json({ message: err.message || "Shipment Microservice Error" });
+app.use((err, _req, res, _next) => {
+  if (err.name === "MulterError" || err.message?.startsWith("Only JPG, PNG")) {
+    return res.status(400).json({ code: "UPLOAD_INVALID", message: err.message });
+  }
+  console.error("UTE Express unhandled request error:", err);
+  return res.status(500).json({ code: "INTERNAL_ERROR", message: "Đã xảy ra lỗi hệ thống." });
 });
 
-connectDB()
-  .then(() => {
-    app.listen(PORT, () => {
-      console.log(`=================================================`);
-      console.log(`🚀 Shipment Microservice is running on port: ${PORT}`);
-      console.log(`   Health Check: http://localhost:${PORT}/health`);
-      console.log(`   Shipment API: http://localhost:${PORT}/api/v1/shipments`);
-      console.log(`   Shipper API:  http://localhost:${PORT}/api/v1/shipper`);
-      console.log(`=================================================`);
-    });
-  })
-  .catch((error) => {
-    console.error("Failed to connect DB for Shipment Microservice:", error);
+export async function startServer() {
+  if (!process.env.ECOMMERCE_SERVICE_API_KEY || process.env.ECOMMERCE_SERVICE_API_KEY.length < 24) {
+    throw new Error("ECOMMERCE_SERVICE_API_KEY must contain at least 24 characters.");
+  }
+  if (!process.env.ACCESS_TOKEN_SECRET || process.env.ACCESS_TOKEN_SECRET.length < 32) {
+    throw new Error("ACCESS_TOKEN_SECRET must contain at least 32 characters.");
+  }
+
+  await migrate();
+  const server = app.listen(port, () => {
+    console.log(`UTE Express Shipment Service listening on port ${port}.`);
+  });
+  return server;
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  startServer().catch(async (error) => {
+    console.error("Failed to start UTE Express Shipment Service:", error);
+    await sequelize.close();
     process.exit(1);
   });
+}
 
 export default app;

@@ -1,345 +1,156 @@
-import db from "../../../../Ecommerce-platform/backend/src/database/models/index.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { Op } from "sequelize";
+import { Agent, Shipment } from "../db/models.js";
+import { ServiceError } from "../domain/errors.js";
+import { listShipments, updateAgentAvailability } from "./shipment.service.js";
 
-const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || "fashion_marketplace_access_token_secret_key_2026";
-
-const login = async (emailOrPhone, password) => {
-  if (!emailOrPhone || !password) {
-    throw new Error("Vui lòng nhập email/số điện thoại và mật khẩu");
+const getAccessTokenSecret = () => {
+  const secret = process.env.ACCESS_TOKEN_SECRET;
+  if (!secret || secret.length < 32) {
+    throw new ServiceError(500, "AUTH_CONFIGURATION_ERROR", "ACCESS_TOKEN_SECRET must contain at least 32 characters.");
   }
-
-  const user = await db.User.findOne({
-    where: {
-      [db.Sequelize.Op.or]: [
-        { email: emailOrPhone },
-        { phone: emailOrPhone }
-      ]
-    },
-    include: [
-      { model: db.Role, as: "role" },
-      { model: db.UserProfile, as: "profile" }
-    ]
-  });
-
-  if (!user) {
-    throw new Error("Tài khoản không tồn tại");
-  }
-
-  const roleName = user.role?.role_name?.toLowerCase();
-  if (roleName !== "shipper" && roleName !== "admin") {
-    throw new Error("Tài khoản không có quyền truy cập hệ thống giao hàng (Shipper Portal)");
-  }
-
-  const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) {
-    throw new Error("Mật khẩu không chính xác");
-  }
-
-  const tokenPayload = {
-    id: user.id,
-    email: user.email,
-    role: roleName,
-    role_id: user.role_id,
-  };
-
-  const accessToken = jwt.sign(tokenPayload, ACCESS_TOKEN_SECRET, {
-    expiresIn: "7d",
-  });
-
-  const userData = {
-    id: user.id,
-    email: user.email,
-    phone: user.phone,
-    role: user.role?.role_name,
-    full_name: user.profile?.full_name || user.email.split("@")[0],
-    avatar_url: user.profile?.avatar_url || null,
-    date_of_birth: user.profile?.date_of_birth || null,
-    gender: user.profile?.gender || null,
-    operating_areas: (() => {
-      const raw = user.profile?.operating_areas;
-      if (Array.isArray(raw)) return raw;
-      try {
-        if (typeof raw === "string") return JSON.parse(raw);
-      } catch (e) {}
-      return [];
-    })(),
-  };
-
-  return { user: userData, accessToken };
+  return secret;
 };
 
-const getShipperProfile = async (shipperId) => {
-  const user = await db.User.findByPk(shipperId, {
-    include: [
-      { model: db.Role, as: "role" },
-      { model: db.UserProfile, as: "profile" }
-    ]
-  });
+const toPublicAgent = (agent) => ({
+  id: agent.id,
+  email: agent.email,
+  phone: agent.phone,
+  role: agent.role,
+  full_name: agent.fullName,
+  avatar_url: agent.avatarUrl,
+  operating_areas: agent.serviceAreas || [],
+  availability: agent.availability,
+  rating: Number(agent.rating),
+  completed_deliveries: agent.completedDeliveries,
+});
 
-  if (!user) {
-    throw new Error("Không tìm thấy thông tin tài khoản");
+export async function login(emailOrPhone, password) {
+  if (typeof emailOrPhone !== "string" || typeof password !== "string" || !password) {
+    throw new ServiceError(400, "VALIDATION_FAILED", "Vui lòng nhập email/số điện thoại và mật khẩu.");
+  }
+  const agent = await Agent.findOne({
+    where: { [Op.or]: [{ email: emailOrPhone.trim().toLowerCase() }, { phone: emailOrPhone.trim() }] },
+  });
+  if (!agent || agent.accountStatus !== "ACTIVE" || !(await bcrypt.compare(password, agent.passwordHash))) {
+    throw new ServiceError(401, "INVALID_CREDENTIALS", "Thông tin đăng nhập không chính xác hoặc tài khoản đã bị khóa.");
   }
 
+  const accessToken = jwt.sign(
+    { id: agent.id, role: agent.role },
+    getAccessTokenSecret(),
+    { expiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || "8h", issuer: "ute-express" },
+  );
+  return { user: toPublicAgent(agent), accessToken };
+}
+
+export async function getProfile(agentId) {
+  const agent = await Agent.findByPk(agentId);
+  if (!agent || agent.accountStatus !== "ACTIVE") throw new ServiceError(404, "AGENT_NOT_FOUND", "Không tìm thấy tài khoản.");
+  return toPublicAgent(agent);
+}
+
+export async function updateProfile(agentId, input) {
+  const agent = await Agent.findByPk(agentId);
+  if (!agent || agent.accountStatus !== "ACTIVE") throw new ServiceError(404, "AGENT_NOT_FOUND", "Không tìm thấy tài khoản.");
+
+  const updates = {};
+  if (input.full_name !== undefined) {
+    if (typeof input.full_name !== "string" || !input.full_name.trim() || input.full_name.trim().length > 160) {
+      throw new ServiceError(400, "VALIDATION_FAILED", "Tên hiển thị không hợp lệ.");
+    }
+    updates.fullName = input.full_name.trim();
+  }
+  if (input.phone !== undefined) {
+    if (typeof input.phone !== "string" || input.phone.length > 30) {
+      throw new ServiceError(400, "VALIDATION_FAILED", "Số điện thoại không hợp lệ.");
+    }
+    updates.phone = input.phone.trim() || null;
+  }
+  if (input.avatar_url !== undefined) {
+    if (input.avatar_url !== null && (typeof input.avatar_url !== "string" || input.avatar_url.length > 1000)) {
+      throw new ServiceError(400, "VALIDATION_FAILED", "Ảnh đại diện không hợp lệ.");
+    }
+    updates.avatarUrl = input.avatar_url || null;
+  }
+  if (input.operating_areas !== undefined) {
+    if (!Array.isArray(input.operating_areas) || input.operating_areas.some((area) => typeof area !== "string" || area.length > 120)) {
+      throw new ServiceError(400, "VALIDATION_FAILED", "Khu vực hoạt động không hợp lệ.");
+    }
+    updates.serviceAreas = [...new Set(input.operating_areas.map((area) => area.trim()).filter(Boolean))];
+  }
+  if (input.availability !== undefined) {
+    const updated = await updateAgentAvailability(agentId, input.availability);
+    return toPublicAgent(updated);
+  }
+  await agent.update(updates);
+  return toPublicAgent(agent);
+}
+
+export async function getShipperShipments(agentId, { page, limit, status, search } = {}) {
+  const result = await listShipments({ agentId, page, limit, status, search });
   return {
-    id: user.id,
-    email: user.email,
-    phone: user.phone,
-    role: user.role?.role_name,
-    full_name: user.profile?.full_name || "",
-    avatar_url: user.profile?.avatar_url || null,
-    date_of_birth: user.profile?.date_of_birth || null,
-    gender: user.profile?.gender || "male",
-    operating_areas: (() => {
-      const raw = user.profile?.operating_areas;
-      if (Array.isArray(raw)) return raw;
-      try {
-        if (typeof raw === "string") return JSON.parse(raw);
-      } catch (e) {}
-      return [];
-    })(),
+    total: result.total,
+    totalPages: result.totalPages,
+    currentPage: result.currentPage,
+    orders: result.shipments.map((shipment) => ({
+      id: shipment.id,
+      shop_order_code: shipment.orderReference,
+      status: shipment.status,
+      subtotal: 0,
+      shipping_fee: Number(shipment.shippingFee),
+      discount_amount: 0,
+      final_amount: Number(shipment.codAmount),
+      cod_status: shipment.paymentMethod === "COD" && shipment.status === "DELIVERED" ? "COLLECTED" : "PENDING",
+      cod_amount_collected: shipment.paymentMethod === "COD" && shipment.status === "DELIVERED" ? Number(shipment.codAmount) : null,
+      delivery_attempts: shipment.attemptCount,
+      parent_order_id: shipment.orderReference,
+      created_at: shipment.createdAt,
+      updated_at: shipment.updatedAt,
+      shipment: {
+        id: shipment.id,
+        shop_order_id: shipment.orderReference,
+        shipper_id: shipment.agentId,
+        tracking_number: shipment.trackingNumber,
+        status: shipment.status,
+        shipping_fee: Number(shipment.shippingFee),
+        histories: shipment.events.map((event) => ({
+          id: event.id,
+          shipment_id: event.shipmentId,
+          status: event.toStatus,
+          note: event.note,
+          proof_image_url: event.proofImageUrl,
+          created_at: event.createdAt,
+        })),
+      },
+      parentOrder: {
+        id: shipment.orderReference,
+        checkout_code: shipment.orderReference,
+        payment_method: shipment.paymentMethod,
+        shipping_address: {
+          recipient_name: shipment.recipientName,
+          phone_number: shipment.recipientPhone,
+          address_line: shipment.recipientAddress,
+        },
+      },
+      shop: {
+        shop_name: shipment.pickupName,
+        pickup_address: shipment.pickupAddress,
+      },
+      recipient_name: shipment.recipientName,
+      recipient_phone: shipment.recipientPhone,
+      recipient_address: shipment.recipientAddress,
+      payment_method: shipment.paymentMethod,
+      cod_amount: Number(shipment.codAmount),
+    })),
   };
-};
+}
 
-const updateShipperProfile = async (shipperId, data) => {
-  const user = await db.User.findByPk(shipperId, {
-    include: [{ model: db.UserProfile, as: "profile" }]
+export async function getCollectedCOD(agentId) {
+  return Shipment.findAll({
+    where: { agentId, paymentMethod: "COD", status: "DELIVERED" },
+    attributes: ["id", "trackingNumber", "orderReference", "codAmount", "deliveredAt"],
+    order: [["deliveredAt", "DESC"]],
   });
-
-  if (!user) {
-    throw new Error("Không tìm thấy tài khoản");
-  }
-
-  const transaction = await db.sequelize.transaction();
-  try {
-    if (data.phone) {
-      await user.update({ phone: data.phone }, { transaction });
-    }
-
-    const profileData = {};
-    if (data.full_name !== undefined) profileData.full_name = data.full_name;
-    if (data.date_of_birth !== undefined) profileData.date_of_birth = data.date_of_birth;
-    if (data.gender !== undefined) profileData.gender = data.gender;
-    if (data.avatar_url !== undefined) profileData.avatar_url = data.avatar_url;
-    if (data.operating_areas !== undefined) {
-      profileData.operating_areas = Array.isArray(data.operating_areas)
-        ? JSON.stringify(data.operating_areas)
-        : data.operating_areas;
-    }
-
-    if (user.profile) {
-      await user.profile.update(profileData, { transaction });
-    } else {
-      await db.UserProfile.create({
-        user_id: user.id,
-        ...profileData
-      }, { transaction });
-    }
-
-    await transaction.commit();
-    return await getShipperProfile(shipperId);
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
-};
-
-const getShipperOrders = async (shipperId, { page = 1, limit = 50, status, search }) => {
-  const where = {};
-
-  if (status) {
-    if (status === 'IN_TRANSIT') {
-      where.status = {
-        [db.Sequelize.Op.in]: ['SHIPPING', 'IN_TRANSIT', 'OUT_FOR_DELIVERY']
-      };
-      where.shipper_id = shipperId;
-    } else if (status === 'SHIPPING' || status === 'PENDING_PICKUP') {
-      where[db.Sequelize.Op.and] = [
-        { status },
-        {
-          [db.Sequelize.Op.or]: [
-            { shipper_id: null },
-            { shipper_id: shipperId }
-          ]
-        }
-      ];
-    } else {
-      where.status = status;
-      where.shipper_id = shipperId;
-    }
-  } else {
-    where[db.Sequelize.Op.or] = [
-      {
-        status: { [db.Sequelize.Op.in]: ['SHIPPING', 'PENDING_PICKUP'] },
-        shipper_id: null
-      },
-      {
-        shipper_id: shipperId
-      }
-    ];
-  }
-
-  const offset = (Number(page) - 1) * Number(limit);
-  const { count, rows } = await db.ShopOrder.findAndCountAll({
-    where,
-    include: [
-      {
-        model: db.Shipment,
-        as: "shipment",
-        include: [{ model: db.ShipmentHistory, as: "histories" }]
-      },
-      {
-        model: db.OrderItem,
-        as: "items",
-        include: [
-          {
-            model: db.ProductVariant,
-            as: "variant",
-            paranoid: false,
-            include: [
-              {
-                model: db.Product,
-                as: "product",
-                paranoid: false,
-                include: [{ model: db.ProductImage, as: "images" }]
-              }
-            ]
-          }
-        ]
-      },
-      { model: db.Shop, as: "shop", paranoid: false },
-      {
-        model: db.ParentOrder,
-        as: "parentOrder",
-        attributes: ['id', 'shipping_address', 'payment_method', 'payment_status', 'user_id', 'note', 'checkout_code']
-      }
-    ],
-    order: [["updated_at", "DESC"]],
-    limit: parseInt(limit),
-    offset,
-    distinct: true,
-  });
-
-  let orders = rows;
-  if (search && search.trim()) {
-    const q = search.trim().toLowerCase();
-    orders = orders.filter((o) => {
-      const codeMatch = o.shop_order_code?.toLowerCase().includes(q);
-      const trackingMatch = o.shipment?.tracking_number?.toLowerCase().includes(q);
-      const addressMatch = JSON.stringify(o.parentOrder?.shipping_address || "").toLowerCase().includes(q);
-      return codeMatch || trackingMatch || addressMatch;
-    });
-  }
-
-  return {
-    total: count,
-    totalPages: Math.ceil(count / limit),
-    currentPage: parseInt(page),
-    orders,
-  };
-};
-
-const getCollectedCOD = async (shipperId) => {
-  return await db.ShopOrder.findAll({
-    where: {
-      shipper_id: shipperId,
-      cod_status: "HELD_BY_SHIPPER"
-    },
-    include: [
-      {
-        model: db.ParentOrder,
-        as: "parentOrder",
-        where: { payment_method: "COD" },
-        attributes: ["id", "checkout_code", "payment_method", "shipping_address"]
-      },
-      {
-        model: db.Shop,
-        as: "shop",
-        attributes: ["id", "shop_name"]
-      }
-    ],
-    order: [["updated_at", "DESC"]]
-  });
-};
-
-const submitCODReconciliation = async (shipperId, orderIds, note = null) => {
-  if (!orderIds || orderIds.length === 0) {
-    throw new Error("Vui lòng chọn ít nhất một đơn hàng để đối soát");
-  }
-
-  const transaction = await db.sequelize.transaction();
-  try {
-    const orders = await db.ShopOrder.findAll({
-      where: {
-        id: orderIds,
-        shipper_id: shipperId,
-        cod_status: "HELD_BY_SHIPPER"
-      },
-      include: [
-        {
-          model: db.ParentOrder,
-          as: "parentOrder",
-          where: { payment_method: "COD" }
-        }
-      ],
-      transaction
-    });
-
-    if (orders.length !== orderIds.length) {
-      throw new Error("Một số đơn hàng đã chọn không hợp lệ hoặc đã được đối soát trước đó");
-    }
-
-    let totalSum = 0;
-    orders.forEach(order => {
-      totalSum += Number(order.cod_amount_collected || 0);
-    });
-
-    const recon = await db.ShipperReconciliation.create({
-      shipper_id: shipperId,
-      amount_submitted: totalSum,
-      status: "PENDING",
-      note: note
-    }, { transaction });
-
-    await db.ShopOrder.update(
-      {
-        cod_status: "SUBMITTED",
-        shipper_reconciliation_id: recon.id
-      },
-      {
-        where: { id: orderIds },
-        transaction
-      }
-    );
-
-    await transaction.commit();
-    return recon;
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
-};
-
-const getReconciliationHistory = async (shipperId) => {
-  return await db.ShipperReconciliation.findAll({
-    where: { shipper_id: shipperId },
-    include: [
-      {
-        model: db.ShopOrder,
-        as: "orders",
-        attributes: ["id", "shop_order_code", "final_amount", "cod_amount_collected", "updated_at"]
-      }
-    ],
-    order: [["created_at", "DESC"]]
-  });
-};
-
-export default {
-  login,
-  getShipperProfile,
-  updateShipperProfile,
-  getShipperOrders,
-  getCollectedCOD,
-  submitCODReconciliation,
-  getReconciliationHistory,
-};
+}

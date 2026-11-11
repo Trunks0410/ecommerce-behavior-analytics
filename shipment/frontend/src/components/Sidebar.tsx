@@ -9,7 +9,6 @@ interface SidebarProps {
 const navItems = [
   { to: "/", label: "Tổng quan" },
   { to: "/orders", label: "Vận đơn" },
-  { to: "/reconciliation", label: "Đối soát & COD" },
   { to: "/profile", label: "Cài đặt & Hồ sơ" },
 ];
 
