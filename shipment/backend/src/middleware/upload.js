@@ -1,12 +1,13 @@
 import multer from "multer";
-import path from "path";
-import fs from "fs";
+import path from "node:path";
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
+import { randomUUID } from "node:crypto";
 import { v2 as cloudinary } from "cloudinary";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
-import dotenv from "dotenv";
 
-dotenv.config();
-
+const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
+const uploadDirectory = path.resolve(currentDirectory, "../../uploads");
 let storage;
 
 if (process.env.CLOUDINARY_NAME && process.env.CLOUDINARY_KEY && process.env.CLOUDINARY_SECRET) {
@@ -15,36 +16,33 @@ if (process.env.CLOUDINARY_NAME && process.env.CLOUDINARY_KEY && process.env.CLO
     api_key: process.env.CLOUDINARY_KEY,
     api_secret: process.env.CLOUDINARY_SECRET,
   });
-
   storage = new CloudinaryStorage({
-    cloudinary: cloudinary,
+    cloudinary,
     params: {
-      folder: "fashion_marketplace/shipment_proofs",
+      folder: "ute-express/delivery-proofs",
       allowed_formats: ["jpg", "jpeg", "png", "webp"],
     },
   });
 } else {
-  // Fallback to local storage
-  const uploadDir = path.resolve("public/uploads");
-  if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-  }
-
+  fs.mkdirSync(uploadDirectory, { recursive: true });
   storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-      cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-      const ext = path.extname(file.originalname);
-      cb(null, file.fieldname + "-" + uniqueSuffix + ext);
+    destination: (_req, _file, callback) => callback(null, uploadDirectory),
+    filename: (_req, file, callback) => {
+      const extension = path.extname(file.originalname).toLowerCase();
+      callback(null, `${randomUUID()}${extension}`);
     },
   });
 }
 
 const upload = multer({
-  storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024, files: 5 },
+  fileFilter: (_req, file, callback) => {
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.mimetype)) {
+      return callback(new Error("Only JPG, PNG, and WebP images are supported."));
+    }
+    return callback(null, true);
+  },
 });
 
 export default upload;

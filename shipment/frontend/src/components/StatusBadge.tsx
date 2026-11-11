@@ -26,11 +26,19 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = ""
         </span>
       );
     case "PENDING_PICKUP":
+    case "ACCEPTED":
     case "CHO_LAY_HANG":
       return (
         <span className={`status-pill status-pill--pickup ${className}`}>
           <span className="status-pill__dot" />
-          <span>Chờ lấy hàng</span>
+          <span>{norm === "ACCEPTED" ? "Đã nhận đơn" : "Chờ lấy hàng"}</span>
+        </span>
+      );
+    case "PICKED_UP":
+      return (
+        <span className={`status-pill status-pill--pickup ${className}`}>
+          <span className="status-pill__dot" />
+          <span>Đã lấy hàng</span>
         </span>
       );
     case "SHIPPING":
@@ -52,6 +60,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = ""
         </span>
       );
     case "FAILED":
+    case "DELIVERY_FAILED":
     case "THAT_BAI":
       return (
         <span className={`status-pill status-pill--failed ${className}`}>

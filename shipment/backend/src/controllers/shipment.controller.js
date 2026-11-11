@@ -1,51 +1,99 @@
-import shipmentService from "../services/shipment.service.js";
+import { ServiceError } from "../domain/errors.js";
+import {
+  createShipment,
+  getShipmentById,
+  getShipmentByOrderReference,
+  getShipmentByTrackingNumber,
+  listAgents,
+  listShipments,
+  transitionShipment,
+} from "../services/shipment.service.js";
 
-const getShipmentHistory = async (req, res) => {
+const respond = (res, status, data, message = "Success") =>
+  res.status(status).json({ message, data });
+
+const handleError = (res, error) => {
+  if (error instanceof ServiceError) {
+    return res.status(error.status).json({ code: error.code, message: error.message });
+  }
+  console.error("UTE Express request failed:", error);
+  return res.status(500).json({ code: "INTERNAL_ERROR", message: "Đã xảy ra lỗi hệ thống." });
+};
+
+const create = async (req, res) => {
   try {
-    const { id } = req.params;
-    const history = await shipmentService.getShipmentHistory(id);
-    res.json(history);
+    const result = await createShipment(req.body);
+    return respond(res, result.created ? 201 : 200, result.shipment, result.created ? "Đã tạo vận đơn." : "Vận đơn đã tồn tại.");
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return handleError(res, error);
   }
 };
 
-const getShipmentByOrderId = async (req, res) => {
+const getByOrderReference = async (req, res) => {
   try {
-    const { orderId } = req.params;
-    const shipment = await shipmentService.getShipmentByOrderId(orderId);
-    if (!shipment) {
-      return res.status(404).json({ message: "Không tìm thấy vận đơn" });
-    }
-    res.json(shipment);
+    return respond(res, 200, await getShipmentByOrderReference(req.params.orderReference));
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return handleError(res, error);
   }
 };
 
-const updateShipmentStatus = async (req, res) => {
+const getById = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { status, location, note, proof_image_url, collected_shipping_fee, is_bom } = req.body;
-    const shipperId = req.user.id;
-    
-    // Require proof of delivery if status is DELIVERED
-    if (status === 'DELIVERED' && !proof_image_url) {
-      return res.status(400).json({ message: "Bắt buộc phải có ảnh bằng chứng khi giao hàng thành công" });
+    const shipment = await getShipmentById(req.params.id, { includeAttempts: true });
+    if (req.user.role === "SHIPPER" && Number(shipment.agentId) !== Number(req.user.id)) {
+      return res.status(404).json({ code: "SHIPMENT_NOT_FOUND", message: "Không tìm thấy vận đơn." });
     }
-
-    const history = await shipmentService.addShipmentHistory(
-      id, status, location, note, proof_image_url, shipperId, collected_shipping_fee, is_bom
-    );
-
-    res.json(history);
+    return respond(res, 200, shipment);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    return handleError(res, error);
+  }
+};
+
+const getTracking = async (req, res) => {
+  try {
+    return respond(res, 200, await getShipmentByTrackingNumber(req.params.trackingNumber));
+  } catch (error) {
+    return handleError(res, error);
+  }
+};
+
+const getShipments = async (req, res) => {
+  try {
+    const result = await listShipments(req.query);
+    return respond(res, 200, result);
+  } catch (error) {
+    return handleError(res, error);
+  }
+};
+
+const getAgents = async (_req, res) => {
+  try {
+    return respond(res, 200, await listAgents());
+  } catch (error) {
+    return handleError(res, error);
+  }
+};
+
+const runAction = (action) => async (req, res) => {
+  try {
+    const shipment = await transitionShipment(req.params.id, action, req.user, req.body);
+    return respond(res, 200, shipment, "Đã cập nhật vận đơn.");
+  } catch (error) {
+    return handleError(res, error);
   }
 };
 
 export default {
-  getShipmentHistory,
-  getShipmentByOrderId,
-  updateShipmentStatus
+  create,
+  getByOrderReference,
+  getById,
+  getTracking,
+  getShipments,
+  getAgents,
+  accept: runAction("accept"),
+  pickup: runAction("pickup"),
+  start: runAction("start"),
+  outForDelivery: runAction("outForDelivery"),
+  complete: runAction("complete"),
+  fail: runAction("fail"),
 };

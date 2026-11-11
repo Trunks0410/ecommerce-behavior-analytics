@@ -31,43 +31,26 @@ export const ProofModal: React.FC<ProofModalProps> = ({ order, onClose, onSucces
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file && !preview) {
+    if (!file) {
       alert("Vui lòng tải lên hoặc chụp ảnh bằng chứng giao hàng thành công!");
       return;
     }
 
     try {
       setSubmitting(true);
-      let proofUrl = "/demo-proof.jpg";
-      if (file) {
-        try {
-          const uploadedUrls = await shipperApi.uploadImage(file);
-          if (uploadedUrls && uploadedUrls.length > 0) {
-            proofUrl = uploadedUrls[0];
-          }
-        } catch {
-          // If upload endpoint offline, use simulated preview URL
-          proofUrl = preview || "/demo-proof.jpg";
-        }
-      }
-
-      if (order.shipment?.id) {
-        try {
-          await shipperApi.updateShipmentStatus(order.shipment.id, {
-            status: "DELIVERED",
-            note: note.trim() || "Giao hàng thành công tận tay người nhận",
-            proof_image_url: proofUrl,
-          });
-        } catch (apiErr) {
-          console.warn("Backend offline, updating locally", apiErr);
-        }
-      }
+      if (!order.shipment?.id) throw new Error("Không tìm thấy mã vận đơn.");
+      const uploadedUrls = await shipperApi.uploadImage(file);
+      if (uploadedUrls.length === 0) throw new Error("Máy chủ không trả về ảnh bằng chứng.");
+      await shipperApi.completeShipment(order.shipment.id, {
+        proofImageUrl: uploadedUrls[0],
+        note: note.trim() || "Giao hàng thành công tận tay người nhận",
+      });
 
       alert(`Đã xác nhận giao thành công cho vận đơn ${trackingNumber}!`);
       onSuccess();
       onClose();
     } catch (error: any) {
-      alert("Lỗi cập nhật: " + (error.response?.data?.message || error.message));
+      alert("Lỗi cập nhật: " + (error.response?.data?.message || error.message || "Không thể cập nhật vận đơn."));
     } finally {
       setSubmitting(false);
     }
@@ -107,9 +90,7 @@ export const ProofModal: React.FC<ProofModalProps> = ({ order, onClose, onSucces
 
             {/* Photo Upload Area */}
             <div className="form-group">
-              <label className="form-label">
-                Ảnh bằng chứng giao hàng (Bắt buộc)
-              </label>
+              <label className="form-label">Ảnh bằng chứng giao hàng (Bắt buộc)</label>
               <div
                 className={`dropzone-box${preview ? " has-image" : ""}`}
                 onClick={() => fileInputRef.current?.click()}
@@ -139,7 +120,7 @@ export const ProofModal: React.FC<ProofModalProps> = ({ order, onClose, onSucces
                 ) : (
                   <div className="dropzone-prompt">
                     <span className="dropzone-title">Nhấp để tải ảnh hoặc chụp biên bản giao nhận</span>
-                    <span className="dropzone-hint">Định dạng JPG, PNG (tối đa 5MB)</span>
+                    <span className="dropzone-hint">Định dạng JPG, PNG, WebP (tối đa 5MB)</span>
                   </div>
                 )}
               </div>
