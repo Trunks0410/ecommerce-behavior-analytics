@@ -5,6 +5,7 @@ import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import { connectDB } from "./core/config/DBConfig.js";
+import { initializeRedis } from "./core/cache/redis.js";
 import appRouter from "./app.routes.js";
 // Cron jobs moved to worker.js
 import morgan from "morgan";
@@ -24,10 +25,19 @@ process.on("unhandledRejection", (reason) => {
   process.exit(1);
 });
 
-// Giới hạn CORS domain cho production
+// Giới hạn CORS domain cho các phân hệ nội bộ (Ecommerce: 5173, Shipment: 5174, Analytics: 5175)
+const defaultAllowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:5175',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:5174',
+  'http://127.0.0.1:5175',
+];
+
 const allowedOrigins = process.env.CORS_ORIGIN 
-  ? process.env.CORS_ORIGIN.split(',') 
-  : ['http://localhost:5173'];
+  ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim()).concat(defaultAllowedOrigins) 
+  : defaultAllowedOrigins;
 
 app.use(cors({ 
   origin: function(origin, callback) {
@@ -66,6 +76,8 @@ app.get("/brands", (req, res) => {
 app.use(errorHandler);
 
 let port = process.env.PORT || 8080;
+
+initializeRedis();
 
 connectDB()
   .then(() => {

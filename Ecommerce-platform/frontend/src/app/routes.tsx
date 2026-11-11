@@ -23,8 +23,8 @@ import OrderDetailPage from "@/pages/user/OrderDetailPage";
 import ReviewPage from "@/pages/user/ReviewPage";
 import VoucherWalletPage from "@/pages/user/VoucherWalletPage";
 import VendorDashboard from "@/pages/vendor/VendorDashboard";
-import ManagerDashboard from "@/pages/manager/ManagerDashboard";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
+import AdminLoginPage from "@/pages/admin/AdminLoginPage";
 import RegisterShopPage from "@/pages/shop/RegisterShopPage";
 import { BlogListPage } from "@/pages/shop/BlogListPage";
 import { BlogDetailPage } from "@/pages/shop/BlogDetailPage";
@@ -168,17 +168,13 @@ export const getRoutes = (role: string = "GUEST"): RouteObject[] => {
       ),
     },
     {
-      path: "manager",
-      element: (
-        <AuthGuard allowedRoles={["manager", "admin"]}>
-          <ManagerDashboard />
-        </AuthGuard>
-      ),
+      path: "admin/login",
+      element: <AdminLoginPage />,
     },
     {
       path: "admin",
       element: (
-        <AuthGuard allowedRoles={["admin"]}>
+        <AuthGuard allowedRoles={["admin"]} redirectTo="/admin/login">
           <AdminDashboard />
         </AuthGuard>
       ),

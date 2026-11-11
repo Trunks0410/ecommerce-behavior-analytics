@@ -13,11 +13,14 @@ import {
   Sparkles,
   ShoppingBag,
   Check,
+  Camera,
+  X,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useProducts, useCategories } from "@/hooks/useProducts";
 import { useLanguage } from "@/shared/context/LanguageContext";
+import { VisualSearchModal } from "@/shared/components/modals/VisualSearchModal";
 
 const ProductListPage = () => {
   const { t } = useLanguage();
@@ -42,6 +45,91 @@ const ProductListPage = () => {
   const [localKeyword, setLocalKeyword] = useState(keyword);
   const [localMinPrice, setLocalMinPrice] = useState(minPrice?.toString() || "");
   const [localMaxPrice, setLocalMaxPrice] = useState(maxPrice?.toString() || "");
+
+  // Visual Search state (Shopee & TikTok Shop)
+  const isVisualSearch = searchParams.get("visualSearch") === "1";
+  const [visualSearchImage, setVisualSearchImage] = useState<string | null>(null);
+  const [visualSearchData, setVisualSearchData] = useState<any>(null);
+  const [isVisualModalOpen, setIsVisualModalOpen] = useState(false);
+  const [jumpPageInput, setJumpPageInput] = useState<string>("");
+
+  const getPaginationRange = (currentPage: number, totalPages: number, siblingCount = 1) => {
+    const totalPageNumbers = siblingCount * 2 + 5;
+
+    if (totalPages <= totalPageNumbers) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    const leftSiblingIndex = Math.max(currentPage - siblingCount, 1);
+    const rightSiblingIndex = Math.min(currentPage + siblingCount, totalPages);
+
+    const shouldShowLeftDots = leftSiblingIndex > 2;
+    const shouldShowRightDots = rightSiblingIndex < totalPages - 2;
+
+    const firstPageIndex = 1;
+    const lastPageIndex = totalPages;
+
+    if (!shouldShowLeftDots && shouldShowRightDots) {
+      const leftItemCount = 3 + 2 * siblingCount;
+      const leftRange = Array.from({ length: leftItemCount }, (_, i) => i + 1);
+      return [...leftRange, "...", totalPages];
+    }
+
+    if (shouldShowLeftDots && !shouldShowRightDots) {
+      const rightItemCount = 3 + 2 * siblingCount;
+      const rightRange = Array.from(
+        { length: rightItemCount },
+        (_, i) => totalPages - rightItemCount + i + 1
+      );
+      return [firstPageIndex, "...", ...rightRange];
+    }
+
+    if (shouldShowLeftDots && shouldShowRightDots) {
+      const middleRange = Array.from(
+        { length: rightSiblingIndex - leftSiblingIndex + 1 },
+        (_, i) => leftSiblingIndex + i
+      );
+      return [firstPageIndex, "...", ...middleRange, "...", lastPageIndex];
+    }
+
+    return [];
+  };
+
+  const handleJumpPage = (e: React.FormEvent) => {
+    e.preventDefault();
+    const targetPage = Number(jumpPageInput);
+    if (data && targetPage >= 1 && targetPage <= data.totalPages) {
+      updateFilters({ page: targetPage });
+      setJumpPageInput("");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  useEffect(() => {
+    if (isVisualSearch) {
+      const img = sessionStorage.getItem("last_visual_search_image");
+      const dataRaw = sessionStorage.getItem("last_visual_search_data");
+      setVisualSearchImage(img);
+      if (dataRaw) {
+        try {
+          setVisualSearchData(JSON.parse(dataRaw));
+        } catch (e) {
+          console.error("Lỗi parse visual search data:", e);
+        }
+      }
+    } else {
+      setVisualSearchImage(null);
+      setVisualSearchData(null);
+    }
+  }, [isVisualSearch]);
+
+  const handleClearVisualSearch = () => {
+    sessionStorage.removeItem("last_visual_search_image");
+    sessionStorage.removeItem("last_visual_search_data");
+    setVisualSearchImage(null);
+    setVisualSearchData(null);
+    updateFilters({ visualSearch: "" });
+  };
 
   // Đồng bộ local state khi URL thay đổi
   useEffect(() => {
@@ -71,7 +159,7 @@ const ProductListPage = () => {
     isFeatured: isFeatured || undefined,
     isNew: isNew === "true" ? true : undefined,
     sortBy: sortBy as any,
-    limit: 12, // Hiển thị 12 sản phẩm mỗi trang cho lưới cân đối
+    limit: 15, // Hiển thị 15 sản phẩm mỗi trang (3 hàng x 5 cột cân đối theo chuẩn Shopee)
   });
 
   const updateFilters = (newParams: Record<string, string | number | undefined | null>) => {
@@ -104,19 +192,29 @@ const ProductListPage = () => {
   };
 
   const handleClearFilters = () => {
+    sessionStorage.removeItem("last_visual_search_image");
+    sessionStorage.removeItem("last_visual_search_data");
+    setVisualSearchImage(null);
+    setVisualSearchData(null);
     setSearchParams({});
     setLocalKeyword("");
     setLocalMinPrice("");
     setLocalMaxPrice("");
   };
 
-  const activeCategoryName = categorySlug
+  const activeCategoryName = isVisualSearch
+    ? t("visual_search_title")
+    : categorySlug
     ? categories?.find((c) => c.slug === categorySlug)?.name
     : t("products_all");
 
-  const visibleProducts = (data?.products ?? []).filter((product) => {
+  const sourceProducts = (isVisualSearch && visualSearchData?.products && visualSearchData.products.length > 0)
+    ? visualSearchData.products
+    : (data?.products ?? []);
+
+  const visibleProducts = sourceProducts.filter((product: any) => {
     if (inStock) {
-      const variantTotal = product.variants?.reduce((sum, variant) => sum + Number(variant.stock_quantity || 0), 0) || 0;
+      const variantTotal = product.variants?.reduce((sum: number, variant: any) => sum + Number(variant.stock_quantity || 0), 0) || 0;
       const productStock = Number(product.stock_quantity ?? variantTotal ?? 0);
       if (productStock <= 0) return false;
     }
@@ -128,6 +226,10 @@ const ProductListPage = () => {
 
     return true;
   });
+
+  const totalDisplayCount = isVisualSearch && visualSearchData?.products
+    ? visualSearchData.products.length
+    : (data?.total || 0);
 
   const quickPriceOptions = [
     { label: t("filter_price_under_200k"), min: 0, max: 200000 },
@@ -165,7 +267,7 @@ const ProductListPage = () => {
 
       <div className="flex flex-col lg:flex-row gap-6">
         {/* 2. SIDEBAR BỘ LỌC (SHOPEE STYLE) */}
-        <aside className="lg:w-72 shrink-0 space-y-5">
+        <aside className="lg:w-64 shrink-0 space-y-5">
           <div className="bg-white dark:bg-slate-800 border border-black/[0.06] dark:border-slate-700/60 rounded-xs sm:rounded-sm p-4 shadow-[0_1px_1px_0_rgba(0,0,0,0.05)] space-y-5">
             {/* Header bộ lọc */}
             <div className="flex justify-between items-center pb-3 border-b border-gray-100 dark:border-slate-700/70">
@@ -478,7 +580,92 @@ const ProductListPage = () => {
         </aside>
 
         {/* 3. KHU VỰC DANH SÁCH SẢN PHẨM */}
-        <main className="flex-1 space-y-5">
+        <main className="flex-1 min-w-0 space-y-5">
+          {/* Visual AI Search Banner (Shopee & TikTok Shop Style) */}
+          {isVisualSearch && (
+            <div className="bg-gradient-to-r from-red-500/10 via-orange-500/10 to-amber-500/10 dark:from-red-950/40 dark:via-orange-950/30 dark:to-amber-950/20 border-2 border-[#ee4d2d]/30 dark:border-[#ee4d2d]/40 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm backdrop-blur-xs">
+              <div className="flex items-center gap-4">
+                {visualSearchImage ? (
+                  <div className="relative group shrink-0">
+                    <img
+                      src={visualSearchImage}
+                      alt="Ảnh tìm kiếm"
+                      className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg border-2 border-[#ee4d2d] shadow-md"
+                    />
+                    <div className="absolute -bottom-1 -right-1 bg-[#ee4d2d] text-white p-1 rounded-full shadow-xs">
+                      <Camera size={12} />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#fef0ed] dark:bg-slate-800 rounded-lg border-2 border-dashed border-[#ee4d2d] flex items-center justify-center text-[#ee4d2d] shrink-0">
+                    <Camera size={24} />
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <h2 className="text-sm sm:text-base font-bold text-gray-900 dark:text-slate-100 flex items-center gap-2">
+                    <Sparkles size={14} className="text-[#ee4d2d]" />
+                    <span>{t("visual_search_results_title")}</span>
+                  </h2>
+                  {(visualSearchData?.visualFeatures || visualSearchData?.queryFeatures) && (
+                    <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-slate-300 flex-wrap pt-0.5">
+                      <span className="flex items-center gap-1.5">
+                        <span>{t("visual_search_color_label")}:</span>
+                        <span
+                          className="w-3.5 h-3.5 rounded-full border border-gray-300 dark:border-slate-600 shadow-xs inline-block"
+                          style={{
+                            backgroundColor:
+                              visualSearchData.visualFeatures?.dominantColorHex ||
+                              visualSearchData.queryFeatures?.dominantColor?.hex ||
+                              "#ee4d2d",
+                          }}
+                        />
+                        <strong className="text-gray-900 dark:text-slate-100">
+                          {visualSearchData.visualFeatures?.dominantColor ||
+                            visualSearchData.queryFeatures?.dominantColor?.colorName ||
+                            t("visual_search_auto_detected")}
+                        </strong>
+                      </span>
+                      {(visualSearchData.visualFeatures?.smartTags ||
+                        visualSearchData.queryFeatures?.categoryKeywords)?.length > 0 && (
+                        <>
+                          <span>•</span>
+                          <span>{t("visual_search_features_title")}:</span>
+                          <strong className="text-gray-900 dark:text-slate-100">
+                            {(
+                              visualSearchData.visualFeatures?.smartTags ||
+                              visualSearchData.queryFeatures?.categoryKeywords
+                            ).join(", ")}
+                          </strong>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsVisualModalOpen(true)}
+                  className="flex-1 sm:flex-none px-3.5 py-2 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-800 dark:text-slate-200 border border-gray-200 dark:border-slate-700 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                >
+                  <Camera size={14} className="text-[#ee4d2d]" />
+                  <span>{t("visual_search_change_image")}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClearVisualSearch}
+                  className="px-3.5 py-2 bg-[#fef0ed] dark:bg-red-950/40 hover:bg-red-100 text-[#ee4d2d] dark:text-red-400 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                  title={t("visual_search_exit")}
+                >
+                  <X size={14} />
+                  <span>{t("visual_search_exit")}</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Thanh công cụ Top Bar chuẩn Shopee */}
           <div className="bg-white dark:bg-slate-800 border border-black/[0.06] dark:border-slate-700/60 rounded-xs sm:rounded-sm p-3.5 sm:p-4 shadow-[0_1px_1px_0_rgba(0,0,0,0.05)] flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -487,7 +674,7 @@ const ProductListPage = () => {
                 <span className="text-[#ee4d2d] font-extrabold">/ {activeCategoryName}</span>
               </h1>
               <p className="text-[11px] text-gray-500 dark:text-slate-400 mt-0.5">
-                {t("products_found")}: <strong className="text-gray-900 dark:text-slate-100">{data?.total || 0}</strong> {t("products_count_unit")}
+                {t("products_found")}: <strong className="text-gray-900 dark:text-slate-100">{totalDisplayCount}</strong> {t("products_count_unit")}
               </p>
             </div>
 
@@ -582,9 +769,9 @@ const ProductListPage = () => {
 
           {/* Lưới sản phẩm */}
           {isLoading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 animate-pulse">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
-                <div key={n} className="aspect-[3/4] bg-gray-200 dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700/60" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-3.5 animate-pulse">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                <div key={n} className="aspect-[3/4] bg-gray-200 dark:bg-slate-800 rounded-lg border border-gray-100 dark:border-slate-700/60" />
               ))}
             </div>
           ) : !data || visibleProducts.length === 0 ? (
@@ -608,51 +795,89 @@ const ProductListPage = () => {
             </div>
           ) : (
             <div
-              className={`grid gap-3 sm:gap-4 ${
+              className={
                 viewType === "grid"
-                  ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4"
-                  : "grid-cols-1"
-              }`}
+                  ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-3.5"
+                  : "flex flex-col space-y-3"
+              }
             >
-              {visibleProducts.map((product) => (
+              {visibleProducts.map((product: any) => (
                 <ProductCard
                   key={product.id}
                   id={product.slug || String(product.id)}
                   name={product.name}
                   price={Number(product.sale_price || product.price)}
                   originalPrice={product.sale_price ? Number(product.price) : undefined}
-                  image={product.images?.[0]?.image_url || "/placeholder.jpg"}
+                  image={product.images?.[0]?.image_url || product.primary_image || "/placeholder.jpg"}
                   category={product.category?.name || "MeeMart"}
                   rating={Number(product.rating_average || 4.8)}
                   sales={Number(product.sold_count || 12)}
-                  badge={product.is_new ? t("badge_new_arrival") : product.sold_count > 15 ? t("badge_best_seller") : undefined}
+                  layout={viewType}
+                  badge={
+                    (product.similarity_score ?? product.similarityScore)
+                      ? t("visual_search_similarity_badge").replace("{score}", String(product.similarity_score ?? product.similarityScore))
+                      : product.is_new
+                      ? t("badge_new_arrival")
+                      : product.sold_count > 15
+                      ? t("badge_best_seller")
+                      : undefined
+                  }
                   shop={product.shop}
                 />
               ))}
             </div>
           )}
 
-          {/* Phân trang (Pagination) */}
+          {/* Phân trang chuẩn Shopee (Pagination with Ellipsis & Jump-to-Page) */}
           {data && data.totalPages > 1 && (
-            <div className="pt-6 flex items-center justify-center gap-2">
-              <button
-                disabled={page <= 1}
-                onClick={() => updateFilters({ page: page - 1 })}
-                className="w-8 h-8 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-300 flex items-center justify-center hover:border-[#ee4d2d] hover:text-[#ee4d2d] disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
-                title="Trang trước"
-              >
-                <ChevronLeft size={16} />
-              </button>
+            <div className="pt-8 pb-4 flex flex-col sm:flex-row items-center justify-center gap-3.5 sm:gap-6">
+              <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                {/* Nút lùi 1 trang */}
+                <button
+                  disabled={page <= 1}
+                  onClick={() => {
+                    updateFilters({ page: page - 1 });
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  className="w-9 h-9 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-300 flex items-center justify-center hover:border-[#ee4d2d] hover:text-[#ee4d2d] disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
+                  title="Trang trước"
+                >
+                  <ChevronLeft size={16} />
+                </button>
 
-              <div className="flex items-center gap-1.5">
-                {Array.from({ length: data.totalPages }).map((_, i) => {
-                  const p = i + 1;
+                {/* Danh sách trang rút gọn với dấu ... */}
+                {getPaginationRange(page, data.totalPages).map((item, idx) => {
+                  if (item === "...") {
+                    const isLeftDots = idx === 1;
+                    const jumpTarget = isLeftDots
+                      ? Math.max(1, page - 5)
+                      : Math.min(data.totalPages, page + 5);
+                    return (
+                      <button
+                        key={`dots-${idx}`}
+                        type="button"
+                        onClick={() => {
+                          updateFilters({ page: jumpTarget });
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }}
+                        className="w-9 h-9 rounded-lg text-slate-400 dark:text-slate-500 hover:text-[#ee4d2d] font-bold text-xs flex items-center justify-center cursor-pointer transition-colors"
+                        title={isLeftDots ? "Lùi 5 trang" : "Tiến 5 trang"}
+                      >
+                        •••
+                      </button>
+                    );
+                  }
+
+                  const p = Number(item);
                   const isActive = p === page;
                   return (
                     <button
                       key={p}
-                      onClick={() => updateFilters({ page: p })}
-                      className={`w-8 h-8 rounded-lg font-bold text-xs transition-colors cursor-pointer ${
+                      onClick={() => {
+                        updateFilters({ page: p });
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                      className={`w-9 h-9 rounded-lg font-bold text-xs transition-colors cursor-pointer ${
                         isActive
                           ? "bg-[#ee4d2d] text-white shadow-xs"
                           : "bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:border-[#ee4d2d] hover:text-[#ee4d2d]"
@@ -662,20 +887,51 @@ const ProductListPage = () => {
                     </button>
                   );
                 })}
+
+                {/* Nút tiến 1 trang */}
+                <button
+                  disabled={page >= data.totalPages}
+                  onClick={() => {
+                    updateFilters({ page: page + 1 });
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  className="w-9 h-9 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-300 flex items-center justify-center hover:border-[#ee4d2d] hover:text-[#ee4d2d] disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
+                  title="Trang kế tiếp"
+                >
+                  <ChevronRight size={16} />
+                </button>
               </div>
 
-              <button
-                disabled={page >= data.totalPages}
-                onClick={() => updateFilters({ page: page + 1 })}
-                className="w-8 h-8 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-300 flex items-center justify-center hover:border-[#ee4d2d] hover:text-[#ee4d2d] disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
-                title="Trang kế tiếp"
-              >
-                <ChevronRight size={16} />
-              </button>
+              {/* Nhập trang muốn đến trực tiếp */}
+              <form onSubmit={handleJumpPage} className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                <span>Đến trang</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={data.totalPages}
+                  value={jumpPageInput}
+                  onChange={(e) => setJumpPageInput(e.target.value)}
+                  placeholder={String(page)}
+                  className="w-14 h-9 px-2 text-center rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold text-xs focus:outline-none focus:border-[#ee4d2d]"
+                />
+                <button
+                  type="submit"
+                  disabled={!jumpPageInput || Number(jumpPageInput) < 1 || Number(jumpPageInput) > data.totalPages}
+                  className="h-9 px-3 rounded-lg bg-slate-100 hover:bg-[#ee4d2d] text-slate-600 hover:text-white dark:bg-slate-800 dark:text-slate-300 font-bold text-xs border border-gray-200 dark:border-slate-700 hover:border-[#ee4d2d] transition-colors disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+                >
+                  Đi
+                </button>
+              </form>
             </div>
           )}
         </main>
       </div>
+
+      {/* Visual Search Modal */}
+      <VisualSearchModal
+        isOpen={isVisualModalOpen}
+        onClose={() => setIsVisualModalOpen(false)}
+      />
     </div>
   );
 };

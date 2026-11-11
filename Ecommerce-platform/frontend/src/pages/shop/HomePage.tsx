@@ -9,22 +9,18 @@ import {
   Truck,
   RotateCcw,
   Clock,
-  Smartphone,
   Shirt,
-  Home,
   Sparkles,
-  Pill,
-  Trophy,
-  Baby,
-  BookOpen,
-  Apple,
   Glasses,
+  ShoppingBag,
+  Layers,
   Gift,
   Copy,
   Check,
   ArrowRight,
 } from "lucide-react";
 import {
+  useCategories,
   useFeaturedProducts,
   useNewestProducts,
   useBestSellerProducts,
@@ -32,87 +28,52 @@ import {
 } from "@/hooks/useProducts";
 import { useLanguage } from "@/shared/context/LanguageContext";
 
-const categories = [
-  {
-    nameKey: "cat_electronics",
-    defaultName: "Điện tử",
-    icon: <Smartphone size={22} className="text-blue-500" />,
-    bgColor: "bg-blue-50 dark:bg-blue-950/40",
-    slug: "dien-tu",
-  },
-  {
-    nameKey: "cat_fashion",
-    defaultName: "Phụ kiện",
-    icon: <Glasses size={22} className="text-pink-500" />,
-    bgColor: "bg-pink-50 dark:bg-pink-950/40",
-    slug: "phu-kien",
-  },
-  {
-    nameKey: "cat_home",
-    defaultName: "Gia dụng",
-    icon: <Home size={22} className="text-amber-500" />,
-    bgColor: "bg-amber-50 dark:bg-amber-950/40",
-    slug: "gia-dung",
-  },
-  {
-    nameKey: "cat_beauty",
-    defaultName: "Làm đẹp",
-    icon: <Sparkles size={22} className="text-rose-500" />,
-    bgColor: "bg-rose-50 dark:bg-rose-950/40",
-    slug: "lam-dep",
-  },
-  {
-    nameKey: "cat_health",
-    defaultName: "Sức khỏe",
-    icon: <Pill size={22} className="text-emerald-500" />,
-    bgColor: "bg-emerald-50 dark:bg-emerald-950/40",
-    slug: "suc-khoe",
-  },
-  {
-    nameKey: "cat_sports",
-    defaultName: "Thể thao",
-    icon: <Trophy size={22} className="text-sky-500" />,
-    bgColor: "bg-sky-50 dark:bg-sky-950/40",
-    slug: "the-thao",
-  },
-  {
-    nameKey: "cat_mother_baby",
-    defaultName: "Mẹ & Bé",
-    icon: <Baby size={22} className="text-yellow-500" />,
-    bgColor: "bg-yellow-50 dark:bg-yellow-950/40",
-    slug: "me-va-be",
-  },
-  {
-    nameKey: "cat_books",
-    defaultName: "Sách",
-    icon: <BookOpen size={22} className="text-teal-500" />,
-    bgColor: "bg-teal-50 dark:bg-teal-950/40",
-    slug: "sach",
-  },
-  {
-    nameKey: "cat_food",
-    defaultName: "Thực phẩm",
-    icon: <Apple size={22} className="text-red-500" />,
-    bgColor: "bg-red-50 dark:bg-red-950/40",
-    slug: "thuc-pham",
-  },
-  {
-    nameKey: "cat_accessories",
-    defaultName: "Phụ kiện",
-    icon: <Glasses size={22} className="text-purple-500" />,
-    bgColor: "bg-purple-50 dark:bg-purple-950/40",
-    slug: "phu-kien",
-  },
+const CATEGORY_COLORS = [
+  "bg-blue-50 dark:bg-blue-950/40",
+  "bg-pink-50 dark:bg-pink-950/40",
+  "bg-purple-50 dark:bg-purple-950/40",
+  "bg-amber-50 dark:bg-amber-950/40",
+  "bg-rose-50 dark:bg-rose-950/40",
+  "bg-emerald-50 dark:bg-emerald-950/40",
+  "bg-teal-50 dark:bg-teal-950/40",
+  "bg-sky-50 dark:bg-sky-950/40",
+  "bg-orange-50 dark:bg-orange-950/40",
+  "bg-indigo-50 dark:bg-indigo-950/40",
 ];
+
+const getCategoryIcon = (slug = "", name = "") => {
+  const s = `${slug} ${name}`.toLowerCase();
+  if (s.includes("so-mi") || s.includes("ao-thun") || s.includes("ao") || s.includes("shirt")) {
+    return <Shirt size={22} className="text-blue-500" />;
+  }
+  if (s.includes("dam") || s.includes("vay") || s.includes("nu") || s.includes("dress")) {
+    return <Sparkles size={22} className="text-pink-500" />;
+  }
+  if (s.includes("non") || s.includes("mu") || s.includes("phu-kien") || s.includes("hat")) {
+    return <Glasses size={22} className="text-purple-500" />;
+  }
+  if (s.includes("nam") || s.includes("men")) {
+    return <ShoppingBag size={22} className="text-indigo-500" />;
+  }
+  return <Layers size={22} className="text-emerald-500" />;
+};
 
 const HomePage = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
 
+  const { data: categoryList = [], isLoading: isLoadingCategories } = useCategories();
   const { data: featuredProducts = [] } = useFeaturedProducts();
   const { data: newestProducts = [] } = useNewestProducts();
   const { data: bestSellers = [] } = useBestSellerProducts();
   const { data: mostViewed = [] } = useMostViewedProducts();
+
+  const displayCategories = (() => {
+    if (!categoryList || categoryList.length === 0) return [];
+    const roots = categoryList.filter((c: any) => !c.parent_id);
+    const children = categoryList.filter((c: any) => c.parent_id);
+    return [...roots, ...children].slice(0, 10);
+  })();
 
   // Flash Sale Countdown Timer (Hours, Minutes, Seconds)
   const [timeLeft, setTimeLeft] = useState({
@@ -206,22 +167,35 @@ const HomePage = () => {
           </div>
 
           <div className="grid grid-cols-5 sm:grid-cols-5 md:grid-cols-10 gap-3">
-            {categories.map((cat, idx) => (
-              <Link
-                key={idx}
-                to={`/products?category=${cat.slug}`}
-                className="flex flex-col items-center group text-center"
-              >
-                <div
-                  className={`w-14 h-14 rounded-2xl ${cat.bgColor} flex items-center justify-center transition-all duration-200 group-hover:scale-105 group-hover:shadow-sm border border-black/5 dark:border-white/5 mb-2`}
-                >
-                  {cat.icon}
+            {isLoadingCategories && displayCategories.length === 0 ? (
+              Array.from({ length: 10 }).map((_, idx) => (
+                <div key={idx} className="flex flex-col items-center animate-pulse">
+                  <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-700 mb-2" />
+                  <div className="h-3 w-10 bg-slate-100 dark:bg-slate-700 rounded" />
                 </div>
-                <span className="text-[11px] sm:text-xs text-gray-700 dark:text-slate-300 font-medium group-hover:text-[#ee4d2d] transition-colors line-clamp-1">
-                  {t(cat.nameKey as any, cat.defaultName)}
-                </span>
-              </Link>
-            ))}
+              ))
+            ) : (
+              displayCategories.map((cat: any, idx: number) => (
+                <Link
+                  key={cat.id || idx}
+                  to={`/products?category=${cat.slug}`}
+                  className="flex flex-col items-center group text-center"
+                >
+                  <div
+                    className={`w-14 h-14 rounded-2xl ${CATEGORY_COLORS[idx % CATEGORY_COLORS.length]} flex items-center justify-center transition-all duration-200 group-hover:scale-105 group-hover:shadow-sm border border-black/5 dark:border-white/5 mb-2 overflow-hidden`}
+                  >
+                    {cat.image_url ? (
+                      <img src={cat.image_url} alt={cat.name} className="w-full h-full object-cover" />
+                    ) : (
+                      getCategoryIcon(cat.slug, cat.name)
+                    )}
+                  </div>
+                  <span className="text-[11px] sm:text-xs text-gray-700 dark:text-slate-300 font-medium group-hover:text-[#ee4d2d] transition-colors line-clamp-1">
+                    {cat.name}
+                  </span>
+                </Link>
+              ))
+            )}
           </div>
         </div>
       </section>

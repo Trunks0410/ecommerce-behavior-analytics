@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { ShieldAlert } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { Button } from "@/shared/components/ui/Button";
 import { Input } from "@/shared/components/ui/Input";
@@ -36,8 +37,6 @@ const Login = () => {
 
       if (roleName === "admin") {
         navigate("/admin", { replace: true });
-      } else if (roleName === "manager") {
-        navigate("/manager", { replace: true });
       } else if (roleName === "vendor") {
         navigate("/vendor", { replace: true });
       } else if (roleName === "shipper") {
@@ -67,7 +66,6 @@ const Login = () => {
       : user?.role?.role_name?.toLowerCase();
 
     if (roleName === "admin") return "/admin";
-    if (roleName === "manager") return "/manager";
     if (roleName === "vendor") return "/vendor";
     if (roleName === "shipper") {
       window.location.href = import.meta.env.VITE_SHIPPER_PORTAL_URL || "http://localhost:5174";
@@ -253,6 +251,16 @@ const Login = () => {
                   Đăng ký ngay
                 </Link>
               </p>
+
+              <div className="mt-6 pt-4 border-t border-black/10 text-center">
+                <Link
+                  to="/admin/login"
+                  className="text-xs font-semibold text-gray-500 hover:text-black flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <ShieldAlert size={14} className="text-red-500" />
+                  <span>Cổng đăng nhập Quản Trị Viên (Admin Portal)</span>
+                </Link>
+              </div>
             </Card>
           </div>
         </div>
