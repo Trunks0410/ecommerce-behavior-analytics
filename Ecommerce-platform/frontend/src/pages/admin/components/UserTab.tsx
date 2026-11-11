@@ -8,6 +8,8 @@ import {
    Lock,
    LockOpen,
    X,
+   Truck,
+   ExternalLink,
 } from 'lucide-react';
 import { adminService } from '@/services/adminService';
 import { getAvatarUrl } from '@/shared/utils/format';
@@ -18,7 +20,7 @@ interface UserTabProps {
 }
 
 export const UserTab = ({ showToast, showConfirm }: UserTabProps) => {
-   const [roleTab, setRoleTab] = useState("manager");
+   const [roleTab, setRoleTab] = useState("user");
    const [users, setUsers] = useState<any[]>([]);
    const [loading, setLoading] = useState(true);
    const [showForm, setShowForm] = useState(false);
@@ -116,10 +118,8 @@ export const UserTab = ({ showToast, showConfirm }: UserTabProps) => {
    };
 
    const roles = [
-      { id: "manager", label: "Manager" },
       { id: "user", label: "Customer" },
       { id: "vendor", label: "Vendor" },
-      { id: "shipper", label: "Shipper" },
    ];
    useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
@@ -166,11 +166,8 @@ export const UserTab = ({ showToast, showConfirm }: UserTabProps) => {
    };
 
    const getRoleLabel = (role: string) => {
-      if (role === "user") return "Customer";
-      if (role === "manager") return "Manager";
       if (role === "vendor") return "Vendor";
-      if (role === "shipper") return "Shipper";
-      return role;
+      return "Customer";
    };
 
    return (
@@ -178,7 +175,7 @@ export const UserTab = ({ showToast, showConfirm }: UserTabProps) => {
          <div className="flex justify-between items-end">
             <div>
                <h1 className="text-3xl font-serif font-black tracking-tighter uppercase text-black">Quản lý Tài khoản</h1>
-               <div className="flex gap-2 mt-4">
+               <div className="flex flex-wrap items-center gap-2 mt-4">
                   {roles.map(r => (
                      <button
                         key={r.id}
@@ -188,6 +185,7 @@ export const UserTab = ({ showToast, showConfirm }: UserTabProps) => {
                         {r.label}
                      </button>
                   ))}
+                  
                </div>
             </div>
             <button

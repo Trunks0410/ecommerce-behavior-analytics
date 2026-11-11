@@ -197,9 +197,12 @@ export const vendorService = {
     return response.data;
   },
 
-  // Sẵn sàng giao hàng (PREPARING -> SHIPPING)
+  // Bàn giao cho UTE Express (PREPARING -> SHIPPING)
   readyOrder: async (orderId: number | string) => {
-    const response = await axiosClient.patch(`/orders/${orderId}/status`, { status: "SHIPPING" });
+    const response = await axiosClient.patch(`/orders/${orderId}/status`, {
+      status: "SHIPPING",
+      shippingProvider: "UTE_EXPRESS",
+    });
     return response.data;
   },
 
@@ -210,8 +213,8 @@ export const vendorService = {
   },
 
   // Cập nhật trạng thái hàng loạt
-  bulkUpdateOrdersStatus: async (orderIds: (number | string)[], status: string) => {
-    const response = await axiosClient.patch("/orders/bulk-status", { orderIds, status });
+  bulkUpdateOrdersStatus: async (orderIds: (number | string)[], status: string, shippingProvider?: string) => {
+    const response = await axiosClient.patch("/orders/bulk-status", { orderIds, status, shippingProvider });
     return response.data;
   },
 

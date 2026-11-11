@@ -18,6 +18,7 @@ interface ProductCardProps {
   sales: number;
   badge?: string;
   isFlashSale?: boolean;
+  layout?: "grid" | "list";
   shop?: {
     id: number | string;
     name: string;
@@ -37,6 +38,7 @@ const ProductCard = ({
   sales,
   badge,
   isFlashSale,
+  layout = "grid",
   shop,
 }: ProductCardProps) => {
   const [showModal, setShowModal] = useState(false);
@@ -50,6 +52,110 @@ const ProductCard = ({
   const discountPercent = originalPrice && originalPrice > price 
     ? Math.round(((originalPrice - price) / originalPrice) * 100) 
     : null;
+
+  if (layout === "list") {
+    return (
+      <>
+        <div className="group relative flex flex-col sm:flex-row bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700/60 rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md hover:border-[#ee4d2d]/40 p-3 gap-4 items-center">
+          {/* Thumbnail */}
+          <div className="relative w-full sm:w-36 sm:h-36 h-48 shrink-0 rounded-lg overflow-hidden bg-gray-50 dark:bg-slate-900">
+            <Link to={`/products/${id}`} className="block w-full h-full">
+              <img
+                src={finalImage}
+                alt={name}
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                loading="lazy"
+              />
+            </Link>
+
+            {discountPercent && discountPercent > 0 && (
+              <div className="absolute top-0 left-0 bg-[#fef0ed] text-[#ee4d2d] px-1.5 py-0.5 text-[10px] font-black rounded-br-md shadow-xs border-r border-b border-[#ee4d2d]/20">
+                -{discountPercent}%
+              </div>
+            )}
+
+            {badge && (
+              <div className="absolute top-1.5 right-1.5 bg-black/60 backdrop-blur-xs text-white px-1.5 py-0.5 text-[10px] font-semibold rounded-xs">
+                {badge}
+              </div>
+            )}
+          </div>
+
+          {/* Info Details */}
+          <div className="flex-1 min-w-0 flex flex-col justify-between py-1 space-y-2 w-full">
+            <div>
+              {shop && (
+                <Link
+                  to={`/shop/${shop.id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-[11px] text-gray-500 dark:text-slate-400 hover:text-[#ee4d2d] transition-colors truncate font-medium block"
+                >
+                  {shop.name}
+                </Link>
+              )}
+
+              <Link
+                to={`/products/${id}`}
+                className="text-xs sm:text-sm font-semibold text-gray-800 dark:text-slate-100 line-clamp-2 hover:text-[#ee4d2d] transition-colors leading-snug"
+                title={name}
+              >
+                {name}
+              </Link>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-50 dark:border-slate-700/50">
+              <div className="flex items-baseline gap-2">
+                <span className="text-base sm:text-lg font-bold text-[#ee4d2d]">
+                  {formatPrice(price)}
+                </span>
+                {originalPrice && originalPrice > price && (
+                  <span className="text-xs text-gray-400 dark:text-slate-500 line-through">
+                    {formatPrice(originalPrice)}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-slate-400">
+                <div className="flex items-center gap-1">
+                  <Star size={12} className="fill-amber-400 text-amber-400" />
+                  <span className="font-semibold text-gray-700 dark:text-slate-200">
+                    {rating > 0 ? rating.toFixed(1) : "5.0"}
+                  </span>
+                </div>
+                <span>
+                  {t("sold")} {sales > 1000 ? `${(sales / 1000).toFixed(1)}k` : sales}
+                </span>
+
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowModal(true);
+                  }}
+                  className="ml-2 px-3 py-1 rounded-full bg-[#fef0ed] dark:bg-slate-700 text-[#ee4d2d] hover:bg-[#ee4d2d] hover:text-white transition-colors text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus size={14} />
+                  <span>{t("add_to_cart") || "Thêm vào giỏ"}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Variant Selection Modal */}
+        {showModal && (
+          <AddToCartModal
+            productSlug={id}
+            productName={name}
+            productImage={image}
+            productPrice={price}
+            originalPrice={originalPrice}
+            onClose={() => setShowModal(false)}
+          />
+        )}
+      </>
+    );
+  }
 
   return (
     <>

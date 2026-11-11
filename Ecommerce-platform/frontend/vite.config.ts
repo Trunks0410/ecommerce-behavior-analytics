@@ -18,6 +18,25 @@ export default defineConfig({
   },
   server: {
     host: true,
+    port: 5173,
+  },
+  optimizeDeps: {
+    include: [
+      "react",
+      "react-dom",
+      "react-router-dom",
+      "react-redux",
+      "@reduxjs/toolkit",
+      "redux-persist",
+      "redux-persist/integration/react",
+      "@react-oauth/google",
+      "@tanstack/react-query",
+      "react-hot-toast",
+      "react/compiler-runtime",
+      "axios",
+      "lucide-react",
+      "recharts",
+    ],
   },
 });
 

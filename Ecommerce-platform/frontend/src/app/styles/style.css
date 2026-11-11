@@ -46,6 +46,17 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @layer components {
+  /* Visual Search Laser Scanning Animation */
+  @keyframes laserScan {
+    0% { top: 2%; opacity: 0.7; }
+    50% { top: 95%; opacity: 1; }
+    100% { top: 2%; opacity: 0.7; }
+  }
+
+  .animate-laser-scan {
+    animation: laserScan 2.2s ease-in-out infinite;
+  }
+
   /* Shopee Component Classes */
   .shopee-card {
     @apply bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700/60 rounded-sm shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5;
@@ -185,4 +196,39 @@ h1, h2, h3, h4, h5, h6 {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* ==========================================================================
+   ẨN HOÀN TOÀN THANH CÔNG CỤ VÀ BANNER CỦA GOOGLE TRANSLATE ENGINE (OPTION A)
+   Giữ nguyên 100% giao diện sang trọng của MeeMart
+   ========================================================================== */
+.goog-te-banner-frame.skiptranslate,
+.goog-te-banner-frame,
+iframe[name^="goog-te-"],
+iframe[id^=":1."],
+.goog-te-gadget-icon,
+#goog-gt-tt,
+.goog-te-balloon-frame {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+body {
+  top: 0px !important;
+}
+
+.goog-tooltip,
+.goog-tooltip:hover {
+  display: none !important;
+}
+
+.goog-text-highlight {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+#google_translate_element {
+  display: none !important;
 }

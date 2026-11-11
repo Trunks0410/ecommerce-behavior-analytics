@@ -19,6 +19,7 @@ import returnRouter from "./modules/return/return.routes.js";
 import blogRouter from "./modules/blog/blog.routes.js";
 import aiChatRouter from "./modules/aiChat/aiChat.routes.js";
 import shipmentRouter from "./modules/shipment/shipment.routes.js";
+import translateRouter from "./modules/translate/translate.routes.js";
 
 const router = express.Router();
 
@@ -42,5 +43,6 @@ router.use("/returns", returnRouter);
 router.use("/", blogRouter);
 router.use("/", aiChatRouter);
 router.use("/shipments", shipmentRouter);
+router.use("/translate", translateRouter);
 
 export default router;

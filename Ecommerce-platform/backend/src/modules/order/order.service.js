@@ -1,6 +1,7 @@
 import db from "../../database/models/index.js";
 import cartService from "../cart/cart.service.js";
 import notificationService from "../notification/notification.service.js";
+import { createUteExpressShipment } from "../shipment/shipment.service.js";
 
 const generateOrderCode = (prefix = "ORD") => {
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
@@ -728,7 +729,7 @@ const autoAssignShipperByArea = async (shopOrderId) => {
 
 
 
-const updateOrderStatus = async (shopOrderId, userId, newStatus, role, note = null) => {
+const updateOrderStatus = async (shopOrderId, userId, newStatus, role, note = null, options = {}) => {
   const shopOrder = await db.ShopOrder.findByPk(shopOrderId, {
     include: [{ model: db.ParentOrder, as: "parentOrder" }, { model: db.OrderItem, as: "items" }]
   });
@@ -753,14 +754,52 @@ const updateOrderStatus = async (shopOrderId, userId, newStatus, role, note = nu
   const oldStatus = shopOrder.status;
   const updateData = { status: newStatus };
 
-  // Trigger auto-assignment of shipper and create shipment when transitioning to PREPARING status
-  if (newStatus === "PREPARING" && oldStatus !== "PREPARING") {
-    const assignedShipperId = await autoAssignShipperByArea(shopOrderId);
-    if (assignedShipperId) {
-      updateData.shipper_id = assignedShipperId;
+  if (newStatus === "SHIPPING" && oldStatus !== "SHIPPING") {
+    if (options.shippingProvider !== "UTE_EXPRESS") {
+      throw new Error("Vui lòng chọn UTE Express trước khi bàn giao đơn hàng.");
     }
-    const shipmentService = (await import("../shipment/shipment.service.js")).default;
-    await shipmentService.createShipment(shopOrderId, assignedShipperId || null);
+
+    const shop = await db.Shop.findByPk(shopOrder.shop_id);
+    const pickupAddress = shop
+      ? await db.UserAddress.findOne({
+          where: { user_id: shop.vendor_id },
+          order: [["is_default", "DESC"], ["id", "ASC"]],
+        })
+      : null;
+    if (!pickupAddress) {
+      throw new Error("Cửa hàng cần có địa chỉ lấy hàng trước khi bàn giao cho UTE Express.");
+    }
+
+    const recipientAddress = shopOrder.parentOrder?.address_id
+      ? await db.UserAddress.findByPk(shopOrder.parentOrder.address_id)
+      : null;
+    const shippingAddress = shopOrder.parentOrder?.shipping_address || "";
+    const addressParts = shippingAddress.split(",").map((part) => part.trim());
+    const recipientName = recipientAddress?.receiver_name || addressParts[0];
+    const recipientPhone = recipientAddress?.phone || addressParts[1];
+    const recipientAddressText = recipientAddress
+      ? [recipientAddress.street, recipientAddress.ward, recipientAddress.district, recipientAddress.province]
+          .filter(Boolean)
+          .join(", ")
+      : addressParts.slice(2).filter(Boolean).join(", ");
+
+    await createUteExpressShipment({
+      orderReference: shopOrder.shop_order_code,
+      pickupName: pickupAddress.receiver_name,
+      pickupPhone: pickupAddress.phone,
+      pickupAddress: [pickupAddress.street, pickupAddress.ward, pickupAddress.district, pickupAddress.province]
+        .filter(Boolean)
+        .join(", "),
+      pickupArea: pickupAddress.district,
+      recipientName,
+      recipientPhone,
+      recipientAddress: recipientAddressText,
+      deliveryNote: note || shopOrder.parentOrder?.note,
+      paymentMethod: shopOrder.parentOrder?.payment_method === "COD" ? "COD" : "PREPAID",
+      codAmount: shopOrder.parentOrder?.payment_method === "COD" ? Number(shopOrder.final_amount) : 0,
+      shippingFee: Number(shopOrder.shipping_fee),
+    });
+    updateData.shipper_id = null;
   }
 
   // Handle DELIVERED logic
@@ -1078,13 +1117,13 @@ const updateOrderStatus = async (shopOrderId, userId, newStatus, role, note = nu
   return shopOrder;
 };
 
-const bulkUpdateOrderStatus = async (shopOrderIds, userId, newStatus, role) => {
+const bulkUpdateOrderStatus = async (shopOrderIds, userId, newStatus, role, options = {}) => {
   const results = [];
   const errors = [];
 
   for (const orderId of shopOrderIds) {
     try {
-      const order = await updateOrderStatus(orderId, userId, newStatus, role);
+      const order = await updateOrderStatus(orderId, userId, newStatus, role, null, options);
       results.push(order);
     } catch (err) {
       errors.push({ orderId, message: err.message });
@@ -1102,26 +1141,10 @@ const getShipperOrders = async (userId, { page = 1, limit = 10, status }) => {
   const where = {};
 
   if (status) {
-    if (status === 'SHIPPING') {
-      where.status = 'SHIPPING';
-      where[db.Sequelize.Op.or] = [
-        { shipper_id: null },
-        { shipper_id: userId }
-      ];
-    } else {
-      where.status = status;
-      where.shipper_id = userId;
-    }
+    where.status = status;
+    where.shipper_id = userId;
   } else {
-    where[db.Sequelize.Op.or] = [
-      {
-        status: 'SHIPPING',
-        shipper_id: null
-      },
-      {
-        shipper_id: userId
-      }
-    ];
+    where.shipper_id = userId;
   }
 
   const offset = (page - 1) * limit;
@@ -1342,4 +1365,3 @@ const autoCompleteDeliveredOrders = async () => {
 };
 
 export default { calculateCheckout, createOrder, getUserOrders, getUserOrderCounts, updateOrderStatus, getOrderDetail, cancelOrder, getShipperOrders, bulkUpdateOrderStatus, autoCompleteDeliveredOrders, autoAssignShipperByArea };
-

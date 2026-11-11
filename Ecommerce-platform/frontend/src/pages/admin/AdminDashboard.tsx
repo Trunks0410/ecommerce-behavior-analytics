@@ -8,7 +8,6 @@ import {
    ExternalLink,
    Check,
    X,
-   TrendingUp,
    User,
    BarChart3,
    Menu,
@@ -21,9 +20,14 @@ import {
    Eye,
    EyeOff,
    Lock,
+   Truck,
+   ChevronRight,
+   Shield,
+   LogOut,
+   ChevronDown
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { setUser } from '@/app/stores/slices/authSlice';
 import { adminService } from '@/services/adminService';
@@ -42,21 +46,24 @@ import { SystemLogTab } from './components/SystemLogTab';
 import { DisputeTab } from '../manager/components/DisputeTab';
 import { ShopWalletTab } from './components/ShopWalletTab';
 import { MarketingTab } from '../manager/components/MarketingTab';
+import { ShippingPartnersTab } from './components/ShippingPartnersTab';
 
 // ============================================================
-// ADMIN DASHBOARD
+// ADMIN DASHBOARD (Chuẩn mực Operate Mode theo AGENTS.md)
 // ============================================================
 
-const AdminDashboard = () => {
-   const [activeTab, setActiveTab] = useState("users");
+export const AdminDashboard = () => {
+   const [searchParams, setSearchParams] = useSearchParams();
+   const initialTab = searchParams.get('tab') || 'users';
+   const [activeTab, setActiveTab] = useState(initialTab);
    const [showUserDropdown, setShowUserDropdown] = useState(false);
-   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
-   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(true);
    const [showAdminProfileModal, setShowAdminProfileModal] = useState(false);
    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
    const [isEditingAdmin, setIsEditingAdmin] = useState(false);
    const [showAdminPassword, setShowAdminPassword] = useState(false);
    const [adminAvatarFile, setAdminAvatarFile] = useState<File | null>(null);
+   const dropdownRef = useRef<HTMLDivElement>(null);
+
    const [adminForm, setAdminForm] = useState({
       full_name: '',
       email: '',
@@ -66,6 +73,7 @@ const AdminDashboard = () => {
       password: '',
       avatar_url: ''
    });
+
    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
    const [confirmDialog, setConfirmDialog] = useState<{
       isOpen: boolean;
@@ -88,6 +96,7 @@ const AdminDashboard = () => {
       setToast({ message, type });
    };
 
+   // Tự động tắt toast sau 4 giây
    useEffect(() => {
       if (toast) {
          const timer = setTimeout(() => {
@@ -97,9 +106,28 @@ const AdminDashboard = () => {
       }
    }, [toast]);
 
+   // Đóng dropdown khi click ra ngoài
+   useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+         if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+            setShowUserDropdown(false);
+         }
+      };
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+   }, []);
+
    const currentUser = useSelector((state: RootState) => state.auth.user);
+   const accessToken = useSelector((state: RootState) => state.auth.accessToken);
    const dispatch = useDispatch();
    const { handleLogout } = useAuth();
+
+   // Đồng bộ query tab lên URL
+   const handleSelectTab = (tabId: string) => {
+      setActiveTab(tabId);
+      setSearchParams({ tab: tabId });
+      setIsSidebarOpen(false);
+   };
 
    useEffect(() => {
       if (showAdminProfileModal && currentUser) {
@@ -158,155 +186,247 @@ const AdminDashboard = () => {
       }
    };
 
+   // Danh sách các mục quản trị hệ thống
    const sidebarItems = [
-      { id: "users", label: "Quản lý Tài khoản", icon: <Users size={20} /> },
-      { id: "vendors", label: "Duyệt gian hàng", icon: <Store size={20} /> },
-      { id: "disputes", label: "Giải quyết khiếu nại", icon: <AlertCircle size={20} /> },
-      { id: "marketing", label: "Chiến dịch Marketing", icon: <Ticket size={20} /> },
-      { id: "shop_wallets", label: "Quản lý ví Shop", icon: <Wallet size={20} /> },
-      { id: "settings", label: "Cấu hình hệ thống", icon: <Settings size={20} /> },
-      { id: "finance", label: "Báo cáo tài chính", icon: <BarChart3 size={20} /> },
-      { id: "reconciliation", label: "Đối soát thanh toán", icon: <Landmark size={20} /> },
-      { id: "withdrawal_logs", label: "Lịch sử rút tiền", icon: <Activity size={20} /> },
-      { id: "system_logs", label: "Nhật ký hệ thống", icon: <ClipboardList size={20} /> },
+      { id: "users", label: "Quản lý Tài khoản", icon: <Users size={18} /> },
+      { id: "vendors", label: "Duyệt gian hàng", icon: <Store size={18} /> },
+      { id: "shipping_partners", label: "Đối tác Vận chuyển (UTE Express)", icon: <Truck size={18} /> },
+      { id: "disputes", label: "Giải quyết khiếu nại", icon: <AlertCircle size={18} /> },
+      { id: "shop_wallets", label: "Quản lý ví Shop", icon: <Wallet size={18} /> },
+      { id: "finance", label: "Báo cáo tài chính", icon: <BarChart3 size={18} /> },
+      { id: "reconciliation", label: "Đối soát thanh toán", icon: <Landmark size={18} /> },
+      { id: "withdrawal_logs", label: "Lịch sử rút tiền", icon: <Activity size={18} /> },
+      { id: "marketing", label: "Chiến dịch Marketing", icon: <Ticket size={18} /> },
+      { id: "settings", label: "Cấu hình hệ thống", icon: <Settings size={18} /> },
+      { id: "system_logs", label: "Nhật ký hệ thống", icon: <ClipboardList size={18} /> },
    ];
 
-   return (
-      <div className="min-h-screen bg-[#F4F4F0] flex overflow-hidden">
+   // Lấy tiêu đề hiển thị của tab hiện hành
+   const getActiveTabTitle = () => {
+      const item = sidebarItems.find(i => i.id === activeTab);
+      return item ? item.label : "Quản trị sàn";
+   };
 
-         {/* Mobile Sidebar Backdrop */}
+   return (
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex antialiased font-sans">
+
+         {/* Backdrop trên màn hình di động */}
          {isSidebarOpen && (
             <div 
-               className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 lg:hidden"
+               className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 lg:hidden"
                onClick={() => setIsSidebarOpen(false)}
             />
          )}
 
-         {/* Sidebar */}
-         <aside className={`w-64 bg-white border-r-2 border-black flex flex-col h-screen fixed lg:sticky top-0 left-0 z-50 shrink-0 transition-transform duration-300
+         {/* =====================================================================
+             SIDEBAR BÊN TRÁI (LEFT SIDEBAR - 260px)
+            ===================================================================== */}
+         <aside className={`w-64 bg-white border-r border-slate-200 flex flex-col h-screen fixed lg:sticky top-0 left-0 z-50 shrink-0 select-none transition-transform duration-200
             lg:translate-x-0 lg:flex
             ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
          `}>
-            <div className="p-8 border-b-2 border-black/5 flex items-center justify-between">
+            {/* Header thương hiệu */}
+            <div className="p-5 border-b border-slate-200 flex items-center justify-between">
                <Link to="/" className="flex items-center gap-3 group" onClick={() => setIsSidebarOpen(false)}>
-                  <div className="w-10 h-10 bg-red-600 text-white border-2 border-black rounded-xl flex items-center justify-center group-hover:bg-black transition-all shadow-subtle group-hover:shadow-none">
-                     <ShieldAlert size={24} />
+                  <div className="w-9 h-9 bg-slate-900 text-white rounded-xl flex items-center justify-center font-bold text-sm shadow-xs group-hover:bg-blue-600 transition-colors">
+                     M
                   </div>
-                  <div className="flex flex-col">
-                     <span className="font-serif text-lg font-black tracking-tighter uppercase leading-none text-red-600">MeeMart</span>
-                     <span className="text-[10px] font-black uppercase tracking-[0.2em] mt-1 text-black">ADMIN</span>
+                  <div>
+                     <h2 className="text-sm font-bold tracking-tight text-slate-900 leading-none">
+                        MeeMart Admin
+                     </h2>
+                     <span className="text-[11px] font-medium text-slate-500 mt-1 block">
+                        Cổng quản trị sàn TMĐT
+                     </span>
                   </div>
                </Link>
-               {/* Mobile Close Button */}
+
+               {/* Nút đóng menu trên mobile */}
                <button 
                   onClick={() => setIsSidebarOpen(false)}
-                  className="lg:hidden p-1 hover:bg-gray-100 rounded-full transition-colors text-black"
+                  className="lg:hidden p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                  aria-label="Đóng menu"
                >
-                  <X size={20} />
+                  <X size={18} />
                </button>
             </div>
 
-            <nav className="flex-grow p-4 space-y-2 overflow-y-auto">
-               {sidebarItems.map(item => (
-                  <button
-                     key={item.id}
-                     onClick={() => {
-                        setActiveTab(item.id);
-                        setIsSidebarOpen(false);
-                      }}
-                     className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${activeTab === item.id ? 'bg-black text-white shadow-brutal translate-x-1' : 'hover:bg-red-50 text-gray-400 hover:text-black'}`}
-                  >
-                     {item.icon}
-                     {item.label}
-                  </button>
-               ))}
+            {/* Menu danh mục chính (Operate Mode - Touch Targets >= 44px) */}
+            <nav className="flex-1 p-3.5 space-y-1 overflow-y-auto">
+               {sidebarItems.map(item => {
+                  const isActive = activeTab === item.id;
+                  return (
+                     <button
+                        key={item.id}
+                        onClick={() => handleSelectTab(item.id)}
+                        className={`w-full flex items-center gap-3 px-3.5 py-2.5 min-h-[44px] rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                           isActive
+                              ? 'bg-slate-900 text-white shadow-xs'
+                              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                        }`}
+                     >
+                        <span className={isActive ? 'text-white' : 'text-slate-400'}>
+                           {item.icon}
+                        </span>
+                        <span className="truncate">{item.label}</span>
+                     </button>
+                  );
+               })}
             </nav>
          </aside>
 
-         {/* Main Content */}
-         <main className="flex-grow flex flex-col h-screen overflow-y-auto">
+         {/* =====================================================================
+             NỘI DUNG CHÍNH BÊN PHẢI (MAIN CANVAS)
+            ===================================================================== */}
+         <main className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
 
-            {/* Topbar */}
-            <header className="bg-white/80 backdrop-blur-md border-b border-black/5 h-20 px-4 md:px-10 flex items-center justify-between sticky top-0 z-40 shadow-sm">
-               <div className="flex items-center gap-2 flex-grow max-w-xs md:max-w-md lg:max-w-lg">
-                  {/* Mobile Toggle Button */}
+            {/* TOPBAR TRÊN CÙNG: BREADCRUMB + TÌM KIẾM + PHÂN HỆ + ADMIN DROPDOWN */}
+            <header className="sticky top-0 z-30 h-16 px-6 md:px-8 bg-white/90 backdrop-blur-md border-b border-slate-200 flex items-center justify-between shadow-xs">
+               
+               {/* Khu vực trái: Mobile menu toggle + Breadcrumb & Title */}
+               <div className="flex items-center gap-3 min-w-0">
                   <button
                      onClick={() => setIsSidebarOpen(true)}
-                     className="lg:hidden p-2.5 border-2 border-black rounded-xl bg-white hover:bg-gray-50 active:translate-y-[2px] transition-all shadow-subtle shrink-0 text-black"
-                     title="Mở menu"
+                     className="lg:hidden p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+                     title="Mở menu điều hướng"
                   >
                      <Menu size={18} />
                   </button>
-                  <div className="relative w-full my-4 hidden sm:block">
-                     <input
-                        type="text"
-                        placeholder="Tìm kiếm mọi thứ trên hệ thống..."
-                        className="w-full bg-gray-50 border-2 border-black rounded-xl px-12 py-3 font-bold text-sm focus:outline-none focus:ring-4 focus:ring-red-500/10 transition-all shadow-inner"
-                     />
-                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+
+                  <div>
+                     <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                        <span>Quản trị sàn</span>
+                        <ChevronRight size={12} />
+                        <span className="font-semibold text-slate-700">{getActiveTabTitle()}</span>
+                     </div>
+                     <h1 className="text-sm font-bold tracking-tight text-slate-900 truncate">
+                        {getActiveTabTitle()}
+                     </h1>
                   </div>
                </div>
 
-               <div className="flex items-center gap-6">
+               {/* Khu vực phải: Thông báo, Xem website, Tài khoản Admin */}
+               <div className="flex items-center gap-3">
+
+                  {/* Nút xem Website khách hàng */}
+                  <Link 
+                     to="/" 
+                     target="_blank"
+                     className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors shadow-2xs"
+                  >
+                     <Store size={14} className="text-slate-400" />
+                     <span>Xem website sàn</span>
+                     <ExternalLink size={12} className="text-slate-400" />
+                  </Link>
+
+                  {/* Nút thông báo */}
                   <NotificationDropdown />
 
-                  <div className="w-[2px] h-8 bg-gray-100"></div>
+                  <div className="h-6 w-[1px] bg-slate-200 hidden sm:block" />
 
-                  <div className="relative">
+                  {/* ADMIN PROFILE DROPDOWN */}
+                  <div className="relative" ref={dropdownRef}>
                      <button
+                        type="button"
                         onClick={() => setShowUserDropdown(!showUserDropdown)}
-                        className="w-11 h-11 bg-red-100 border-2 border-black rounded-xl flex items-center justify-center text-red-600 hover:bg-red-200 transition-all active:translate-y-1 overflow-hidden"
+                        className={`flex items-center gap-2.5 p-1.5 pr-2.5 rounded-xl border transition-all cursor-pointer ${
+                           showUserDropdown
+                              ? 'border-slate-900 ring-2 ring-slate-900/10 bg-slate-50'
+                              : 'border-slate-200 bg-white hover:bg-slate-50 shadow-2xs'
+                        }`}
+                        title="Tài khoản Quản trị viên"
                      >
-                        {currentUser?.avatarUrl || currentUser?.profile?.avatar_url ? (
-                           <img src={getAvatarUrl(currentUser.avatarUrl || currentUser.profile.avatar_url)} alt="avatar" className="w-full h-full object-cover" />
-                        ) : (
-                           <User size={24} />
-                        )}
+                        <div className="w-7 h-7 rounded-lg bg-slate-900 text-white flex items-center justify-center font-bold text-xs overflow-hidden shrink-0">
+                           {currentUser?.avatarUrl || currentUser?.profile?.avatar_url ? (
+                              <img src={getAvatarUrl(currentUser?.avatarUrl || currentUser?.profile?.avatar_url)} alt="avatar" className="w-full h-full object-cover" />
+                           ) : (
+                              currentUser?.fullName?.[0]?.toUpperCase() || currentUser?.profile?.full_name?.[0]?.toUpperCase() || "AD"
+                           )}
+                        </div>
+                        <div className="hidden md:block text-left leading-tight">
+                           <div className="text-xs font-bold text-slate-900 truncate max-w-[140px]">
+                              {currentUser?.email || "admin@meemart.com"}
+                           </div>
+                           <div className="text-[10px] text-emerald-600 font-medium flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              Quản trị viên
+                           </div>
+                        </div>
+                        <ChevronDown
+                           size={14}
+                           className={`text-slate-400 transition-transform duration-200 ${
+                              showUserDropdown ? 'rotate-180 text-slate-900' : ''
+                           }`}
+                        />
                      </button>
 
+                     {/* DROPDOWN MENU KHI CLICK */}
                      {showUserDropdown && (
-                        <div className="absolute right-0 mt-4 w-64 bg-white border-2 border-black rounded-2xl shadow-brutal z-50 p-4 animate-in fade-in slide-in-from-top-2">
-                           <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-100">
-                              <div className="w-10 h-10 rounded-xl bg-red-600 text-white flex items-center justify-center font-black overflow-hidden shrink-0">
-                                 {currentUser?.avatarUrl || currentUser?.profile?.avatar_url ? (
-                                    <img src={getAvatarUrl(currentUser.avatarUrl || currentUser.profile.avatar_url)} alt="avatar" className="w-full h-full object-cover" />
-                                 ) : (
-                                    currentUser?.fullName?.[0]?.toUpperCase() || currentUser?.profile?.full_name?.[0]?.toUpperCase() || "AD"
-                                 )}
+                        <div className="absolute right-0 mt-2 w-64 rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                           <div className="px-4 py-2.5 border-b border-slate-100">
+                              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                 Tài khoản Quản trị
                               </div>
-                              <div>
-                                 <p className="text-xs font-black uppercase text-black line-clamp-1">{currentUser?.fullName || currentUser?.profile?.full_name || "Admin"}</p>
-                                 <p className="text-[10px] text-red-500 font-bold line-clamp-1">{currentUser?.email || "admin@meemart.vn"}</p>
+                              <div className="text-xs font-bold truncate mt-0.5 text-slate-900">
+                                 {currentUser?.email || "admin@meemart.com"}
+                              </div>
+                              <div className="text-[11px] text-emerald-600 font-medium">
+                                 Quyền: System Administrator
                               </div>
                            </div>
-                           <div className="space-y-1">
+
+                           <div className="p-1.5 space-y-0.5">
                               <button
                                  onClick={() => {
                                     setShowAdminProfileModal(true);
                                     setShowUserDropdown(false);
                                  }}
-                                 className="w-full text-left px-3 py-2 hover:bg-gray-50 rounded-lg text-[10px] font-black uppercase tracking-widest text-black transition-all"
+                                 className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left cursor-pointer"
                               >
-                                 Thông tin cá nhân
+                                 <User size={15} className="text-slate-400" />
+                                 <span>Thông tin cá nhân Admin</span>
                               </button>
-                              <button onClick={handleLogout} className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all mt-2">Đăng xuất</button>
+
+                              <a
+                                 href={`http://localhost:5175${accessToken ? `?token=${encodeURIComponent(accessToken)}` : ''}`}
+                                 target="_blank"
+                                 rel="noreferrer"
+                                 onClick={() => setShowUserDropdown(false)}
+                                 className="w-full flex items-center justify-between p-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer"
+                              >
+                                 <div className="flex items-center gap-2.5">
+                                    <BarChart3 size={15} className="text-slate-400" />
+                                    <span>Phân tích hành vi khách hàng</span>
+                                 </div>
+                                 <ExternalLink size={12} className="text-slate-400" />
+                              </a>
+                           </div>
+
+                           <div className="border-t border-slate-100 my-1" />
+
+                           <div className="p-1.5">
+                              <button
+                                 type="button"
+                                 onClick={handleLogout}
+                                 className="w-full flex items-center gap-2.5 p-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                              >
+                                 <LogOut size={15} />
+                                 <span>Đăng xuất tài khoản</span>
+                              </button>
                            </div>
                         </div>
                      )}
                   </div>
-
-                  <Link to="/" className="flex items-center gap-2 px-6 py-3 border-2 border-black rounded-xl font-black text-[10px] uppercase tracking-widest bg-black text-white hover:bg-primary transition-all shadow-subtle active:translate-x-[2px] active:translate-y-[2px] active:shadow-none">
-                     Website <ExternalLink size={14} />
-                  </Link>
                </div>
             </header>
 
-            {/* Content Area */}
-            <div className="p-4 md:p-10 max-w-7xl w-full mx-auto">
+            {/* KHÔNG GIAN NỘI DUNG TỪNG PHÂN HỆ */}
+            <div className="p-6 md:p-8 max-w-7xl w-full mx-auto flex-1 space-y-6">
 
                {activeTab === "users" && <UserTab showToast={showToast} showConfirm={showConfirm} />}
                {activeTab === "vendors" && <VendorTab showToast={showToast} showConfirm={showConfirm} />}
                {activeTab === "settings" && <SettingsTab showToast={showToast} showConfirm={showConfirm} />}
+               {activeTab === "shipping_partners" && <ShippingPartnersTab showToast={showToast} showConfirm={showConfirm} />}
                {activeTab === "finance" && <FinanceTab />}
                {activeTab === "reconciliation" && <ReconciliationTab showToast={showToast} showConfirm={showConfirm} />}
                {activeTab === "withdrawal_logs" && <WithdrawalLogTab showToast={showToast} showConfirm={showConfirm} />}
@@ -318,177 +438,156 @@ const AdminDashboard = () => {
             </div>
          </main>
 
-         {/* Modal Profile Admin */}
+         {/* =====================================================================
+             MODAL PROFILE ADMIN (Sạch sẽ, Tinh tế theo chuẩn Production)
+            ===================================================================== */}
          {showAdminProfileModal && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowAdminProfileModal(false)}>
-               <div className="bg-white border-[3px] border-black rounded-[2.5rem] p-10 max-w-lg w-full shadow-brutal relative" onClick={e => e.stopPropagation()}>
-                  <button onClick={() => setShowAdminProfileModal(false)} className="absolute top-4 right-4 p-2 bg-gray-100 rounded-full hover:bg-red-100 hover:text-red-600 transition-colors">
-                     <X size={20} />
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-150" onClick={() => setShowAdminProfileModal(false)}>
+               <div className="bg-white border border-slate-200 rounded-2xl p-6 md:p-8 max-w-lg w-full shadow-2xl relative space-y-6 text-slate-900" onClick={e => e.stopPropagation()}>
+                  <button 
+                     onClick={() => setShowAdminProfileModal(false)} 
+                     className="absolute top-5 right-5 p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                  >
+                     <X size={18} />
                   </button>
-                  <h2 className="text-2xl font-serif font-black tracking-tighter uppercase mb-6 border-b-2 border-black pb-4 text-center">Thông tin cá nhân Admin</h2>
+
+                  <div className="space-y-1">
+                     <h2 className="text-xl font-bold tracking-tight text-slate-900">
+                        Thông tin cá nhân Admin
+                     </h2>
+                     <p className="text-xs text-slate-500">
+                        Xem và cập nhật thông tin định danh quản trị viên hệ thống
+                     </p>
+                  </div>
 
                   {!isEditingAdmin ? (
-                     <>
-                        <div className="flex flex-col items-center mb-6">
-                           <div className="w-24 h-24 rounded-full bg-red-100 flex items-center justify-center font-black text-red-600 text-3xl border-4 border-black overflow-hidden shadow-subtle mb-4">
+                     <div className="space-y-5">
+                        <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
+                           <div className="w-16 h-16 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-xl overflow-hidden shrink-0">
                               {currentUser?.avatarUrl || currentUser?.profile?.avatar_url ? (
                                  <img src={getAvatarUrl(currentUser?.avatarUrl || currentUser?.profile?.avatar_url)} alt="avatar" className="w-full h-full object-cover" />
                               ) : (
                                  currentUser?.fullName?.[0]?.toUpperCase() || currentUser?.profile?.full_name?.[0]?.toUpperCase() || "A"
                               )}
                            </div>
-                           <h3 className="text-xl font-black uppercase text-center text-black">{currentUser?.fullName || currentUser?.profile?.full_name || "Admin"}</h3>
-                           <p className="text-xs font-bold text-gray-500 mt-1">{currentUser?.email || "admin@meemart.vn"}</p>
-                           <span className="mt-3 px-3 py-1.5 bg-black text-white text-[9px] font-black uppercase tracking-widest rounded-full border border-black">
-                              {typeof currentUser?.role === 'object' && currentUser?.role !== null
-                                 ? currentUser.role.role_name
-                                 : currentUser?.role || "Admin"}
-                           </span>
+                           <div className="space-y-1">
+                              <h3 className="text-base font-bold text-slate-900">
+                                 {currentUser?.fullName || currentUser?.profile?.full_name || "Super Admin"}
+                              </h3>
+                              <p className="text-xs text-slate-500">{currentUser?.email || "admin@meemart.com"}</p>
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-900 text-white text-[10px] font-semibold">
+                                 {typeof currentUser?.role === 'object' && currentUser?.role !== null
+                                    ? currentUser.role?.role_name || "Admin"
+                                    : currentUser?.role || "Admin"}
+                              </span>
+                           </div>
                         </div>
 
-                        <div className="space-y-4 text-black">
-                           <div className="flex justify-between items-center py-2 border-b border-dashed border-gray-200">
-                              <span className="text-xs font-black uppercase text-gray-400">Số điện thoại</span>
-                              <span className="text-sm font-bold">{currentUser?.phone || currentUser?.profile?.phone || "Chưa cập nhật"}</span>
+                        <div className="space-y-2.5 text-xs divide-y divide-slate-100">
+                           <div className="flex justify-between py-2">
+                              <span className="text-slate-500">Số điện thoại:</span>
+                              <span className="font-semibold text-slate-900">{currentUser?.phone || currentUser?.profile?.phone || "Chưa cập nhật"}</span>
                            </div>
-                           <div className="flex justify-between items-center py-2 border-b border-dashed border-gray-200">
-                              <span className="text-xs font-black uppercase text-gray-400">Ngày sinh</span>
-                              <span className="text-sm font-bold">
+                           <div className="flex justify-between py-2">
+                              <span className="text-slate-500">Ngày sinh:</span>
+                              <span className="font-semibold text-slate-900">
                                  {currentUser?.dateOfBirth || currentUser?.profile?.birthday
                                     ? new Date(currentUser?.dateOfBirth || currentUser?.profile?.birthday).toLocaleDateString(getCurrentLocale())
                                     : "Chưa cập nhật"}
                               </span>
                            </div>
-                           <div className="flex justify-between items-center py-2 border-b border-dashed border-gray-200">
-                              <span className="text-xs font-black uppercase text-gray-400">Giới tính</span>
-                              <span className="text-sm font-bold">{currentUser?.gender || currentUser?.profile?.gender || "Chưa cập nhật"}</span>
+                           <div className="flex justify-between py-2">
+                              <span className="text-slate-500">Giới tính:</span>
+                              <span className="font-semibold text-slate-900">{currentUser?.gender || currentUser?.profile?.gender || "Chưa cập nhật"}</span>
                            </div>
-                           <div className="flex justify-between items-center py-2 border-b border-dashed border-gray-200">
-                              <span className="text-xs font-black uppercase text-gray-400">Địa chỉ</span>
-                              <span className="text-sm font-bold truncate max-w-[200px]" title={currentUser?.address || currentUser?.profile?.address}>
+                           <div className="flex justify-between py-2">
+                              <span className="text-slate-500">Địa chỉ:</span>
+                              <span className="font-semibold text-slate-900 truncate max-w-[220px]" title={currentUser?.address || currentUser?.profile?.address}>
                                  {currentUser?.address || currentUser?.profile?.address || "Chưa cập nhật"}
                               </span>
                            </div>
-
-                           <button
-                              onClick={() => setIsEditingAdmin(true)}
-                              className="mt-6 w-full py-3 border-2 border-black rounded-xl font-black text-xs uppercase tracking-widest bg-red-600 text-white hover:bg-red-700 transition-all shadow-subtle active:translate-y-[2px]"
-                           >
-                              Chỉnh sửa hồ sơ
-                           </button>
                         </div>
-                     </>
+
+                        <button
+                           onClick={() => setIsEditingAdmin(true)}
+                           className="w-full min-h-[44px] py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+                        >
+                           Chỉnh sửa hồ sơ
+                        </button>
+                     </div>
                   ) : (
-                     <div className="space-y-4 text-black text-left mt-4 max-h-[60vh] overflow-y-auto pr-2">
-                        <div className="flex flex-col items-center mb-6">
-                           <div
-                              onClick={() => document.getElementById('admin-avatar-input')?.click()}
-                              className="w-24 h-24 rounded-full bg-red-100 flex items-center justify-center font-black text-red-600 text-3xl border-4 border-black overflow-hidden shadow-subtle mb-2 cursor-pointer relative group"
-                              title="Click để thay đổi ảnh đại diện"
-                           >
-                              {adminAvatarFile ? (
-                                 <img src={URL.createObjectURL(adminAvatarFile)} alt="avatar preview" className="w-full h-full object-cover" />
-                              ) : adminForm.avatar_url ? (
-                                 <img src={getAvatarUrl(adminForm.avatar_url)} alt="avatar" className="w-full h-full object-cover" />
-                              ) : (
-                                 adminForm.full_name?.[0]?.toUpperCase() || "A"
-                              )}
-                              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                 <span className="text-white text-[10px] font-bold uppercase text-center leading-tight">Thay đổi<br />ảnh</span>
-                              </div>
-                           </div>
-                           <input
-                              id="admin-avatar-input"
-                              type="file"
-                              accept="image/*"
-                              onChange={e => {
-                                 if (e.target.files && e.target.files[0]) {
-                                    setAdminAvatarFile(e.target.files[0]);
-                                 }
-                              }}
-                              className="hidden"
-                           />
-                           <p className="text-[9px] font-black uppercase text-gray-400">Click vào ảnh để thay đổi</p>
-                        </div>
-
+                     <div className="space-y-4 text-xs max-h-[60vh] overflow-y-auto pr-1">
                         <div>
-                           <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">Họ và tên</label>
+                           <label className="text-xs font-semibold text-slate-700 block mb-1.5">Họ và tên</label>
                            <input
                               type="text" value={adminForm.full_name}
                               onChange={e => setAdminForm({ ...adminForm, full_name: e.target.value })}
-                              className="w-full border-2 border-black rounded-xl px-4 py-2 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-red-500 text-black"
+                              className="w-full min-h-[44px] border border-slate-200 rounded-xl px-3.5 py-2 font-medium text-slate-900 focus:outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
                            />
                         </div>
+
                         <div>
-                           <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">Email</label>
+                           <label className="text-xs font-semibold text-slate-700 block mb-1.5">Email</label>
                            <input
                               type="email" value={adminForm.email}
                               onChange={e => setAdminForm({ ...adminForm, email: e.target.value })}
-                              className="w-full border-2 border-black rounded-xl px-4 py-2 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-red-500 text-black"
+                              className="w-full min-h-[44px] border border-slate-200 rounded-xl px-3.5 py-2 font-medium text-slate-900 focus:outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
                            />
                         </div>
+
                         <div>
-                           <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">Số điện thoại</label>
+                           <label className="text-xs font-semibold text-slate-700 block mb-1.5">Số điện thoại</label>
                            <input
                               type="text" value={adminForm.phone}
                               onChange={e => setAdminForm({ ...adminForm, phone: e.target.value })}
-                              className="w-full border-2 border-black rounded-xl px-4 py-2 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-red-500 text-black"
+                              className="w-full min-h-[44px] border border-slate-200 rounded-xl px-3.5 py-2 font-medium text-slate-900 focus:outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
                            />
                         </div>
+
                         <div>
-                           <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">Giới tính</label>
+                           <label className="text-xs font-semibold text-slate-700 block mb-1.5">Giới tính</label>
                            <select
                               value={adminForm.gender}
                               onChange={e => setAdminForm({ ...adminForm, gender: e.target.value })}
-                              className="w-full border-2 border-black rounded-xl px-4 py-2 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-red-500 text-black"
+                              className="w-full min-h-[44px] border border-slate-200 rounded-xl px-3.5 py-2 font-medium text-slate-900 focus:outline-none focus:border-slate-900"
                            >
                               <option value="MALE">Nam</option>
                               <option value="FEMALE">Nữ</option>
                               <option value="OTHER">Khác</option>
                            </select>
                         </div>
+
                         <div>
-                           <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">Ngày sinh</label>
-                           <input
-                              type="date" value={adminForm.birthday ? adminForm.birthday.slice(0, 10) : ''}
-                              onChange={e => setAdminForm({ ...adminForm, birthday: e.target.value })}
-                              className="w-full border-2 border-black rounded-xl px-4 py-2 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-red-500 text-black"
-                           />
-                        </div>
-                        <div>
-                           <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 block">Mật khẩu mới (Để trống nếu không đổi)</label>
+                           <label className="text-xs font-semibold text-slate-700 block mb-1.5">Mật khẩu mới (Để trống nếu giữ nguyên)</label>
                            <div className="relative">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                                 <Lock size={14} />
-                              </span>
                               <input
                                  type={showAdminPassword ? "text" : "password"} value={adminForm.password}
                                  onChange={e => setAdminForm({ ...adminForm, password: e.target.value })}
-                                 placeholder="••••••••"
-                                 className="w-full border-2 border-black rounded-xl pl-9 pr-10 py-2 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-red-500 text-black"
+                                 placeholder="••••••••••••"
+                                 className="w-full min-h-[44px] border border-slate-200 rounded-xl px-3.5 pr-10 py-2 font-medium text-slate-900 focus:outline-none focus:border-slate-900"
                               />
                               <button
                                  type="button"
-                                 aria-label={showAdminPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                                 onClick={() => setShowAdminPassword((prev) => !prev)}
+                                 className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600"
+                                 onClick={() => setShowAdminPassword(!showAdminPassword)}
                               >
                                  {showAdminPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                               </button>
                            </div>
                         </div>
-                        <div className="flex gap-4 mt-6">
-                           <button
-                              onClick={handleUpdateAdminProfile}
-                              className="flex-grow py-3 border-2 border-black rounded-xl font-black text-xs uppercase tracking-widest bg-red-600 text-white hover:bg-red-700 transition-all shadow-subtle active:translate-y-[2px]"
-                           >
-                              Lưu thay đổi
-                           </button>
+
+                        <div className="flex gap-3 pt-2">
                            <button
                               onClick={() => setIsEditingAdmin(false)}
-                              className="px-6 py-3 border-2 border-black rounded-xl font-black text-xs uppercase tracking-widest bg-white hover:bg-gray-50 transition-all text-black"
+                              className="flex-1 min-h-[44px] px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-semibold hover:bg-slate-100 transition-colors cursor-pointer"
                            >
                               Hủy
+                           </button>
+                           <button
+                              onClick={handleUpdateAdminProfile}
+                              className="flex-1 min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold transition-colors cursor-pointer shadow-xs"
+                           >
+                              Lưu thay đổi
                            </button>
                         </div>
                      </div>
@@ -496,42 +595,69 @@ const AdminDashboard = () => {
                </div>
             </div>
          )}
+
+         {/* =====================================================================
+             MODERN TOAST NOTIFICATION (Không viền brutalist, không neon)
+            ===================================================================== */}
          {toast && (
-            <div className="fixed top-6 right-6 z-[9999] animate-in fade-in slide-in-from-top-4 duration-300">
-               <div className={`border-4 border-black p-4 rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-3 font-black text-sm ${toast.type === 'success' ? 'bg-[#A3E635]' : toast.type === 'error' ? 'bg-[#F87171]' : 'bg-[#60A5FA]'
+            <div className="fixed top-6 right-6 z-[9999] animate-in fade-in slide-in-from-top-3 duration-200">
+               <div className={`p-4 rounded-2xl border shadow-xl flex items-center gap-3 text-xs font-semibold backdrop-blur-md ${
+                  toast.type === 'success'
+                     ? 'bg-emerald-50/95 border-emerald-200 text-emerald-900 shadow-emerald-500/10'
+                     : toast.type === 'error'
+                     ? 'bg-rose-50/95 border-rose-200 text-rose-900 shadow-rose-500/10'
+                     : 'bg-blue-50/95 border-blue-200 text-blue-900 shadow-blue-500/10'
+               }`}>
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                     toast.type === 'success' ? 'bg-emerald-600 text-white' : toast.type === 'error' ? 'bg-rose-600 text-white' : 'bg-blue-600 text-white'
                   }`}>
-                  {toast.type === 'success' && <Check className="w-5 h-5 stroke-[3]" />}
-                  {toast.type === 'error' && <X className="w-5 h-5 stroke-[3]" />}
-                  {toast.type === 'info' && <Bell className="w-5 h-5 stroke-[3]" />}
-                  <span className="text-black uppercase tracking-wider">{toast.message}</span>
-                  <button onClick={() => setToast(null)} className="ml-2 hover:bg-black/10 p-1 rounded transition-colors cursor-pointer">
-                     <X className="w-4 h-4" />
+                     {toast.type === 'success' && <Check size={14} />}
+                     {toast.type === 'error' && <X size={14} />}
+                     {toast.type === 'info' && <Bell size={14} />}
+                  </div>
+                  <span className="font-medium text-slate-800">{toast.message}</span>
+                  <button 
+                     onClick={() => setToast(null)} 
+                     className="ml-2 p-1 text-slate-400 hover:text-slate-700 rounded-lg transition-colors cursor-pointer"
+                     aria-label="Đóng thông báo"
+                  >
+                     <X size={14} />
                   </button>
                </div>
             </div>
          )}
+
+         {/* =====================================================================
+             MODERN CONFIRM DIALOG
+            ===================================================================== */}
          {confirmDialog && (
-            <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setConfirmDialog(null)}>
-               <div className="bg-white border-[3px] border-black rounded-[2rem] p-8 max-w-sm w-full shadow-brutal text-center" onClick={e => e.stopPropagation()}>
-                  <h3 className="text-lg font-black uppercase tracking-tighter mb-4 text-black">Xác nhận</h3>
-                  <p className="text-sm font-bold text-gray-700 mb-6">{confirmDialog.message}</p>
-                  <div className="flex gap-4 justify-center">
-                     <button
-                        onClick={confirmDialog.onConfirm}
-                        className="px-6 py-3 border-2 border-black rounded-xl font-black text-xs uppercase tracking-widest bg-red-600 text-white hover:bg-red-700 transition-all shadow-subtle active:translate-y-[2px]"
-                     >
-                        Đồng ý
-                     </button>
+            <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-150" onClick={() => setConfirmDialog(null)}>
+               <div className="bg-white border border-slate-200 rounded-2xl p-6 md:p-8 max-w-sm w-full shadow-2xl text-center space-y-4" onClick={e => e.stopPropagation()}>
+                  <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto">
+                     <AlertCircle size={22} />
+                  </div>
+                  <div>
+                     <h3 className="text-base font-bold text-slate-900">Xác nhận thao tác</h3>
+                     <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">{confirmDialog.message}</p>
+                  </div>
+                  <div className="flex gap-3 justify-center pt-2">
                      <button
                         onClick={() => setConfirmDialog(null)}
-                        className="px-6 py-3 border-2 border-black rounded-xl font-black text-xs uppercase tracking-widest bg-white hover:bg-gray-50 transition-all text-black"
+                        className="flex-1 min-h-[44px] px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                      >
                         Hủy
+                     </button>
+                     <button
+                        onClick={confirmDialog.onConfirm}
+                        className="flex-1 min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-white transition-colors cursor-pointer shadow-xs"
+                     >
+                        Xác nhận
                      </button>
                   </div>
                </div>
             </div>
          )}
+
       </div>
    );
 };
