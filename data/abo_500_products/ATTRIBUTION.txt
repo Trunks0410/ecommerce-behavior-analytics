@@ -1,0 +1,7 @@
+Dataset: Amazon Berkeley Objects (ABO)
+License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+License: https://creativecommons.org/licenses/by/4.0/
+Dataset: https://amazon-berkeley-objects.s3.amazonaws.com/index.html
+Data attribution: Amazon.com
+Dataset/archive attribution: Matthieu Guillaumin, Thomas Dideriksen, Kenan Deng, Himanshu Arora, Jasmine Collins, and Jitendra Malik.
+Changes: A 500-product sample was selected; primary images were downloaded in the dataset's small-image size.
