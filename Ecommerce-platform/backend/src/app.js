@@ -10,9 +10,14 @@ import appRouter from "./app.routes.js";
 // Cron jobs moved to worker.js
 import morgan from "morgan";
 import { errorHandler } from "./core/middleware/errorHandler.js";
+import iamService from "./modules/iam/iam.service.js";
+import vectorSearchService from "./modules/product/vectorSearch.service.js";
+import { logContextMiddleware, isSilentLogPath } from "./core/utils/logContext.js";
 
 let app = express();
-app.use(morgan("dev"));
+// Đánh dấu request polling (vd: /chats/unread-count) để tắt log morgan / API / SQL
+app.use(logContextMiddleware);
+app.use(morgan("dev", { skip: (req) => isSilentLogPath(req.originalUrl) }));
 
 // Cải thiện xử lý lỗi - exit an toàn để process manager (PM2/Docker) có thể khởi động lại
 process.on("uncaughtException", (error) => {
@@ -55,6 +60,45 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Middleware log chi tiết từng API Request & Response & Timing
+app.use((req, res, next) => {
+  const startTime = Date.now();
+  const url = req.originalUrl;
+
+  // Bỏ qua log cho static files và các route polling
+  if (url.startsWith("/public") || isSilentLogPath(url)) {
+    return next();
+  }
+
+  const timestamp = new Date().toLocaleTimeString("vi-VN");
+  console.log(`\n============================================================`);
+  console.log(`📡 [API REQ] [${timestamp}] ${req.method} ${url}`);
+
+  if (req.query && Object.keys(req.query).length > 0) {
+    console.log(`   🔎 Query:`, JSON.stringify(req.query));
+  }
+
+  if (req.body && Object.keys(req.body).length > 0) {
+    const safeBody = { ...req.body };
+    if (safeBody.password) safeBody.password = "******";
+    if (safeBody.refreshToken) safeBody.refreshToken = "[HIDDEN]";
+    console.log(`   📦 Body:`, JSON.stringify(safeBody));
+  }
+
+  res.on("finish", () => {
+    const duration = Date.now() - startTime;
+    const isError = res.statusCode >= 400;
+    const statusTag = isError
+      ? `\x1b[31m[FAIL ${res.statusCode}]\x1b[0m`
+      : `\x1b[32m[SUCCESS ${res.statusCode}]\x1b[0m`;
+
+    console.log(`🏁 [API RES] ${req.method} ${url} -> ${statusTag} \x1b[33m(${duration}ms)\x1b[0m`);
+    console.log(`============================================================\n`);
+  });
+
+  next();
+});
+
 // Serve static files
 app.use("/public", express.static("src/public"));
 
@@ -80,7 +124,13 @@ let port = process.env.PORT || 8080;
 initializeRedis();
 
 connectDB()
-  .then(() => {
+  .then(async () => {
+    // Tự động khởi tạo hệ thống IAM Roles & Policies nếu chưa có
+    await iamService.initDefaultIAM();
+
+    // Nạp ma trận Multimodal Vector Search (Qwen3-VL 2048-dim) vào bộ nhớ RAM
+    vectorSearchService.init();
+    
     app.listen(port, () => {
       console.log("Backend nodejs is running on the port: " + port);
     });

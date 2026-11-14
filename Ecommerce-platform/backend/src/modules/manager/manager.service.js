@@ -1,5 +1,6 @@
 import db from "../../database/models/index.js";
 import notificationService from "../notification/notification.service.js";
+import vectorSearchService from "../product/vectorSearch.service.js";
 
 const getStats = async () => {
   const pendingProducts = await db.Product.count({ where: { approval_status: "PENDING" } });
@@ -79,6 +80,13 @@ const updateProductStatus = async (productId, status) => {
 
 
   await product.update({ approval_status: status });
+
+  // Cập nhật hoặc vô hiệu hóa vector trên Vector Microservice khi duyệt/ẩn sản phẩm
+  if (status === "APPROVED") {
+    vectorSearchService.upsertProductVector(product.id).catch(() => {});
+  } else if (status === "REJECTED" || status === "HIDDEN") {
+    vectorSearchService.deleteProductVector(product.id).catch(() => {});
+  }
 
   try {
     const shop = await db.Shop.findByPk(product.shop_id);

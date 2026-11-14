@@ -16,6 +16,14 @@ export default (sequelize, DataTypes) => {
       User.hasMany(models.ReturnRequest, { foreignKey: "user_id", as: "returnRequests" });
       User.hasMany(models.Notification, { foreignKey: "user_id", as: "notifications" });
       User.hasMany(models.UserCoupon, { foreignKey: "user_id", as: "savedCoupons" });
+      // IAM Policy associations
+      User.belongsToMany(models.Policy, {
+        through: models.UserPolicy,
+        foreignKey: "user_id",
+        otherKey: "policy_id",
+        as: "directPolicies",
+      });
+      User.hasMany(models.UserPolicy, { foreignKey: "user_id", as: "userPolicies" });
     }
   }
 

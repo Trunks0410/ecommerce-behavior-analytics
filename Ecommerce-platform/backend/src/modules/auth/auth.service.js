@@ -79,6 +79,7 @@ const login = (data) => {
   return new Promise(async (resolve, reject) => {
     try {
       const { email_or_phone, password } = data;
+      console.log(`\n🔍 [AUTH SERVICE] Querying database for user: "${email_or_phone}"...`);
 
       // Find user
       const user = await db.User.findOne({
@@ -101,15 +102,19 @@ const login = (data) => {
       });
 
       if (!user) {
+        console.warn(`❌ [AUTH SERVICE] No user found with email or phone: "${email_or_phone}"`);
         return resolve({
           status: 401,
           message: "User not found",
         });
       }
 
+      console.log(`👤 [AUTH SERVICE] Found user ID ${user.id} (${user.email}) - Status: ${user.status}, Role: ${user.role?.role_name || user.role_id}`);
+
       // Check password
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
+        console.warn(`❌ [AUTH SERVICE] Wrong password for user: "${email_or_phone}"`);
         return resolve({
           status: 401,
           message: "Wrong password",
@@ -118,6 +123,7 @@ const login = (data) => {
 
       // Check user status
       if (user.status !== "ACTIVE") {
+        console.warn(`❌ [AUTH SERVICE] Account not active (status: ${user.status}) for user: "${email_or_phone}"`);
         return resolve({
           status: 403,
           message: "Account is not active",
@@ -137,14 +143,17 @@ const login = (data) => {
 
       // Save refresh token to database
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+      console.log(`🔑 [AUTH SERVICE] Creating refresh token in DB for user ID: ${user.id}...`);
       await db.RefreshToken.create({
         user_id: user.id,
         token: refreshToken,
         expires_at: expiresAt,
         is_revoked: false,
       });
+      console.log(`🔑 [AUTH SERVICE] Refresh token created successfully.`);
+
       let redirectUrl = "/";
-      if (user.role_id === 1 || user.role?.role_name === "admin") {////
+      if (user.role_id === 1 || user.role?.role_name === "admin") {
         redirectUrl = "/admin";
       }
       resolve({
@@ -168,6 +177,10 @@ const login = (data) => {
         },
       });
     } catch (error) {
+      console.error(`💥 [AUTH SERVICE ERROR]:`, error);
+      if (error.original) {
+        console.error(`💥 [SEQUELIZE SQL ERROR]:`, error.original.message);
+      }
       reject(error);
     }
   });

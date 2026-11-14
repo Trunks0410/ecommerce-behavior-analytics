@@ -22,7 +22,7 @@ export default (sequelize, DataTypes) => {
         allowNull: false,
       },
       token: {
-        type: DataTypes.STRING(255),
+        type: DataTypes.STRING(512),
         allowNull: false,
       },
       expires_at: {
@@ -43,7 +43,8 @@ export default (sequelize, DataTypes) => {
       sequelize,
       modelName: "RefreshToken",
       tableName: "refresh_tokens",
-      createdAt: false,
+      timestamps: true,
+      createdAt: "created_at",
       updatedAt: false,
     },
   );

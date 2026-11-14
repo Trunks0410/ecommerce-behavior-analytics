@@ -1,6 +1,6 @@
 import authService from "./auth.service.js";
 
-//REGISTER
+// REGISTER
 const register = async (req, res) => {
   try {
     const { email, phone, password, fullName, role_id } = req.body;
@@ -31,8 +31,10 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   try {
     const { email_or_phone, password } = req.body;
+    console.log(`\n📨 [AUTH] Login attempt for: "${email_or_phone}"`);
 
     if (!email_or_phone || !password) {
+      console.warn("⚠️ [AUTH] Login failed: Missing email/phone or password");
       return res.status(400).json({ message: "Missing required fields" });
     }
 
@@ -53,6 +55,9 @@ const login = async (req, res) => {
         vietnameseMessage = "Sai mật khẩu";
 
       response.message = `${vietnameseMessage}. Bạn đã nhập sai ${currentAttempts}/${maxAttempts} lần. Quá ${maxAttempts} lần sẽ bị khóa đăng nhập 5 phút.`;
+      console.warn(`⚠️ [AUTH] Login failed (${response.status}): ${response.message}`);
+    } else {
+      console.log(`✅ [AUTH] Login successful for: "${email_or_phone}" (Role: ${response.data?.user?.role || "user"})`);
     }
 
     // Lưu refreshToken vào cookie httpOnly từ HEAD
@@ -68,8 +73,14 @@ const login = async (req, res) => {
 
     return res.status(response.status).json(response);
   } catch (error) {
-    console.error("Login Error:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    console.error("❌ [AUTH] Login Controller Exception:", error);
+    if (error.original) {
+      console.error("❌ [SEQUELIZE SQL ERROR]:", error.original.message);
+    }
+    return res.status(500).json({
+      message: error.message || "Internal server error",
+      sqlError: error.original?.message || undefined,
+    });
   }
 };
 

@@ -1,6 +1,10 @@
 {
   "scripts": {
-    "dev": "nodemon --watch src src/app.js",
+    "dev": "nodemon src/app.js",
+    "dev:ram": "nodemon src/app.js --vector-mode=ram",
+    "dev:microservice": "nodemon src/app.js --vector-mode=microservice",
+    "dev:vector-service": "python ../../vector-service/server.py",
+    "dev:vector-node": "node ../../vector-service/server.js",
     "dev:shipper": "nodemon ../../shipment/backend/server.js",
     "dev:shipment": "nodemon ../../shipment/backend/server.js",
     "db:reset": "npx sequelize-cli db:drop && npx sequelize-cli db:create && npx sequelize-cli db:migrate && npx sequelize-cli db:seed:all"

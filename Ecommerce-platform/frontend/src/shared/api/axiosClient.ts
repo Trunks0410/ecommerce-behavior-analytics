@@ -1,7 +1,9 @@
 import axios from "axios";
 
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+
 export const publicAxios = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  baseURL: BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
@@ -15,7 +17,7 @@ publicAxios.interceptors.request.use((config) => {
 });
 
 export const axiosClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  baseURL: BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
