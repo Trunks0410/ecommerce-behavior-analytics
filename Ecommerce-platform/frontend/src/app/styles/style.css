@@ -1,0 +1,234 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-primary: #ee4d2d; /* Shopee Vibrant Orange */
+  --color-primary-hover: #d03e1e;
+  --color-primary-dark: #c23517;
+  --color-primary-light: #fef0ed;
+  --color-secondary: #0f172a;
+  --color-accent: #334155;
+  
+  --shadow-shopee: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-shopee-hover: 0 4px 16px 0 rgba(0, 0, 0, 0.12);
+  --shadow-soft: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+  --shadow-premium: 0 10px 30px -5px rgba(0, 0, 0, 0.08);
+}
+
+:root {
+  --color-bg-main: #f5f5f5;
+  --color-surface: #ffffff;
+  --color-text-main: #222222;
+  --color-text-muted: #757575;
+  --color-border: #e5e7eb;
+}
+
+.dark {
+  --color-bg-main: #0b0f19;
+  --color-surface: #1e293b;
+  --color-text-main: #f8fafc;
+  --color-text-muted: #94a3b8;
+  --color-border: #334155;
+}
+
+body {
+  background-color: var(--color-bg-main);
+  color: var(--color-text-main);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: inherit;
+  letter-spacing: -0.01em;
+}
+
+@layer components {
+  /* Visual Search Laser Scanning Animation */
+  @keyframes laserScan {
+    0% { top: 2%; opacity: 0.7; }
+    50% { top: 95%; opacity: 1; }
+    100% { top: 2%; opacity: 0.7; }
+  }
+
+  .animate-laser-scan {
+    animation: laserScan 2.2s ease-in-out infinite;
+  }
+
+  /* Shopee Component Classes */
+  .shopee-card {
+    @apply bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700/60 rounded-sm shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5;
+  }
+
+  .shopee-btn-primary {
+    @apply inline-flex items-center justify-center font-medium py-2.5 px-6 rounded-sm text-white bg-[#ee4d2d] hover:bg-[#d03e1e] active:opacity-90 transition-all duration-200 shadow-sm text-sm;
+  }
+
+  .shopee-btn-outline {
+    @apply inline-flex items-center justify-center font-medium py-2.5 px-6 rounded-sm text-[#ee4d2d] border border-[#ee4d2d] bg-[#fef0ed] dark:bg-slate-800 hover:bg-[#fde2dc] transition-all duration-200 text-sm;
+  }
+
+  .shopee-badge {
+    @apply px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-xs bg-[#fef0ed] text-[#ee4d2d] border border-[#ee4d2d]/30;
+  }
+
+  /* Shopee Box (Container / Panel) System */
+  .shopee-box {
+    @apply bg-white dark:bg-slate-800 rounded-xs sm:rounded-sm border border-black/[0.06] dark:border-slate-700/60 shadow-[0_1px_1px_0_rgba(0,0,0,0.05)];
+  }
+
+  .shopee-box-interactive {
+    @apply bg-white dark:bg-slate-800 rounded-xs sm:rounded-sm border border-black/[0.06] dark:border-slate-700/60 shadow-[0_1px_1px_0_rgba(0,0,0,0.05)] transition-all duration-200 hover:shadow-[0_2px_12px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 hover:border-[#ee4d2d]/40;
+  }
+
+  .shopee-box-header {
+    @apply px-4 py-3 sm:px-5 sm:py-3.5 border-b border-gray-100 dark:border-slate-700/60 flex items-center justify-between;
+  }
+
+  .shopee-box-title {
+    @apply text-sm sm:text-base font-bold text-gray-900 dark:text-slate-100 uppercase tracking-tight flex items-center gap-2;
+  }
+
+  /* Shopee Dropdown & Popover System */
+  .shopee-popover {
+    @apply bg-white dark:bg-slate-800 border border-black/[0.09] dark:border-slate-700 rounded-xs sm:rounded-sm shadow-[0_2px_24px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.45)] z-50;
+  }
+
+  .shopee-dropdown-item {
+    @apply w-full px-3.5 py-2.5 text-xs sm:text-sm text-gray-700 dark:text-slate-200 hover:bg-[#fbfbfb] dark:hover:bg-slate-700/70 hover:text-[#ee4d2d] dark:hover:text-[#ee4d2d] flex items-center gap-2.5 transition-colors cursor-pointer text-left;
+  }
+
+  .shopee-dropdown-item-active {
+    @apply text-[#ee4d2d] dark:text-[#ee4d2d] font-semibold bg-[#fef0ed]/60 dark:bg-slate-700/80;
+  }
+
+  .shopee-select-btn {
+    @apply bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xs sm:rounded-sm px-3.5 py-2 text-xs sm:text-sm text-gray-800 dark:text-slate-200 hover:border-[#ee4d2d] focus:border-[#ee4d2d] transition-all flex items-center justify-between gap-2 shadow-xs cursor-pointer;
+  }
+
+  /* Retain backward compatibility with modernized styles */
+  .input-modern {
+    @apply w-full px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:border-[#ee4d2d] focus:ring-1 focus:ring-[#ee4d2d] transition-all text-sm font-normal text-slate-800 dark:text-slate-100 placeholder-slate-400;
+  }
+
+  .input-modern:disabled {
+    @apply bg-slate-100 dark:bg-slate-800/50 text-slate-400 border-slate-200 dark:border-slate-700 cursor-not-allowed opacity-80;
+  }
+
+  .btn-modern {
+    @apply inline-flex items-center justify-center font-semibold py-2.5 px-6 rounded-lg transition-all duration-200 text-white bg-[#ee4d2d] hover:bg-[#d03e1e] active:scale-[0.98] shadow-sm text-sm;
+  }
+
+  .btn-modern-secondary {
+    @apply inline-flex items-center justify-center font-semibold py-2.5 px-6 rounded-lg transition-all duration-200 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-[0.98] shadow-sm text-sm;
+  }
+
+  .btn-auth-modern {
+    @apply w-full inline-flex items-center justify-center h-12 font-bold text-sm tracking-wide rounded-lg transition-all duration-200 text-white bg-[#ee4d2d] hover:bg-[#d03e1e] active:scale-[0.98] shadow-md;
+  }
+
+  .card-modern {
+    @apply bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 rounded-xl shadow-sm transition-all duration-200 hover:shadow-md p-5;
+  }
+
+  .badge-modern {
+    @apply px-2.5 py-0.5 text-xs font-semibold rounded-full bg-[#fef0ed] dark:bg-[#ee4d2d]/20 text-[#ee4d2d];
+  }
+
+  .glass {
+    @apply bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-gray-200 dark:border-slate-800 shadow-xs;
+  }
+}
+
+/* Swiper Custom Styling Shopee */
+.home-swiper .swiper-button-next,
+.home-swiper .swiper-button-prev {
+  background: rgba(0, 0, 0, 0.3) !important;
+  color: white !important;
+  width: 36px !important;
+  height: 60px !important;
+  border-radius: 0 !important;
+  transition: all 0.2s ease !important;
+}
+
+.home-swiper .swiper-button-next:hover,
+.home-swiper .swiper-button-prev:hover {
+  background: rgba(0, 0, 0, 0.6) !important;
+}
+
+.home-swiper .swiper-button-next::after,
+.home-swiper .swiper-button-prev::after {
+  font-size: 16px !important;
+  font-weight: bold !important;
+}
+
+.home-swiper .swiper-pagination-bullet {
+  background: rgba(255, 255, 255, 0.7) !important;
+  width: 9px !important;
+  height: 9px !important;
+  opacity: 0.8 !important;
+  transition: all 0.2s ease !important;
+}
+
+.home-swiper .swiper-pagination-bullet-active {
+  background: #ee4d2d !important;
+  width: 18px !important;
+  border-radius: 6px !important;
+  opacity: 1 !important;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bg-main);
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ==========================================================================
+   ẨN HOÀN TOÀN THANH CÔNG CỤ VÀ BANNER CỦA GOOGLE TRANSLATE ENGINE (OPTION A)
+   Giữ nguyên 100% giao diện sang trọng của MeeMart
+   ========================================================================== */
+.goog-te-banner-frame.skiptranslate,
+.goog-te-banner-frame,
+iframe[name^="goog-te-"],
+iframe[id^=":1."],
+.goog-te-gadget-icon,
+#goog-gt-tt,
+.goog-te-balloon-frame {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+body {
+  top: 0px !important;
+}
+
+.goog-tooltip,
+.goog-tooltip:hover {
+  display: none !important;
+}
+
+.goog-text-highlight {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+#google_translate_element {
+  display: none !important;
+}

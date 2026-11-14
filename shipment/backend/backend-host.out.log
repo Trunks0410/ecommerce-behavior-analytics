@@ -1,0 +1,19 @@
+
+> shipment-service@1.0.0 dev
+> nodemon server.js
+
+[33m[nodemon] 3.1.14[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[32m[nodemon] starting `node server.js`[39m
+◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+◇ injected env (0) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+Connection has been established successfully.
+=================================================
+🚀 Shipment Microservice is running on port: 8090
+   Health Check: http://localhost:8090/health
+   Shipment API: http://localhost:8090/api/v1/shipments
+   Shipper API:  http://localhost:8090/api/v1/shipper
+=================================================
+[32m[nodemon] clean exit - waiting for changes before restart[39m
