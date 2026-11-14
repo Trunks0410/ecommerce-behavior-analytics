@@ -1,75 +1,58 @@
+import { timingSafeEqual } from "node:crypto";
 import jwt from "jsonwebtoken";
-import dotenv from "dotenv";
-import db from "../../../../Ecommerce-platform/backend/src/database/models/index.js";
+import { Agent } from "../db/models.js";
 
-dotenv.config();
-
-const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || "fashion_marketplace_access_token_secret_key_2026";
-
-export const verifyToken = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  const token = authHeader && authHeader.split(" ")[1];
-
-  if (!token) {
-    return res.status(401).json({ message: "Vui lòng đăng nhập để thực hiện" });
-  }
-
-  jwt.verify(token, ACCESS_TOKEN_SECRET, (err, user) => {
-    if (err) {
-      if (err.name === "TokenExpiredError") {
-        return res.status(401).json({ message: "accessToken jwt expired" });
-      }
-      return res.status(401).json({ message: "Token không hợp lệ hoặc đã hết hạn" });
-    }
-    req.user = user;
-    next();
-  });
+const getTokenSecret = () => {
+  const secret = process.env.ACCESS_TOKEN_SECRET;
+  if (!secret || secret.length < 32) throw new Error("ACCESS_TOKEN_SECRET must contain at least 32 characters.");
+  return secret;
 };
 
-export const optionalVerifyToken = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  const token = authHeader && authHeader.split(" ")[1];
+export const verifyToken = async (req, res, next) => {
+  const token = req.headers.authorization?.match(/^Bearer\s+(.+)$/i)?.[1];
+  if (!token) return res.status(401).json({ code: "UNAUTHENTICATED", message: "Vui lòng đăng nhập để tiếp tục." });
 
-  if (!token) {
-    req.user = null;
-    return next();
-  }
-
-  jwt.verify(token, ACCESS_TOKEN_SECRET, (err, user) => {
-    if (err) {
-      req.user = null;
-    } else {
-      req.user = user;
-    }
-    next();
-  });
-};
-
-export const isShipper = async (req, res, next) => {
   try {
-    if (!req.user || !req.user.id) {
-      return res.status(401).json({ message: "Chưa xác thực người dùng" });
+    const payload = jwt.verify(token, getTokenSecret(), { issuer: "ute-express" });
+    const agent = await Agent.findByPk(payload.id);
+    if (!agent || agent.accountStatus !== "ACTIVE") {
+      return res.status(401).json({ code: "UNAUTHENTICATED", message: "Tài khoản không còn hoạt động." });
     }
-
-    const user = await db.User.findByPk(req.user.id, {
-      include: [{ model: db.Role, as: "role" }]
-    });
-
-    if (!user || !user.role) {
-      return res.status(403).json({ message: "Không tìm thấy thông tin quyền hạn người dùng" });
-    }
-
-    const roleName = user.role.role_name.toLowerCase();
-    if (roleName !== "shipper" && roleName !== "admin") {
-      return res.status(403).json({ message: "Quyền truy cập bị từ chối. Chỉ dành cho Shipper hoặc Admin" });
-    }
-
-    req.currentUser = user;
-    next();
+    req.user = { id: agent.id, role: agent.role };
+    req.currentUser = agent;
+    return next();
   } catch (error) {
-    console.error("Error in isShipper middleware:", error);
-    return res.status(500).json({ message: "Lỗi kiểm tra quyền hạn shipper" });
+    if (error.name === "TokenExpiredError" || error.name === "JsonWebTokenError") {
+      return res.status(401).json({ code: "INVALID_TOKEN", message: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn." });
+    }
+    return next(error);
   }
 };
 
-export default { verifyToken, optionalVerifyToken, isShipper };
+export const isShipper = (req, res, next) => {
+  if (!req.user || req.user.role !== "SHIPPER") {
+    return res.status(403).json({ code: "FORBIDDEN", message: "Chức năng này chỉ dành cho shipper." });
+  }
+  return next();
+};
+
+export const isAdmin = (req, res, next) => {
+  if (!req.user || req.user.role !== "ADMIN") {
+    return res.status(403).json({ code: "FORBIDDEN", message: "Chức năng này chỉ dành cho quản trị viên UTE Express." });
+  }
+  return next();
+};
+
+export const verifyServiceKey = (req, res, next) => {
+  const expected = process.env.ECOMMERCE_SERVICE_API_KEY;
+  const provided = req.get("x-service-api-key");
+  if (!expected || !provided) {
+    return res.status(401).json({ code: "SERVICE_UNAUTHENTICATED", message: "Service authentication is required." });
+  }
+  const expectedBuffer = Buffer.from(expected);
+  const providedBuffer = Buffer.from(provided);
+  if (expectedBuffer.length !== providedBuffer.length || !timingSafeEqual(expectedBuffer, providedBuffer)) {
+    return res.status(401).json({ code: "SERVICE_UNAUTHENTICATED", message: "Service authentication failed." });
+  }
+  return next();
+};

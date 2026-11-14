@@ -20,7 +20,7 @@ const heroBanners = [
     subtitleKey: "hero_slide2_subtitle",
     saleBadgeKey: "hero_slide2_badge",
     buttonTextKey: "hero_slide2_btn",
-    link: "/products?category=dien-tu",
+    link: "/products?category=nam",
     bgGradient: "from-blue-600 via-indigo-600 to-purple-600",
     image: "https://images.unsplash.com/photo-1550009158-9ebf69173e03?q=80&w=1200",
   },
@@ -30,7 +30,7 @@ const heroBanners = [
     subtitleKey: "hero_slide3_subtitle",
     saleBadgeKey: "hero_slide3_badge",
     buttonTextKey: "hero_slide3_btn",
-    link: "/products?category=thoi-trang",
+    link: "/products?category=nu",
     bgGradient: "from-amber-600 via-orange-500 to-rose-500",
     image: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=1200",
   },
@@ -164,7 +164,7 @@ const HeroSection = () => {
 
           {/* Card 2: Hàng Hiệu */}
           <Link
-            to="/products?category=thoi-trang"
+            to="/products?category=phu-kien"
             className="relative rounded-xl overflow-hidden group shadow-xs border border-gray-100 dark:border-slate-800 bg-gradient-to-r from-emerald-950 to-slate-900 aspect-[2.2/1] flex flex-col justify-center p-5 text-white transition-transform hover:scale-[1.01]"
           >
             <img

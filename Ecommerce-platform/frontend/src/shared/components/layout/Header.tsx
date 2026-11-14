@@ -25,6 +25,7 @@ import {
   LogOut,
   Package,
   Check,
+  Camera,
 } from "lucide-react";
 import { useAppSelector } from "@/app/stores/hooks";
 import useAuth from "@/hooks/useAuth";
@@ -33,6 +34,7 @@ import { useCategories, useProducts } from "@/hooks/useProducts";
 import { NotificationDropdown } from "./NotificationDropdown";
 import { useTheme } from "@/shared/context/ThemeContext";
 import { useLanguage } from "@/shared/context/LanguageContext";
+import { VisualSearchModal } from "@/shared/components/modals/VisualSearchModal";
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8088";
 
@@ -118,6 +120,7 @@ const Header = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isVisualSearchOpen, setIsVisualSearchOpen] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -449,6 +452,16 @@ const Header = () => {
                 placeholder={t("search_placeholder")}
                 className="w-full pl-4 pr-3 py-1.5 bg-transparent border-0 outline-none text-sm text-gray-800 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500"
               />
+              {/* Visual Search Button */}
+              <button
+                type="button"
+                onClick={() => setIsVisualSearchOpen(true)}
+                className="p-1.5 text-gray-400 hover:text-[#ee4d2d] hover:bg-[#fef0ed] dark:hover:bg-slate-700/60 rounded-full transition-all cursor-pointer mr-1 shrink-0 flex items-center justify-center group"
+                title={t("visual_search_title")}
+                aria-label={t("visual_search_title")}
+              >
+                <Camera size={18} className="group-hover:scale-110 transition-transform" />
+              </button>
               <button
                 type="submit"
                 className="bg-[#ee4d2d] hover:bg-[#d03e1e] text-white px-5 sm:px-6 py-2 rounded-full font-medium flex items-center justify-center transition-colors cursor-pointer shrink-0"
@@ -756,6 +769,12 @@ const Header = () => {
           </Link>
         </div>
       </div>
+
+      {/* Visual Search Modal */}
+      <VisualSearchModal
+        isOpen={isVisualSearchOpen}
+        onClose={() => setIsVisualSearchOpen(false)}
+      />
     </header>
   );
 };

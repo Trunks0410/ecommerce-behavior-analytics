@@ -29,7 +29,7 @@ export const LoginPage: React.FC = () => {
     } catch (loginError) {
       if (axios.isAxiosError(loginError) && !loginError.response) {
         setError("Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối và thử lại.");
-      } else if (axios.isAxiosError(loginError) && loginError.response?.status === 400) {
+      } else if (axios.isAxiosError(loginError) && [400, 401].includes(loginError.response?.status || 0)) {
         setError("Email/số điện thoại hoặc mật khẩu chưa chính xác.");
       } else {
         setError("Đăng nhập chưa thành công. Vui lòng thử lại.");

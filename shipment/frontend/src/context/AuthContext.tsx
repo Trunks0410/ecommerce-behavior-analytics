@@ -44,7 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (emailOrPhone: string, pass: string) => {
     const res = await shipperApi.login(emailOrPhone, pass);
-    const { user: userData, accessToken } = res.data;
+    const { user: userData, accessToken } = res;
     setToken(accessToken);
     setUser(userData);
     localStorage.setItem("shipper_token", accessToken);

@@ -44,10 +44,10 @@ export const DashboardPage: React.FC = () => {
     try {
       const [allOrders, pendingPickup, inTransit, delivered, failed] = await Promise.all([
         shipperApi.getOrders({ limit: 8 }),
-        shipperApi.getOrders({ limit: 1, status: "PENDING_PICKUP" }),
+        shipperApi.getOrders({ limit: 1, status: "ASSIGNED" }),
         shipperApi.getOrders({ limit: 1, status: "IN_TRANSIT" }),
         shipperApi.getOrders({ limit: 1, status: "DELIVERED" }),
-        shipperApi.getOrders({ limit: 1, status: "FAILED" }),
+        shipperApi.getOrders({ limit: 1, status: "DELIVERY_FAILED" }),
       ]);
 
       setOrders(allOrders.orders);
@@ -73,10 +73,10 @@ export const DashboardPage: React.FC = () => {
   const metrics = summary
     ? [
         { label: "Tổng vận đơn", value: summary.total, status: "ALL", tone: "blue", icon: Package },
-        { label: "Chờ lấy hàng", value: summary.pendingPickup, status: "PENDING_PICKUP", tone: "amber", icon: Clock3 },
+        { label: "Chờ nhận đơn", value: summary.pendingPickup, status: "ASSIGNED", tone: "amber", icon: Clock3 },
         { label: "Đang giao", value: summary.inTransit, status: "IN_TRANSIT", tone: "indigo", icon: Truck },
         { label: "Đã giao", value: summary.delivered, status: "DELIVERED", tone: "green", icon: CircleCheck },
-        { label: "Giao thất bại", value: summary.failed, status: "FAILED", tone: "red", icon: CircleX },
+        { label: "Giao thất bại", value: summary.failed, status: "DELIVERY_FAILED", tone: "red", icon: CircleX },
       ]
     : [];
 

@@ -1,6 +1,83 @@
 import db from "../../database/models/index.js";
 import { Op, Sequelize } from "sequelize";
 import vectorSearchService from "./vectorSearch.service.js";
+import { Op } from "sequelize";
+import { getOrSetCache } from "../../core/cache/redis.js";
+import translateService from "../translate/translate.service.js";
+
+const isVietnameseText = (text) =>
+  Boolean(text && /[àáảãạăằắẳẵặâầấẩẫậđèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵ]/i.test(text));
+
+export const enrichProductsTranslation = async (products, targetLang = "vi") => {
+  if (!products || !Array.isArray(products) || products.length === 0) return products;
+
+  const toTranslate = [];
+  const toTranslateMap = [];
+  const normalizedLang = targetLang?.toLowerCase()?.startsWith("en") ? "en" : "vi";
+
+  products.forEach((p, index) => {
+    const rawName = p.name || "";
+    if (rawName) {
+      if (normalizedLang === "vi") {
+        if (!isVietnameseText(rawName)) {
+          toTranslate.push(rawName);
+          toTranslateMap.push({ index, field: "name" });
+        }
+      } else if (normalizedLang === "en") {
+        if (isVietnameseText(rawName)) {
+          toTranslate.push(rawName);
+          toTranslateMap.push({ index, field: "name" });
+        }
+      }
+    }
+
+    const catName = p.category?.name;
+    if (catName) {
+      if (normalizedLang === "vi") {
+        if (!isVietnameseText(catName)) {
+          toTranslate.push(catName);
+          toTranslateMap.push({ index, field: "category" });
+        }
+      } else if (normalizedLang === "en") {
+        if (isVietnameseText(catName)) {
+          toTranslate.push(catName);
+          toTranslateMap.push({ index, field: "category" });
+        }
+      }
+    }
+  });
+
+  if (toTranslate.length > 0) {
+    const fromLang = normalizedLang === "vi" ? "auto" : "vi";
+    try {
+      const translatedList = await translateService.translateTexts(toTranslate, fromLang, normalizedLang);
+
+      toTranslateMap.forEach((item, i) => {
+        const translated = translatedList[i];
+        if (translated) {
+          if (typeof products[item.index].toJSON === "function") {
+            products[item.index] = products[item.index].toJSON();
+          }
+          if (item.field === "name") {
+            products[item.index].original_name = products[item.index].name;
+            products[item.index].name = translated;
+          } else if (item.field === "category" && products[item.index].category) {
+            products[item.index].category = {
+              ...(typeof products[item.index].category.toJSON === "function"
+                ? products[item.index].category.toJSON()
+                : products[item.index].category),
+              name: translated,
+            };
+          }
+        }
+      });
+    } catch (e) {
+      console.warn("Product translation batch error:", e.message);
+    }
+  }
+
+  return products;
+};
 
 const enrichProductRating = async (product) => {
   if (!product) return null;
@@ -66,7 +143,7 @@ const enrichProductsRating = async (products) => {
   });
 };
 
-const getProducts = async (filters) => {
+const fetchProducts = async (filters, lang = "vi") => {
   const {
     keyword, // Từ khóa tìm kiếm
     categorySlug, // Lọc theo danh mục
@@ -209,12 +286,13 @@ const getProducts = async (filters) => {
     });
 
     const enrichedProducts = await enrichProductsRating(rows);
+    const translatedProducts = await enrichProductsTranslation(enrichedProducts, lang);
 
     return {
       total: count,
       totalPages: Math.ceil(count / limit),
       currentPage: parseInt(page),
-      products: enrichedProducts,
+      products: translatedProducts,
     };
   } catch (error) {
     console.error("=== [productService.getProducts ERROR] ===");
@@ -226,7 +304,7 @@ const getProducts = async (filters) => {
   }
 };
 
-const getProductBySlug = async (slug) => {
+const getProductBySlug = async (slug, lang = "vi") => {
   const product = await db.Product.findOne({
     where: { slug, approval_status: "APPROVED" },
     include: [
@@ -246,7 +324,6 @@ const getProductBySlug = async (slug) => {
     ? product.variants.reduce((sum, v) => sum + v.stock_quantity, 0)
     : 0;
 
-
   // Tính số lượng đánh giá và điểm trung bình
   const reviewStats = await db.ProductReview.findOne({
     where: { product_id: product.id },
@@ -260,8 +337,9 @@ const getProductBySlug = async (slug) => {
   const review_count = parseInt(reviewStats?.review_count || 0, 10);
   const rating_average = parseFloat(reviewStats?.rating_average || 0);
 
-  return { ...product.toJSON(), totalStock, review_count, rating_average };
-
+  const productData = { ...product.toJSON(), totalStock, review_count, rating_average };
+  const [translatedProduct] = await enrichProductsTranslation([productData], lang);
+  return translatedProduct;
 };
 
 const getSimilarProducts = async (categoryId, excludeProductId, limit = 6) => {
@@ -319,10 +397,11 @@ const getSimilarProducts = async (categoryId, excludeProductId, limit = 6) => {
     limit,
     order: [["sold_count", "DESC"]],
   });
-  return await enrichProductsRating(products);
+  const enriched = await enrichProductsRating(products);
+  return await enrichProductsTranslation(enriched, lang);
 };
 
-const getFeaturedProducts = async (limit = 10) => {
+const fetchFeaturedProducts = async (limit = 10, lang = "vi") => {
   // Validate limit
   const parsedLimit = Number(limit) || 10;
 
@@ -378,10 +457,11 @@ const getFeaturedProducts = async (limit = 10) => {
 
     subQuery: false,
   });
-  return await enrichProductsRating(products);
+  const enriched = await enrichProductsRating(products);
+  return await enrichProductsTranslation(enriched, lang);
 };
 
-const getNewestProducts = async (limit = 10) => {
+const fetchNewestProducts = async (limit = 10, lang = "vi") => {
   const parsedLimit = Number(limit) || 10;
 
   const products = await db.Product.findAll({
@@ -435,10 +515,11 @@ const getNewestProducts = async (limit = 10) => {
 
     subQuery: false,
   });
-  return await enrichProductsRating(products);
+  const enriched = await enrichProductsRating(products);
+  return await enrichProductsTranslation(enriched, lang);
 };
 
-const getBestSellerProducts = async (limit = 10) => {
+const fetchBestSellerProducts = async (limit = 10, lang = "vi") => {
   const parsedLimit = Number(limit) || 10;
 
   const products = await db.Product.findAll({
@@ -489,10 +570,11 @@ const getBestSellerProducts = async (limit = 10) => {
 
     subQuery: false,
   });
-  return await enrichProductsRating(products);
+  const enriched = await enrichProductsRating(products);
+  return await enrichProductsTranslation(enriched, lang);
 };
 
-const getMostViewedProducts = async (limit = 10) => {
+const fetchMostViewedProducts = async (limit = 10, lang = "vi") => {
   const parsedLimit = Number(limit) || 10;
 
   const products = await db.Product.findAll({
@@ -537,7 +619,8 @@ const getMostViewedProducts = async (limit = 10) => {
     limit: parsedLimit,
     subQuery: false,
   });
-  return await enrichProductsRating(products);
+  const enriched = await enrichProductsRating(products);
+  return await enrichProductsTranslation(enriched, lang);
 };
 
 // POST /products/:id/favorite
@@ -641,6 +724,7 @@ const getRecommendedProducts = async (userId, viewedIdsParam, limit = 10) => {
 };
 
 export default {
+  enrichProductsTranslation,
   getProducts,
   getProductBySlug,
   getSimilarProducts,

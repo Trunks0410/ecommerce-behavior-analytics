@@ -1,6 +1,7 @@
 {
   "name": "shipment-microservice",
   "version": "1.0.0",
+  "type": "module",
   "description": "Shipment & Shipper Microservice (Backend API & Shipper Dashboard Frontend)",
   "scripts": {
     "dev": "node dev.js",

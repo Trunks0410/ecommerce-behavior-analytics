@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useRoutes } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { getRoutes } from "./routes";
-import { initAuthThunk } from "@/app/stores/slices/authSlice";
+import { initAuthThunk, setToken } from "@/app/stores/slices/authSlice";
 import type { AppDispatch, RootState } from "@/app/stores/store";
 import toast, { Toaster } from "react-hot-toast";
 
@@ -18,30 +18,28 @@ if (typeof window !== "undefined") {
       toast.success(msgStr, {
         duration: 4000,
         style: {
-          border: "3px solid #10b981",
-          padding: "16px",
-          color: "#065f46",
-          background: "#ecfdf5",
-          fontWeight: "900",
-          fontFamily: "sans-serif",
-          borderRadius: "20px",
-          boxShadow: "4px 4px 0px 0px #10b981",
-          fontSize: "12px",
+          border: "1px solid #bbf7d0",
+          padding: "12px 16px",
+          color: "#166534",
+          background: "#f0fdf4",
+          fontWeight: "600",
+          borderRadius: "12px",
+          boxShadow: "0 4px 12px -2px rgba(0, 0, 0, 0.08)",
+          fontSize: "13px",
         },
       });
     } else if (isError) {
       toast.error(msgStr, {
         duration: 4000,
         style: {
-          border: "3px solid #ef4444",
-          padding: "16px",
-          color: "#991b1b",
-          background: "#fef2f2",
-          fontWeight: "900",
-          fontFamily: "sans-serif",
-          borderRadius: "20px",
-          boxShadow: "4px 4px 0px 0px #ef4444",
-          fontSize: "12px",
+          border: "1px solid #fecdd3",
+          padding: "12px 16px",
+          color: "#9f1239",
+          background: "#fff1f2",
+          fontWeight: "600",
+          borderRadius: "12px",
+          boxShadow: "0 4px 12px -2px rgba(0, 0, 0, 0.08)",
+          fontSize: "13px",
         },
       });
     } else {
@@ -49,15 +47,14 @@ if (typeof window !== "undefined") {
         duration: 4000,
         icon: "ℹ️",
         style: {
-          border: "3px solid #000",
-          padding: "16px",
-          color: "#000",
-          background: "#fff",
-          fontWeight: "900",
-          fontFamily: "sans-serif",
-          borderRadius: "20px",
-          boxShadow: "4px 4px 0px 0px #000",
-          fontSize: "12px",
+          border: "1px solid #e2e8f0",
+          padding: "12px 16px",
+          color: "#1e293b",
+          background: "#ffffff",
+          fontWeight: "600",
+          borderRadius: "12px",
+          boxShadow: "0 4px 12px -2px rgba(0, 0, 0, 0.08)",
+          fontSize: "13px",
         },
       });
     }
@@ -80,11 +77,22 @@ function App() {
   const routing = useRoutes(getRoutes(roleName));
 
   useEffect(() => {
-    // Luôn verify token khi ứng dụng khởi chạy nếu có accessToken trong store
-    if (accessToken) {
+    // 1. Đồng bộ token khi chuyển từ phân hệ Analytics sang (:5175 -> :5173)
+    const urlParams = new URLSearchParams(window.location.search);
+    const tokenFromUrl = urlParams.get("token");
+
+    if (tokenFromUrl) {
+      dispatch(setToken({ accessToken: tokenFromUrl }));
+      dispatch(initAuthThunk());
+      urlParams.delete("token");
+      const remaining = urlParams.toString();
+      const newUrl = window.location.pathname + (remaining ? `?${remaining}` : "");
+      window.history.replaceState({}, document.title, newUrl);
+    } else if (accessToken) {
+      // 2. Luôn verify token khi ứng dụng khởi chạy nếu có accessToken trong store
       dispatch(initAuthThunk());
     }
-  }, [dispatch]);
+  }, [dispatch, accessToken]);
 
   // Đang verify token → hiện loading
   if (!initialized) {

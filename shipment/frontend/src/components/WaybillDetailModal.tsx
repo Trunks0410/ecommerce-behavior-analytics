@@ -43,11 +43,9 @@ export const WaybillDetailModal: React.FC<WaybillDetailModalProps> = ({
   };
 
   const statusNorm = (order.status || "").toUpperCase();
-  const canStart = statusNorm === "PENDING_PICKUP" || statusNorm === "ASSIGNED";
-  const canComplete =
-    statusNorm === "IN_TRANSIT" ||
-    statusNorm === "SHIPPING" ||
-    statusNorm === "OUT_FOR_DELIVERY";
+  const canAdvance = ["ASSIGNED", "ACCEPTED", "PICKED_UP", "IN_TRANSIT"].includes(statusNorm);
+  const canComplete = statusNorm === "OUT_FOR_DELIVERY";
+  const histories = order.shipment?.histories || [];
 
   return (
     <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
@@ -186,83 +184,31 @@ export const WaybillDetailModal: React.FC<WaybillDetailModalProps> = ({
           <div className="drawer-section">
             <h3 className="drawer-section-title">Lịch Sử Hành Trình</h3>
             <div className="audit-timeline">
-              <div className="timeline-step is-done">
-                <span className="step-marker" />
-                <div className="step-content">
-                  <div className="step-header">
-                    <strong>Tiếp nhận vận đơn thành công</strong>
-                    <span className="step-time text-mono">Hệ thống UTE Express</span>
-                  </div>
-                  <p className="step-desc">
-                    Kiện hàng được khởi tạo từ hệ thống đối tác và sẵn sàng điều phối.
-                  </p>
-                </div>
-              </div>
-
-              <div className="timeline-step is-done">
-                <span className="step-marker" />
-                <div className="step-content">
-                  <div className="step-header">
-                    <strong>Đã phân công tài xế</strong>
-                    <span className="step-time text-mono">Điều phối khu vực</span>
-                  </div>
-                  <p className="step-desc">
-                    Tài xế tiếp nhận lịch trình lấy hàng tại kho người gửi.
-                  </p>
-                </div>
-              </div>
-
-              {canComplete && (
-                <div className="timeline-step is-active">
-                  <span className="step-marker" />
+              {histories.length === 0 && <p className="step-desc">Chưa có sự kiện vận chuyển.</p>}
+              {histories.map((event) => (
+                <div
+                  className={`timeline-step${event.status === "DELIVERY_FAILED" || event.status === "RETURNED" ? " is-failed" : " is-done"}`}
+                  key={event.id}
+                >
+                  <span className={`step-marker${event.status === "DELIVERED" ? " step-marker--success" : event.status === "DELIVERY_FAILED" ? " step-marker--danger" : ""}`} />
                   <div className="step-content">
                     <div className="step-header">
-                      <strong>Đang trên hành trình giao hàng</strong>
-                      <span className="step-time text-mono">Đang di chuyển</span>
+                      <strong>{event.status.replace(/_/g, " ")}</strong>
+                      <span className="step-time text-mono">
+                        {new Date(event.created_at).toLocaleString("vi-VN")}
+                      </span>
                     </div>
-                    <p className="step-desc">
-                      Tài xế đang vận chuyển kiện hàng đến địa chỉ người nhận.
-                    </p>
+                    {event.note && <p className="step-desc">{event.note}</p>}
                   </div>
                 </div>
-              )}
-
-              {statusNorm === "DELIVERED" && (
-                <div className="timeline-step is-done">
-                  <span className="step-marker step-marker--success" />
-                  <div className="step-content">
-                    <div className="step-header">
-                      <strong className="text-success">Giao hàng thành công</strong>
-                      <span className="step-time text-mono">Hoàn tất</span>
-                    </div>
-                    <p className="step-desc">
-                      Người nhận đã nhận hàng và xác nhận đầy đủ kiện hàng.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {statusNorm === "FAILED" && (
-                <div className="timeline-step is-failed">
-                  <span className="step-marker step-marker--danger" />
-                  <div className="step-content">
-                    <div className="step-header">
-                      <strong className="text-danger">Giao hàng chưa thành công</strong>
-                      <span className="step-time text-mono">Ghi nhận sự cố</span>
-                    </div>
-                    <p className="step-desc">
-                      Đã lưu biên bản sự cố giao hàng và lên lịch hẹn giao lại lần tiếp theo.
-                    </p>
-                  </div>
-                </div>
-              )}
+              ))}
             </div>
           </div>
         </div>
 
         {/* Drawer Footer Actions */}
         <div className="drawer-footer">
-          {canStart && onStartDelivery && (
+          {canAdvance && onStartDelivery && (
             <button
               type="button"
               className="btn btn-primary btn-block"
@@ -271,7 +217,9 @@ export const WaybillDetailModal: React.FC<WaybillDetailModalProps> = ({
                 onClose();
               }}
             >
-              Bắt đầu giao đơn hàng
+              {statusNorm === "ASSIGNED" ? "Nhận đơn hàng" :
+                statusNorm === "ACCEPTED" ? "Xác nhận đã lấy hàng" :
+                  statusNorm === "PICKED_UP" ? "Bắt đầu vận chuyển" : "Bắt đầu giao hàng"}
             </button>
           )}
 
@@ -314,4 +262,3 @@ export const WaybillDetailModal: React.FC<WaybillDetailModalProps> = ({
 };
 
 export default WaybillDetailModal;
-

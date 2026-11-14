@@ -32,6 +32,12 @@ export const useShipmentDetail = (orderId: number) => {
     queryKey: ["shipment", orderId],
     queryFn: () => shipmentService.getShipmentByOrderId(orderId),
     enabled: !!orderId,
+    refetchInterval: (query) => {
+      const terminalStatuses = ["DELIVERED", "RETURNED", "CANCELLED"];
+      return query.state.data && terminalStatuses.includes(query.state.data.status)
+        ? false
+        : 15000;
+    },
   });
 };
 

@@ -607,7 +607,36 @@ export const vi = {
   hotline: "1900 1234",
   connect_with_us: "Kết nối với chúng tôi",
   faq: "Câu hỏi thường gặp",
-  copyright: "© 2024 MeeMart Việt Nam. Bảo lưu mọi quyền."
+  copyright: "© 2024 MeeMart Việt Nam. Bảo lưu mọi quyền.",
+
+  // Visual Search
+  visual_search_title: "Tìm kiếm bằng hình ảnh",
+  visual_search_subtitle: "Nhận diện màu sắc, kiểu dáng và tìm sản phẩm thời trang tương đồng tức thì",
+  visual_search_drag_drop: "Kéo & thả ảnh vào đây hoặc",
+  visual_search_browse: "duyệt tệp từ máy tính",
+  visual_search_format_hint: "Hỗ trợ định dạng JPG, PNG, WEBP (Dung lượng tối đa 10MB)",
+  visual_search_paste_tip: "Mẹo: Bạn có thể nhấn Ctrl + V để dán ảnh trực tiếp từ bộ nhớ tạm",
+  visual_search_camera_btn: "Chụp trực tiếp từ Webcam / Camera",
+  visual_search_camera_frame_hint: "Đặt sản phẩm vào giữa khung ngắm",
+  visual_search_camera_capture: "Chụp và phân tích ngay",
+  visual_search_camera_cancel: "Hủy bỏ",
+  visual_search_focus_title: "Tiêu điểm vật thể",
+  visual_search_focus_hint: "Kéo để di chuyển • Kéo các góc để chỉnh kích thước tiêu điểm",
+  visual_search_focus_apply: "Tìm kiếm theo vùng đã chọn",
+  visual_search_change_image: "Đổi ảnh khác",
+  visual_search_features_title: "Đặc trưng nhận diện",
+  visual_search_color_label: "Màu sắc",
+  visual_search_auto_detected: "Tự động nhận diện",
+  visual_search_most_similar: "Sản phẩm tương đồng nhất",
+  visual_search_found_count: "Tìm thấy {count} sản phẩm",
+  visual_search_similarity_badge: "{score}% tương đồng",
+  visual_search_no_products: "Chưa tìm thấy sản phẩm có đặc trưng tương tự trong danh mục.",
+  visual_search_view_all: "Xem tất cả {count} kết quả tương đồng",
+  visual_search_close: "Đóng",
+  visual_search_exit: "Tắt tìm kiếm ảnh",
+  visual_search_results_title: "Kết quả tìm kiếm bằng hình ảnh",
+  visual_search_footer_algorithm: "So khớp độ tương đồng trên toàn bộ kho hàng MeeMart",
+  visual_search_view_full_list: "Xem đầy đủ danh sách kết quả"
 };
 
 export type TranslationKey = keyof typeof vi;

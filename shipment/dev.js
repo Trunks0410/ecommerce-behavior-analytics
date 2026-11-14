@@ -41,6 +41,7 @@ const frontendProcess = spawn(npmCmd, ["run", "dev"], {
   cwd: frontendDir,
   env: { ...process.env },
   stdio: ["inherit", "pipe", "pipe"],
+  shell: isWin,
 });
 
 frontendProcess.stdout.on("data", (data) => {

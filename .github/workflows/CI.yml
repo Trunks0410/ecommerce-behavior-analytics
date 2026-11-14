@@ -1,0 +1,40 @@
+name: Simple 2-Stage CI
+
+# Kích hoạt workflow khi push code hoặc tạo Pull Request vào nhánh main
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  # STAGE 1: Kiểm tra cú pháp / Build ứng dụng
+  build-stage:
+    name: Stage 1 - Build & Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Giả lập quá trình Build
+        run: |
+          echo "Đang kiểm tra cấu trúc thư mục..."
+          ls -la
+          echo "Build thành công!"
+
+  # STAGE 2: Chạy kiểm thử (Chỉ chạy sau khi Stage 1 hoàn tất)
+  test-stage:
+    name: Stage 2 - Automated Tests
+    runs-on: ubuntu-latest
+    needs: build-stage # Ràng buộc: Stage 1 phải pass thì Stage 2 mới chạy
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Giả lập chạy Unit Test
+        run: |
+          echo "Đang khởi chạy bộ test..."
+          sleep 2
+          echo "Tất cả test cases đều PASS!"

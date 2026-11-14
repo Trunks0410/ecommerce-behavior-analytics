@@ -85,7 +85,7 @@ const calculateCheckout = async (req, res) => {
 
 const updateOrderStatus = async (req, res) => {
   try {
-    const { status, note } = req.body;
+    const { status, note, shippingProvider } = req.body;
     const { orderId } = req.params; // this is shop_order_id
     
     let role = "user";
@@ -96,16 +96,16 @@ const updateOrderStatus = async (req, res) => {
        role = roleMap[req.user.role_id] || "user";
     }
     
-    const order = await orderService.updateOrderStatus(orderId, req.user.id, status, role, note);
+    const order = await orderService.updateOrderStatus(orderId, req.user.id, status, role, note, { shippingProvider });
     return res.status(200).json({ message: "Cập nhật trạng thái thành công", data: order });
   } catch (error) {
-    return res.status(400).json({ message: error.message });
+    return res.status(error.isAxiosError ? 502 : 400).json({ message: error.message });
   }
 };
 
 const bulkUpdateOrderStatus = async (req, res) => {
   try {
-    const { orderIds, status } = req.body;
+    const { orderIds, status, shippingProvider } = req.body;
     
     let role = "user";
     if (req.user.role && req.user.role.role_name) {
@@ -119,7 +119,7 @@ const bulkUpdateOrderStatus = async (req, res) => {
       return res.status(400).json({ message: "Danh sách đơn hàng không hợp lệ" });
     }
     
-    const result = await orderService.bulkUpdateOrderStatus(orderIds, req.user.id, status, role);
+    const result = await orderService.bulkUpdateOrderStatus(orderIds, req.user.id, status, role, { shippingProvider });
     return res.status(200).json({ message: "Cập nhật trạng thái hàng loạt thành công", data: result });
   } catch (error) {
     return res.status(400).json({ message: error.message });
