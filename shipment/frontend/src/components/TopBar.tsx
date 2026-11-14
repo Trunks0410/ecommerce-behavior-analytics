@@ -75,13 +75,6 @@ export const TopBar: React.FC<TopBarProps> = ({
                 >
                   Thông tin tài khoản
                 </Link>
-                <Link
-                  to="/reconciliation"
-                  className="user-menu-item"
-                  onClick={() => setShowUserMenu(false)}
-                >
-                  Đối soát tiền COD
-                </Link>
               </div>
               <div className="user-menu-footer">
                 <button type="button" className="btn-logout" onClick={logout}>

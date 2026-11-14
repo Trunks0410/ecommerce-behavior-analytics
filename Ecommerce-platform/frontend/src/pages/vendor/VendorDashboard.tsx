@@ -1227,7 +1227,7 @@ const VendorDashboard = () => {
       isOpen: true,
       title: "Sẵn sàng giao hàng",
       message:
-        "Bạn có chắc chắn muốn chuyển trạng thái đơn hàng sang sẵn sàng giao?",
+        "Bạn có chắc chắn muốn bàn giao đơn hàng này cho UTE Express?",
       onConfirm: async () => {
         setConfirmModal((prev) => ({ ...prev, isOpen: false }));
         try {
@@ -1291,13 +1291,14 @@ const VendorDashboard = () => {
     setConfirmModal({
       isOpen: true,
       title: "Xử lý hàng loạt",
-      message: `Bạn có chắc chắn muốn ${actionText} ${eligibleOrders.length} đơn hàng này không?`,
+      message: `Bạn có chắc chắn muốn ${actionText} ${eligibleOrders.length} đơn hàng này${targetStatus === "SHIPPING" ? " cho UTE Express" : ""} không?`,
       onConfirm: async () => {
         setConfirmModal((prev) => ({ ...prev, isOpen: false }));
         try {
           await vendorService.bulkUpdateOrdersStatus(
             eligibleOrders,
             targetStatus,
+            targetStatus === "SHIPPING" ? "UTE_EXPRESS" : undefined,
           );
           alert(`Đã ${actionText} thành công!`);
           fetchShopOrders();

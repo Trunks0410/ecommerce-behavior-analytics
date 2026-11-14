@@ -10,6 +10,9 @@ export interface ShipperUser {
   date_of_birth?: string;
   gender?: string;
   operating_areas?: string[];
+  availability?: "AVAILABLE" | "BUSY" | "OFFLINE";
+  rating?: number;
+  completed_deliveries?: number;
 }
 
 export interface ShipmentHistory {
@@ -24,11 +27,17 @@ export interface ShipmentHistory {
 
 export interface Shipment {
   id: number;
-  shop_order_id: number;
-  shipper_id: number;
-  tracking_number: string;
+  orderReference?: string;
+  order_reference?: string;
+  agentId?: number;
+  agent_id?: number;
+  shop_order_id?: number;
+  shipper_id?: number;
+  trackingNumber?: string;
+  tracking_number?: string;
   status: string;
   shipping_fee: number;
+  shippingFee?: number;
   histories?: ShipmentHistory[];
 }
 
@@ -59,18 +68,18 @@ export interface ShopOrder {
   cod_amount_collected?: number;
   delivery_attempts: number;
   shipper_id?: number;
-  parent_order_id: number;
+  parent_order_id: number | string;
   created_at: string;
   updated_at: string;
   shipment?: Shipment;
   items?: OrderItem[];
   shop?: {
-    id: number;
+    id: number | string;
     shop_name: string;
     pickup_address?: string;
   };
   parentOrder?: {
-    id: number;
+    id: number | string;
     checkout_code: string;
     shipping_address: any;
     payment_method: string;
@@ -79,26 +88,10 @@ export interface ShopOrder {
   };
 }
 
-export interface CODReconciliation {
-  id: number;
-  shipper_id: number;
-  amount_submitted: number;
-  status: "PENDING" | "APPROVED" | "REJECTED";
-  note?: string;
-  created_at: string;
-  orders?: {
-    id: number;
-    shop_order_code: string;
-    final_amount: number;
-    cod_amount_collected: number;
-    updated_at: string;
-  }[];
-}
-
 export const shipperApi = {
   login: async (email_or_phone: string, password: string) => {
     const res = await axiosClient.post("/shipper/login", { email_or_phone, password });
-    return res.data;
+    return res.data.data;
   },
 
   getProfile: async () => {
@@ -126,16 +119,6 @@ export const shipperApi = {
     return res.data.data as ShopOrder[];
   },
 
-  submitCODReconciliation: async (orderIds: number[], note?: string) => {
-    const res = await axiosClient.post("/shipper/cod/reconcile", { orderIds, note });
-    return res.data.data as CODReconciliation;
-  },
-
-  getReconciliationHistory: async () => {
-    const res = await axiosClient.get("/shipper/cod/reconciliations");
-    return res.data.data as CODReconciliation[];
-  },
-
   uploadImage: async (file: File) => {
     const formData = new FormData();
     formData.append("images", file);
@@ -145,29 +128,39 @@ export const shipperApi = {
     return res.data.data as string[];
   },
 
-  updateShipmentStatus: async (
-    shipmentId: number,
-    payload: {
-      status: string;
-      location?: string;
-      note?: string;
-      proof_image_url?: string;
-      collected_shipping_fee?: number;
-      is_bom?: boolean;
-    }
-  ) => {
-    const res = await axiosClient.post(`/shipments/${shipmentId}/history`, payload);
-    return res.data;
+  acceptShipment: async (shipmentId: number) => {
+    const res = await axiosClient.post(`/shipments/${shipmentId}/accept`);
+    return res.data.data as Shipment;
   },
 
-  getShipmentByOrderId: async (orderId: number) => {
-    const res = await axiosClient.get(`/shipments/order/${orderId}`);
-    return res.data as Shipment;
+  pickupShipment: async (shipmentId: number) => {
+    const res = await axiosClient.post(`/shipments/${shipmentId}/pickup`);
+    return res.data.data as Shipment;
   },
 
-  getShipmentHistory: async (shipmentId: number) => {
-    const res = await axiosClient.get(`/shipments/${shipmentId}/history`);
-    return res.data as ShipmentHistory[];
+  startShipment: async (shipmentId: number) => {
+    const res = await axiosClient.post(`/shipments/${shipmentId}/start`);
+    return res.data.data as Shipment;
+  },
+
+  markOutForDelivery: async (shipmentId: number) => {
+    const res = await axiosClient.post(`/shipments/${shipmentId}/out-for-delivery`);
+    return res.data.data as Shipment;
+  },
+
+  completeShipment: async (shipmentId: number, payload: { proofImageUrl: string; note?: string }) => {
+    const res = await axiosClient.post(`/shipments/${shipmentId}/complete`, payload);
+    return res.data.data as Shipment;
+  },
+
+  failShipment: async (shipmentId: number, reason: string) => {
+    const res = await axiosClient.post(`/shipments/${shipmentId}/fail`, { reason });
+    return res.data.data as Shipment;
+  },
+
+  updateAvailability: async (availability: "AVAILABLE" | "OFFLINE") => {
+    const res = await axiosClient.put("/shipper/profile", { availability });
+    return res.data.data as ShipperUser;
   },
 };
 

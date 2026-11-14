@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { vi, TranslationKey } from "../locales/vi";
 import { en } from "../locales/en";
+import { initGoogleTranslate, switchDOMTranslation } from "../services/googleTranslateService";
 
 type Language = "vi" | "en";
 
@@ -29,7 +30,17 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       document.documentElement.lang = nextLanguage;
       document.documentElement.setAttribute("data-language", nextLanguage);
     }
+    // Tự động kích hoạt dịch toàn trang DOM (Option A)
+    switchDOMTranslation(nextLanguage);
   };
+
+  useEffect(() => {
+    // Khởi tạo engine dịch tự động DOM ngầm khi load ứng dụng
+    initGoogleTranslate();
+    if (language === "en") {
+      setTimeout(() => switchDOMTranslation("en"), 500);
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof document !== "undefined") {
@@ -39,6 +50,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (typeof window !== "undefined") {
       window.localStorage.setItem("meemart_language", language);
     }
+    switchDOMTranslation(language);
   }, [language]);
 
   useEffect(() => {

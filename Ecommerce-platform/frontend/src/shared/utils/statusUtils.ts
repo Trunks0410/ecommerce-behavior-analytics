@@ -46,11 +46,15 @@ export const getShipmentStatusLabel = (
   if (!status) return '';
   if (language === "en") {
     const labels: Record<string, string> = {
+      PENDING_ASSIGNMENT: "Awaiting courier assignment",
+      ASSIGNED: "Courier assigned",
+      ACCEPTED: "Courier accepted",
       PENDING_PICKUP: "Awaiting pickup",
       PICKED_UP: "Picked up",
       IN_TRANSIT: "In transit",
       OUT_FOR_DELIVERY: "Out for delivery",
       DELIVERED: "Delivered",
+      DELIVERY_FAILED: "Delivery failed",
       FAILED: "Delivery failed",
       RETURN_PENDING: "Awaiting return",
       RETURNED: "Returned",
@@ -59,11 +63,15 @@ export const getShipmentStatusLabel = (
     return labels[status] || status;
   }
   const labels: Record<string, string> = {
+    'PENDING_ASSIGNMENT': 'Chờ phân công shipper',
+    'ASSIGNED': 'Đã phân công shipper',
+    'ACCEPTED': 'Shipper đã nhận đơn',
     'PENDING_PICKUP': 'Chờ shipper nhận',
     'PICKED_UP': 'Đã lấy hàng',
     'IN_TRANSIT': 'Đang luân chuyển',
     'OUT_FOR_DELIVERY': 'Đang đi giao',
     'DELIVERED': 'Giao thành công',
+    'DELIVERY_FAILED': 'Giao thất bại',
     'FAILED': 'Giao thất bại',
     'RETURN_PENDING': 'Chờ chuyển hoàn',
     'RETURNED': 'Đã chuyển hoàn',

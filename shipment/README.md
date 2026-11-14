@@ -1,63 +1,105 @@
-# Shipment & Shipper Microservice
+# UTE Express Shipment Service
 
-Dịch vụ vận chuyển và cổng điều phối giao nhận (Shipper Portal) độc lập, tách biệt hoàn toàn với Ecommerce Platform.
+UTE Express is an independent delivery microservice for the commerce website in
+[`../Ecommerce-platform/`](../Ecommerce-platform/). This folder owns the shipment API,
+its database and migrations, demo shipper accounts, and the shipper portal. The service
+does not share the ecommerce database or import its application code.
 
-## 1. Cấu Trúc Thư Mục
+Read [`KE_HOACH_TRIEN_KHAI_UTE_EXPRESS.md`](KE_HOACH_TRIEN_KHAI_UTE_EXPRESS.md) for the
+implementation scope, integration contract and acceptance criteria.
+
+## Folder layout
 
 ```text
 shipment/
-├── backend/                  # API Microservice Backend (Port 8090)
-│   ├── server.js             # Entrypoint server Express
-│   ├── package.json
-│   └── src/
-│       ├── controllers/      # shipment.controller.js, shipper.controller.js
-│       ├── routes/           # shipment.routes.js, shipper.routes.js
-│       ├── services/         # shipment.service.js, shipper.service.js
-│       └── middleware/       # auth.js, upload.js
-└── frontend/                 # Giao diện Shipper Dashboard độc lập (Port 5174)
-    ├── index.html
-    ├── package.json
-    ├── vite.config.ts
-    └── src/
-        ├── api/              # axiosClient.ts, shipperApi.ts
-        ├── context/          # AuthContext.tsx
-        ├── components/       # Navbar, StatusBadge, ProofModal, FailModal
-        └── pages/            # LoginPage, DashboardPage, OrdersPage, ReconciliationPage, ProfilePage
+├── backend/   Express API, MySQL schema/migrations, domain and seed
+└── frontend/  Shipper portal (React, Vite)
 ```
 
-## 2. Các API Microservice
+## Backend setup
 
-### Shipment API (`/api/v1/shipments`):
-- `GET /order/:orderId`: Lấy thông tin vận đơn theo mã đơn hàng
-- `GET /:id/history`: Lấy lịch sử hành trình vận đơn
-- `POST /:id/history`: Cập nhật trạng thái vận đơn (IN_TRANSIT, DELIVERED, FAILED...)
+Requirements: Node.js and a MySQL database dedicated to UTE Express.
 
-### Shipper API (`/api/v1/shipper`):
-- `POST /login`: Đăng nhập cổng Shipper Portal
-- `GET /profile`: Xem thông tin tài khoản shipper
-- `PUT /profile`: Cập nhật thông tin cá nhân và khu vực giao nhận
-- `GET /orders`: Lấy danh sách các đơn hàng shipper được phân công hoặc nhận giao
-- `GET /cod/collected`: Danh sách đơn hàng đang giữ tiền mặt thu hộ (COD)
-- `POST /cod/reconcile`: Gửi yêu cầu đối soát, bàn giao tiền COD về bưu cục
-- `GET /cod/reconciliations`: Xem lịch sử các đợt đối soát tiền COD
-- `POST /upload`: Upload ảnh bằng chứng giao hàng hoặc avatar
+1. Create a separate database, for example `ute_express`. Do not point the service at
+   the ecommerce database.
+2. Configure `shipment/backend/.env` with the dedicated `SHIPMENT_DB_NAME`, database
+   credentials, an `ACCESS_TOKEN_SECRET` of at least 32 characters, and an
+   `ECOMMERCE_SERVICE_API_KEY` of at least 24 characters. Use different random values
+   for these secrets; `.env` is local-only and must not be committed. The example file
+   is only a template for fresh checkouts.
+3. Install and initialize:
 
-## 3. Hướng Dẫn Chạy Dịch Vụ
+   ```text
+   npm install
+   npm run db:migrate
+   npm run db:seed
+   npm run dev
+   ```
 
-### Khởi chạy Backend (Port 8090):
-```bash
-cd shipment/backend
+The API listens on port `8090` by default. `GET /health` checks the database connection.
+The demo seed is disabled when `NODE_ENV=production`.
+
+## Shipper portal setup
+
+In `shipment/frontend`, install dependencies and start Vite:
+
+```text
 npm install
 npm run dev
 ```
 
-### Khởi chạy Frontend Shipper Dashboard (Port 5174):
-```bash
-cd shipment/frontend
-npm install
-npm run dev
+The portal defaults to `http://localhost:8090/api/v1`. Override it with
+`VITE_SHIPMENT_API_URL` when the service uses another URL. Add the portal origin to
+the backend's `CORS_ORIGIN`.
+
+Local demo account after seeding:
+
+```text
+Email:    shipper01@ute-express.local
+Password: Shipper@123
 ```
-Giao diện Shipper Portal sẽ chạy tại: **http://localhost:5174**
-Tài khoản thử nghiệm:
-- **Email:** `shipper@gmail.com`
-- **Mật khẩu:** `123456`
+
+Set `DEMO_SHIPPER_PASSWORD` before seeding to use a different local demo password.
+The seed does not reset passwords for accounts that already exist.
+
+## API overview
+
+| Purpose | Endpoint |
+|---|---|
+| Health | `GET /health` |
+| Service-to-service shipment creation | `POST /api/v1/shipments` |
+| Service-to-service lookup by order reference | `GET /api/v1/shipments/by-reference/:orderReference` |
+| Public tracking by tracking number | `GET /api/v1/shipments/tracking/:trackingNumber` |
+| Shipper login/profile/jobs | `/api/v1/shipper/*` |
+| Shipper delivery actions | `POST /api/v1/shipments/:id/{accept,pickup,start,out-for-delivery,complete,fail}` |
+
+Website-to-service requests use the `x-service-api-key` header. Shipper actions use a
+bearer access token. The frontend must never contain the service API key.
+
+Shipment creation is idempotent on `orderReference`. The service records its own tracking
+events and applies state transitions and automatic shipper assignment. A shipment without
+an available shipper remains in the assignment queue.
+
+## Ecommerce integration
+
+Configure the Ecommerce backend with:
+
+```text
+UTE_SHIPMENT_SERVICE_URL=http://localhost:8090
+UTE_SHIPMENT_SERVICE_API_KEY=<same value as shipment backend ECOMMERCE_SERVICE_API_KEY>
+```
+
+The URL is the service origin without `/api/v1`. Keep the key only in the backend
+environment; shop handoff requests create UTE Express shipments and customer tracking
+requests are authorized by Ecommerce before being proxied to the shipment service.
+
+## Tests
+
+Run the backend domain tests:
+
+```text
+npm test
+```
+
+These tests cover the delivery state machine and assignment ranking. Database integration
+tests require a separately configured shipment database.

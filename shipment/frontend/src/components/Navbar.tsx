@@ -5,7 +5,6 @@ import { useAuth } from "../context/AuthContext";
 const navLinks = [
   { to: "/", label: "Tổng quan" },
   { to: "/orders", label: "Đơn giao hàng" },
-  { to: "/reconciliation", label: "Đối soát COD" },
   { to: "/profile", label: "Hồ sơ cá nhân" },
 ];
 

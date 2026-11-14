@@ -34,22 +34,14 @@ export const FailModal: React.FC<FailModalProps> = ({ order, onClose, onSuccess 
 
     try {
       setSubmitting(true);
-      if (order.shipment?.id) {
-        try {
-          await shipperApi.updateShipmentStatus(order.shipment.id, {
-            status: "FAILED",
-            note: finalReason,
-          });
-        } catch (apiErr) {
-          console.warn("Backend offline, updating locally", apiErr);
-        }
-      }
+      if (!order.shipment?.id) throw new Error("Không tìm thấy mã vận đơn.");
+      await shipperApi.failShipment(order.shipment.id, finalReason);
 
       alert(`Đã ghi nhận giao thất bại cho vận đơn ${trackingNumber}. Đơn hàng sẽ được chuyển vào danh sách chờ xử lý lại.`);
       onSuccess();
       onClose();
     } catch (error: any) {
-      alert("Lỗi: " + (error.response?.data?.message || error.message));
+      alert("Lỗi: " + (error.response?.data?.message || error.message || "Không thể cập nhật vận đơn."));
     } finally {
       setSubmitting(false);
     }

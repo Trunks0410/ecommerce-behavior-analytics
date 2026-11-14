@@ -13,9 +13,7 @@ export const ProfilePage: React.FC = () => {
 
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
-  const [dob, setDob] = useState("");
-  const [gender, setGender] = useState("male");
-  const [selectedAreas, setSelectedAreas] = useState<string[]>(["Quận 1", "Thành phố Thủ Đức", "Bình Thạnh"]);
+  const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
@@ -24,13 +22,9 @@ export const ProfilePage: React.FC = () => {
 
   useEffect(() => {
     if (user) {
-      setFullName(user.full_name || "Nguyễn Văn A");
-      setPhone(user.phone || "0908 123 456");
-      setDob(user.date_of_birth ? user.date_of_birth.split("T")[0] : "1996-08-15");
-      setGender(user.gender || "male");
-      if (user.operating_areas && user.operating_areas.length > 0) {
-        setSelectedAreas(user.operating_areas);
-      }
+      setFullName(user.full_name || "");
+      setPhone(user.phone || "");
+      setSelectedAreas(user.operating_areas || []);
       setAvatarPreview(user.avatar_url || null);
     }
   }, [user]);
@@ -51,6 +45,16 @@ export const ProfilePage: React.FC = () => {
     );
   };
 
+  const handleAvailabilityChange = async () => {
+    const nextAvailability = user?.availability === "OFFLINE" ? "AVAILABLE" : "OFFLINE";
+    try {
+      const updatedProfile = await shipperApi.updateAvailability(nextAvailability);
+      updateUser(updatedProfile);
+    } catch (error: any) {
+      alert(error.response?.data?.message || error.message || "Không thể cập nhật trạng thái hoạt động.");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName.trim()) {
@@ -64,47 +68,30 @@ export const ProfilePage: React.FC = () => {
       let uploadedAvatarUrl = user?.avatar_url;
 
       if (avatarFile) {
-        try {
-          const uploadRes = await shipperApi.uploadImage(avatarFile);
-          if (uploadRes && uploadRes.length > 0) {
-            uploadedAvatarUrl = uploadRes[0];
-          }
-        } catch {
-          // offline simulation
-          uploadedAvatarUrl = avatarPreview || undefined;
-        }
+        const uploadRes = await shipperApi.uploadImage(avatarFile);
+        if (uploadRes.length === 0) throw new Error("Máy chủ không trả về ảnh đại diện.");
+        uploadedAvatarUrl = uploadRes[0];
       }
 
-      try {
-        await shipperApi.updateProfile({
-          full_name: fullName.trim(),
-          phone: phone.trim(),
-          date_of_birth: dob || undefined,
-          gender,
-          operating_areas: selectedAreas,
-          avatar_url: uploadedAvatarUrl,
-        });
-      } catch {
-        // offline fallback
-      }
-
-      updateUser({
+      const updatedProfile = await shipperApi.updateProfile({
         full_name: fullName.trim(),
         phone: phone.trim(),
-        date_of_birth: dob,
-        gender,
         operating_areas: selectedAreas,
         avatar_url: uploadedAvatarUrl,
       });
 
+      updateUser(updatedProfile);
+      setAvatarFile(null);
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 3000);
+    } catch (error: any) {
+      alert(error.response?.data?.message || error.message || "Không thể cập nhật hồ sơ.");
     } finally {
       setSaving(false);
     }
   };
 
-  const displayName = fullName || "Nguyễn Văn A";
+  const displayName = fullName || user?.email || "Shipper";
   const userInitials = displayName
     .split(/\s+/)
     .map((w) => w[0])
@@ -126,6 +113,22 @@ export const ProfilePage: React.FC = () => {
       <div className="profile-grid">
         {/* Left Column: Form */}
         <div className="portal-panel profile-form-panel">
+          <div className="page-head-card">
+            <div>
+              <span className="page-eyebrow">TRẠNG THÁI SHIPPER</span>
+              <p className="page-desc">
+                Trạng thái hiện tại: <strong>{user?.availability || "OFFLINE"}</strong>
+              </p>
+            </div>
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => void handleAvailabilityChange()}
+              disabled={user?.availability === "BUSY"}
+            >
+              {user?.availability === "OFFLINE" ? "Bật nhận đơn" : "Tạm ngừng nhận đơn"}
+            </button>
+          </div>
           <form onSubmit={handleSubmit} className="profile-main-form">
             {savedSuccess && (
               <div className="notice notice--success">
@@ -192,38 +195,6 @@ export const ProfilePage: React.FC = () => {
                 />
               </div>
 
-              <div className="form-group">
-                <label className="form-label" htmlFor="dob">Ngày sinh</label>
-                <input
-                  id="dob"
-                  type="date"
-                  className="input"
-                  value={dob}
-                  onChange={(e) => setDob(e.target.value)}
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Giới tính</label>
-                <div className="gender-toggle-row">
-                  {[
-                    { label: "Nam", value: "male" },
-                    { label: "Nữ", value: "female" },
-                    { label: "Khác", value: "other" },
-                  ].map((g) => (
-                    <label key={g.value} className={`gender-radio-card${gender === g.value ? " is-active" : ""}`}>
-                      <input
-                        type="radio"
-                        name="gender"
-                        value={g.value}
-                        checked={gender === g.value}
-                        onChange={() => setGender(g.value)}
-                      />
-                      <span>{g.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
             </div>
 
             {/* Khu vực hoạt động */}

@@ -10,6 +10,12 @@ export const publicAxios = axios.create({
   withCredentials: true,
 });
 
+publicAxios.interceptors.request.use((config) => {
+  const currentLang = typeof window !== "undefined" ? window.localStorage.getItem("meemart_language") || "vi" : "vi";
+  config.headers["Accept-Language"] = currentLang;
+  return config;
+});
+
 export const axiosClient = axios.create({
   baseURL: BASE_URL,
   headers: {
@@ -42,6 +48,9 @@ const refreshToken = async () => {
 };
 
 axiosClient.interceptors.request.use(async (config) => {
+  const currentLang = typeof window !== "undefined" ? window.localStorage.getItem("meemart_language") || "vi" : "vi";
+  config.headers["Accept-Language"] = currentLang;
+
   const { store } = await import("@/app/stores/store");
   const accessToken = store.getState().auth.accessToken;
 

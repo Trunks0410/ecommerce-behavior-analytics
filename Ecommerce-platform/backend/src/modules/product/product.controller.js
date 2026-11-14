@@ -5,7 +5,8 @@ import vectorSearchService from "./vectorSearch.service.js";
 const getProducts = async (req, res, next) => {
   try {
     const filters = req.query;
-    const products = await productService.getProducts(filters);
+    const lang = getReqLang(req);
+    const products = await productService.getProducts(filters, lang);
     return res.status(200).json({ message: "Success", data: products });
   } catch (error) {
     return next(error);
@@ -16,7 +17,8 @@ const getProducts = async (req, res, next) => {
 const getProductBySlug = async (req, res, next) => {
   try {
     const { slug } = req.params;
-    const product = await productService.getProductBySlug(slug);
+    const lang = getReqLang(req);
+    const product = await productService.getProductBySlug(slug, lang);
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
@@ -31,7 +33,8 @@ const getProductBySlug = async (req, res, next) => {
 const getSimilarProducts = async (req, res, next) => {
   try {
     const { slug } = req.params;
-    const product = await productService.getProductBySlug(slug);
+    const lang = getReqLang(req);
+    const product = await productService.getProductBySlug(slug, lang);
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
@@ -39,6 +42,7 @@ const getSimilarProducts = async (req, res, next) => {
       product.category_id,
       product.id,
       6,
+      lang
     );
     return res.status(200).json({ message: "Success", data: similarProducts });
   } catch (error) {
@@ -50,7 +54,8 @@ const getSimilarProducts = async (req, res, next) => {
 const getFeaturedProducts = async (req, res, next) => {
   try {
     const limit = req.query.limit || 10;
-    const featuredProducts = await productService.getFeaturedProducts(limit);
+    const lang = getReqLang(req);
+    const featuredProducts = await productService.getFeaturedProducts(limit, lang);
     return res.status(200).json({ message: "Success", data: featuredProducts });
   } catch (error) {
     return next(error);
@@ -61,7 +66,8 @@ const getFeaturedProducts = async (req, res, next) => {
 const getNewestProducts = async (req, res, next) => {
   try {
     const limit = req.query.limit || 10;
-    const newestProducts = await productService.getNewestProducts(limit);
+    const lang = getReqLang(req);
+    const newestProducts = await productService.getNewestProducts(limit, lang);
     return res.status(200).json({ message: "Success", data: newestProducts });
   } catch (error) {
     return next(error);
@@ -72,8 +78,9 @@ const getNewestProducts = async (req, res, next) => {
 const getBestSellerProducts = async (req, res, next) => {
   try {
     const limit = req.query.limit || 10;
+    const lang = getReqLang(req);
     const bestSellerProducts =
-      await productService.getBestSellerProducts(limit);
+      await productService.getBestSellerProducts(limit, lang);
     return res
       .status(200)
       .json({ message: "Success", data: bestSellerProducts });
@@ -86,7 +93,8 @@ const getBestSellerProducts = async (req, res, next) => {
 const getMostViewedProducts = async (req, res, next) => {
   try {
     const limit = req.query.limit || 10;
-    const mostViewedProducts = await productService.getMostViewedProducts(limit);
+    const lang = getReqLang(req);
+    const mostViewedProducts = await productService.getMostViewedProducts(limit, lang);
     return res.status(200).json({ message: "Success", data: mostViewedProducts });
   } catch (error) {
     return next(error);
@@ -183,4 +191,5 @@ export default {
   syncVectorDatabase,
   toggleFavorite,
   recordView,
+  visualSearch,
 };

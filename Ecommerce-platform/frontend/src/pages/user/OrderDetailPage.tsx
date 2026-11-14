@@ -68,9 +68,14 @@ const OrderDetailPage = () => {
     if (!window.confirm(confirmText)) return;
     setIsConfirming(true);
     try {
+      if (order?.status === "SHIPPING" && shipment?.status === "DELIVERED") {
+        await orderService.updateOrderStatus(Number(id), "DELIVERED");
+      }
       await orderService.updateOrderStatus(Number(id), 'COMPLETED');
       alert(t("order_detail_confirmed_success"));
       queryClient.invalidateQueries({ queryKey: ["order", Number(id)] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["orderCounts"] });
     } catch (error: any) {
       alert(`${t("error_label")}: ${error.response?.data?.message || error.message}`);
     } finally {
@@ -297,7 +302,13 @@ const OrderDetailPage = () => {
   };
 
   const isFailedDeliveryReturn = order && ['RETURN_PENDING', 'RETURNED'].includes(order.status) && (!order.returnRequests || order.returnRequests.length === 0);
-  const displayStatus = isFailedDeliveryReturn ? 'FAILED' : order?.status;
+  const displayStatus = isFailedDeliveryReturn
+    ? 'FAILED'
+    : order?.status === "SHIPPING" && shipment?.status === "DELIVERED"
+      ? "DELIVERED"
+      : order?.status === "SHIPPING" && shipment?.status === "RETURNED"
+        ? "RETURNED"
+        : order?.status;
 
   const renderTimeline = (currentStatus: string) => {
     if (!order) return null;
@@ -311,7 +322,7 @@ const OrderDetailPage = () => {
 
       if (currentStatus === 'FAILED') {
         title = t("order_detail_delivery_failed");
-        const failedHistory = shipment?.histories?.find(h => h.status === 'FAILED');
+        const failedHistory = shipment?.histories?.find(h => ['FAILED', 'DELIVERY_FAILED'].includes(h.status));
         desc = failedHistory?.note ? `${t("order_detail_reason_prefix")} ${failedHistory.note}` : t("order_detail_order_failed");
       } else if (currentStatus === 'RETURN_PENDING') {
         if (order.returnRequests && order.returnRequests.length > 0) {
@@ -396,7 +407,7 @@ const OrderDetailPage = () => {
     }
 
     // Nếu là luồng giao hàng thất bại quay đầu, chỉ hiển thị tới trạng thái FAILED
-    const failedIndex = displayHistories.findIndex(h => h.status === 'FAILED');
+    const failedIndex = displayHistories.findIndex(h => ['FAILED', 'DELIVERY_FAILED'].includes(h.status));
     if (failedIndex !== -1) {
       displayHistories = displayHistories.slice(failedIndex);
     }
@@ -558,7 +569,7 @@ const OrderDetailPage = () => {
               </div>
               
               <div className="flex flex-row flex-wrap items-center gap-3">
-                {order.status === 'DELIVERED' && (
+                {displayStatus === 'DELIVERED' && (
                   <button
                     onClick={handleConfirmReceipt}
                     disabled={isConfirming}

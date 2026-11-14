@@ -6,7 +6,6 @@ import TopBar from "./components/TopBar";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import OrdersPage from "./pages/OrdersPage";
-import ReconciliationPage from "./pages/ReconciliationPage";
 import ProfilePage from "./pages/ProfilePage";
 
 const getPageTitle = (pathname: string): string => {
@@ -15,8 +14,6 @@ const getPageTitle = (pathname: string): string => {
       return "Tổng quan vận chuyển";
     case "/orders":
       return "Danh sách vận đơn";
-    case "/reconciliation":
-      return "Đối soát tiền COD";
     case "/profile":
       return "Cài đặt & Hồ sơ";
     default:
@@ -76,7 +73,6 @@ export const App: React.FC = () => (
         <Route element={<ProtectedLayout />}>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/orders" element={<OrdersPage />} />
-          <Route path="/reconciliation" element={<ReconciliationPage />} />
           <Route path="/profile" element={<ProfilePage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

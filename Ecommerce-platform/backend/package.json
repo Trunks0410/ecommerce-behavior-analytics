@@ -29,6 +29,7 @@
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.7",
     "qs": "^6.15.2",
+    "redis": "^6.3.1",
     "sequelize": "^6.37.8"
   },
   "devDependencies": {
