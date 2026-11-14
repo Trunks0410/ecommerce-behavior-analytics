@@ -1,34 +1,34 @@
 import express from "express";
 import managerController from "./manager.controller.js";
-import { verifyToken, isManager } from "../../core/middleware/auth.js";
+import { verifyToken, requirePermission } from "../../core/middleware/auth.js";
 
 const router = express.Router();
 
-// Apply auth middleware to all manager routes
-router.use(verifyToken, isManager);
+// Tất cả route vận hành đều cần verifyToken và kiểm tra IAM permission tương ứng
+router.use(verifyToken);
 
-router.get("/stats", managerController.getStats);
-router.get("/reports/overview", managerController.getReportOverview);
+router.get("/stats", requirePermission("stats:read"), managerController.getStats);
+router.get("/reports/overview", requirePermission("reports:read"), managerController.getReportOverview);
 
-router.get("/products/pending", managerController.getPendingProducts);
-router.get("/products/active", managerController.getActiveProducts);
-router.put("/products/:id/status", managerController.updateProductStatus);
+router.get("/products/pending", requirePermission("product:read"), managerController.getPendingProducts);
+router.get("/products/active", requirePermission("product:read"), managerController.getActiveProducts);
+router.put("/products/:id/status", requirePermission("product:approve"), managerController.updateProductStatus);
 
-router.get("/disputes", managerController.getDisputes);
-router.put("/disputes/:id/resolve", managerController.resolveDispute);
+router.get("/disputes", requirePermission("dispute:read"), managerController.getDisputes);
+router.put("/disputes/:id/resolve", requirePermission("dispute:resolve"), managerController.resolveDispute);
 
-router.get("/vouchers", managerController.getVouchers);
-router.post("/vouchers", managerController.createVoucher);
-router.delete("/vouchers/:id", managerController.deleteVoucher);
+router.get("/vouchers", requirePermission("voucher:read"), managerController.getVouchers);
+router.post("/vouchers", requirePermission("voucher:manage"), managerController.createVoucher);
+router.delete("/vouchers/:id", requirePermission("voucher:manage"), managerController.deleteVoucher);
 
-router.get("/campaigns", managerController.getCampaigns);
-router.post("/campaigns", managerController.createCampaign);
+router.get("/campaigns", requirePermission("campaign:read"), managerController.getCampaigns);
+router.post("/campaigns", requirePermission("campaign:manage"), managerController.createCampaign);
 
-router.get("/vendors", managerController.getVendors);
-router.put("/vendors/:id/status", managerController.updateVendorStatus);
+router.get("/vendors", requirePermission("shop:read"), managerController.getVendors);
+router.put("/vendors/:id/status", requirePermission("shop:update"), managerController.updateVendorStatus);
 
-router.get("/returns", managerController.getReturnRequests);
-router.get("/returns/:id", managerController.getReturnRequestDetail);
-router.post("/returns/:id/resolve", managerController.resolveReturnRequest);
+router.get("/returns", requirePermission("return:read"), managerController.getReturnRequests);
+router.get("/returns/:id", requirePermission("return:read"), managerController.getReturnRequestDetail);
+router.post("/returns/:id/resolve", requirePermission("return:resolve"), managerController.resolveReturnRequest);
 
 export default router;

@@ -17,6 +17,12 @@ router.get("/featured", productController.getFeaturedProducts);
 router.get("/newest", productController.getNewestProducts);
 router.get("/best-sellers", productController.getBestSellerProducts);
 router.get("/most-viewed", productController.getMostViewedProducts);
+router.get("/recommendations", optionalVerifyToken, productController.getRecommendedProducts);
+
+// Quản lý cấu hình & đồng bộ Vector Search (Option 1: RAM | Option 2: Microservice)
+router.get("/vector/status", productController.getVectorStatus);
+router.post("/vector/mode", productController.switchVectorMode);
+router.post("/vector/sync", productController.syncVectorDatabase);
 
 // Tìm kiếm bằng hình ảnh (Visual Search - Shopee & TikTok Style)
 router.post("/visual-search", memoryUpload.single("image"), productController.visualSearch);

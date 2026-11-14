@@ -1,4 +1,6 @@
 import db from "../../database/models/index.js";
+import { Op, Sequelize } from "sequelize";
+import vectorSearchService from "./vectorSearch.service.js";
 import { Op } from "sequelize";
 import { getOrSetCache } from "../../core/cache/redis.js";
 import translateService from "../translate/translate.service.js";
@@ -159,8 +161,19 @@ const fetchProducts = async (filters, lang = "vi") => {
 
   // 1. Xây dựng where clause động
   const where = { approval_status: "APPROVED" };
+  let vectorRankedIds = null;
 
-  if (keyword) {
+  if (keyword && vectorSearchService.isReady()) {
+    const semanticIds = await vectorSearchService.searchProductsBySemantic(keyword, 40);
+    if (semanticIds && semanticIds.length > 0) {
+      vectorRankedIds = semanticIds;
+      console.log(`🔍 [SEMANTIC SEARCH - ${vectorSearchService.getMode().toUpperCase()}] Query: "${keyword}" -> Khớp ${semanticIds.length} vector tương đồng nhất.`);
+    }
+  }
+
+  if (vectorRankedIds && vectorRankedIds.length > 0) {
+    where.id = { [Op.in]: vectorRankedIds };
+  } else if (keyword) {
     where.name = { [Op.like]: `%${keyword}%` };
   }
   if (shopId) {
@@ -239,6 +252,9 @@ const fetchProducts = async (filters, lang = "vi") => {
 
   // 3. Xác định ORDER BY
   const orderMap = {
+    relevance: vectorRankedIds && vectorRankedIds.length > 0
+      ? [Sequelize.literal(`FIELD(\`Product\`.\`id\`, ${vectorRankedIds.join(",")})`)]
+      : [["created_at", "DESC"]],
     price_asc: [["price", "ASC"]],
     price_desc: [["price", "DESC"]],
     newest: [["created_at", "DESC"]],
@@ -246,7 +262,14 @@ const fetchProducts = async (filters, lang = "vi") => {
     most_viewed: [["view_count", "DESC"]],
   };
 
-  const order = orderMap[sortBy] || [["created_at", "DESC"]];
+  let order = orderMap[sortBy];
+  if (!order) {
+    if (vectorRankedIds && vectorRankedIds.length > 0) {
+      order = [Sequelize.literal(`FIELD(\`Product\`.\`id\`, ${vectorRankedIds.join(",")})`)];
+    } else {
+      order = [["created_at", "DESC"]];
+    }
+  }
 
   //4. Phân trang
   const offset = (page - 1) * limit;
@@ -319,7 +342,39 @@ const getProductBySlug = async (slug, lang = "vi") => {
   return translatedProduct;
 };
 
-const fetchSimilarProducts = async (categoryId, excludeProductId, limit = 6, lang = "vi") => {
+const getSimilarProducts = async (categoryId, excludeProductId, limit = 6) => {
+  // Ưu tiên lấy sản phẩm tương tự theo Cosine Vector Similarity (nếu có)
+  if (vectorSearchService.isReady() && excludeProductId) {
+    const similarVectorIds = await vectorSearchService.getSimilarProductIds(excludeProductId, limit);
+    if (similarVectorIds && similarVectorIds.length > 0) {
+      const vectorProducts = await db.Product.findAll({
+        where: {
+          id: { [Op.in]: similarVectorIds },
+          approval_status: "APPROVED",
+        },
+        include: [
+          {
+            model: db.Category,
+            as: "category",
+            attributes: ["id", "name", "slug"],
+          },
+          {
+            model: db.ProductImage,
+            as: "images",
+            where: { is_primary: true },
+            required: false,
+          },
+        ],
+        order: [Sequelize.literal(`FIELD(\`Product\`.\`id\`, ${similarVectorIds.join(",")})`)],
+        limit,
+      });
+
+      if (vectorProducts && vectorProducts.length > 0) {
+        return await enrichProductsRating(vectorProducts);
+      }
+    }
+  }
+
   const products = await db.Product.findAll({
     where: {
       category_id: categoryId,
@@ -601,33 +656,72 @@ const recordView = async (userId, productId) => {
   return true;
 };
 
-const getProducts = (filters, lang = "vi") => {
-  const normalizedFilters = Object.fromEntries(
-    Object.entries(filters).sort(([left], [right]) => left.localeCompare(right)),
-  );
-  return getOrSetCache(
-    `products:list:${lang}:${JSON.stringify(normalizedFilters)}`,
-    () => fetchProducts(filters, lang),
-  );
+// GET /products/recommendations
+const getRecommendedProducts = async (userId, viewedIdsParam, limit = 10) => {
+  const parsedLimit = Number(limit) || 10;
+  let viewedIds = [];
+
+  if (Array.isArray(viewedIdsParam) && viewedIdsParam.length > 0) {
+    viewedIds = viewedIdsParam.map(Number).filter((n) => !isNaN(n) && n > 0);
+  } else if (typeof viewedIdsParam === "string" && viewedIdsParam.trim()) {
+    viewedIds = viewedIdsParam
+      .split(",")
+      .map((s) => Number(s.trim()))
+      .filter((n) => !isNaN(n) && n > 0);
+  }
+
+  if (userId && viewedIds.length === 0) {
+    const history = await db.UserViewedProduct.findAll({
+      where: { user_id: userId },
+      order: [["viewed_at", "DESC"]],
+      limit: 15,
+      attributes: ["product_id"],
+      raw: true,
+    });
+    viewedIds = history.map((h) => Number(h.product_id));
+  }
+
+  if (viewedIds.length > 0 && vectorSearchService.isReady()) {
+    const recommendedIds = await vectorSearchService.getRecommendationsByUserHistory(
+      viewedIds,
+      parsedLimit
+    );
+    if (recommendedIds && recommendedIds.length > 0) {
+      const products = await db.Product.findAll({
+        where: {
+          id: { [Op.in]: recommendedIds },
+          approval_status: "APPROVED",
+        },
+        include: [
+          {
+            model: db.Category,
+            as: "category",
+            attributes: ["id", "name", "slug"],
+          },
+          {
+            model: db.ProductImage,
+            as: "images",
+            where: { is_primary: true },
+            required: false,
+          },
+          {
+            model: db.Shop,
+            as: "shop",
+            attributes: ["id", "shop_name", "status", "rating", "shop_logo"],
+            required: false,
+          },
+        ],
+        order: [Sequelize.literal(`FIELD(\`Product\`.\`id\`, ${recommendedIds.join(",")})`)],
+        limit: parsedLimit,
+      });
+      if (products.length > 0) {
+        return await enrichProductsRating(products);
+      }
+    }
+  }
+
+  return await getFeaturedProducts(parsedLimit);
 };
-
-const getSimilarProducts = (categoryId, excludeProductId, limit = 6, lang = "vi") =>
-  getOrSetCache(
-    `products:similar:${lang}:${categoryId}:${excludeProductId}:${limit}`,
-    () => fetchSimilarProducts(categoryId, excludeProductId, limit, lang),
-  );
-
-const getFeaturedProducts = (limit = 10, lang = "vi") =>
-  getOrSetCache(`products:featured:${lang}:${limit}`, () => fetchFeaturedProducts(limit, lang));
-
-const getNewestProducts = (limit = 10, lang = "vi") =>
-  getOrSetCache(`products:newest:${lang}:${limit}`, () => fetchNewestProducts(limit, lang));
-
-const getBestSellerProducts = (limit = 10, lang = "vi") =>
-  getOrSetCache(`products:best-sellers:${lang}:${limit}`, () => fetchBestSellerProducts(limit, lang));
-
-const getMostViewedProducts = (limit = 10, lang = "vi") =>
-  getOrSetCache(`products:most-viewed:${lang}:${limit}`, () => fetchMostViewedProducts(limit, lang));
 
 export default {
   enrichProductsTranslation,
@@ -638,6 +732,7 @@ export default {
   getNewestProducts,
   getBestSellerProducts,
   getMostViewedProducts,
+  getRecommendedProducts,
   toggleFavorite,
   recordView,
 };

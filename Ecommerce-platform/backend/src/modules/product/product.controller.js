@@ -1,60 +1,5 @@
 import productService from "./product.service.js";
-import visualSimilarityService from "./visualSimilarity.service.js";
-
-// POST /products/visual-search
-const visualSearch = async (req, res, next) => {
-  try {
-    const fileBuffer = req.file ? req.file.buffer : null;
-    let clientMetadata = {};
-    if (req.body.metadata) {
-      try {
-        clientMetadata = typeof req.body.metadata === "string" ? JSON.parse(req.body.metadata) : req.body.metadata;
-      } catch (e) {
-        clientMetadata = {};
-      }
-    }
-
-    if (req.file?.originalname && !clientMetadata.originalFileName) {
-      clientMetadata.originalFileName = req.file.originalname;
-    }
-
-    const categoryId = req.query.categoryId || req.body.categoryId || null;
-    const limit = Number(req.query.limit || req.body.limit) || 24;
-    const page = Number(req.query.page || req.body.page) || 1;
-
-    const result = await visualSimilarityService.searchProductsByImage({
-      fileBuffer,
-      clientMetadata,
-      categoryId,
-      limit,
-      page,
-    });
-
-    const lang = getReqLang(req);
-    if (result && result.products && result.products.length > 0) {
-      result.products = await productService.enrichProductsTranslation(result.products, lang);
-    }
-
-    return res.status(200).json({
-      message: "Visual search completed successfully",
-      data: result,
-    });
-  } catch (error) {
-    return next(error);
-  }
-};
-
-const getReqLang = (req) => {
-  const queryLang = req.query.lang;
-  if (queryLang) return queryLang.toLowerCase().startsWith("en") ? "en" : "vi";
-  const headerLang = req.headers["accept-language"];
-  if (headerLang) {
-    const primary = headerLang.split(",")[0].trim().toLowerCase();
-    if (primary.startsWith("en")) return "en";
-    if (primary.startsWith("vi")) return "vi";
-  }
-  return "vi";
-};
+import vectorSearchService from "./vectorSearch.service.js";
 
 // GET /products?keyword=&categorySlug=&gender=&minPrice=&maxPrice=&sortBy=&page=
 const getProducts = async (req, res, next) => {
@@ -183,6 +128,55 @@ const recordView = async (req, res, next) => {
   }
 };
 
+// GET /products/recommendations
+const getRecommendedProducts = async (req, res, next) => {
+  try {
+    const userId = req.user ? req.user.id : null;
+    const { viewedIds, limit = 10 } = req.query;
+    const products = await productService.getRecommendedProducts(userId, viewedIds, limit);
+    return res.status(200).json({ message: "Success", data: products });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+// GET /products/vector/status
+const getVectorStatus = async (req, res, next) => {
+  try {
+    const status = await vectorSearchService.getStatus();
+    return res.status(200).json({ message: "Success", data: status });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+// POST /products/vector/mode
+const switchVectorMode = async (req, res, next) => {
+  try {
+    const { mode } = req.body;
+    const status = await vectorSearchService.setMode(mode);
+    return res.status(200).json({
+      message: `Đã chuyển chế độ Vector Search sang ${status.mode.toUpperCase()}`,
+      data: status,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+// POST /products/vector/sync
+const syncVectorDatabase = async (req, res, next) => {
+  try {
+    const result = await vectorSearchService.syncDatabaseVectors();
+    return res.status(200).json({
+      message: "Đồng bộ Vector từ Database hoàn tất",
+      data: result,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 export default {
   getProducts,
   getProductBySlug,
@@ -191,6 +185,10 @@ export default {
   getNewestProducts,
   getBestSellerProducts,
   getMostViewedProducts,
+  getRecommendedProducts,
+  getVectorStatus,
+  switchVectorMode,
+  syncVectorDatabase,
   toggleFavorite,
   recordView,
   visualSearch,

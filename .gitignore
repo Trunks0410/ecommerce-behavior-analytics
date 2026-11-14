@@ -14,15 +14,16 @@ build/
 .output/
 out/
 *.tsbuildinfo
+**/dist/
 
 # Environment variables & secrets
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
 *.env
+**/.env
+**/.env.*
 !.env.example
+!**/.env.example
 
 # Logs
 logs/
@@ -40,6 +41,7 @@ pids
 
 # Python
 __pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 *.so
@@ -58,11 +60,13 @@ lib/
 lib64/
 parts/
 sdist/
-var/
 wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+
+# Binary data & caches
+*.npy
 
 # Editor & OS files
 .DS_Store
@@ -74,4 +78,3 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
-

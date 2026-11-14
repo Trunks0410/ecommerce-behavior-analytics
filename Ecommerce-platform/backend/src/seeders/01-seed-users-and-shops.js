@@ -8,11 +8,13 @@ export default {
 
     // 1. Insert Roles
     await queryInterface.bulkInsert('roles', [
-      { id: 1, role_name: 'admin' },
-      { id: 2, role_name: 'manager' },
-      { id: 3, role_name: 'vendor' },
-      { id: 4, role_name: 'shipper' },
-      { id: 5, role_name: 'user' }
+      { id: 1, role_name: 'admin', description: 'Root Platform Administrator with unrestricted permissions (*)', is_system: 1 },
+      { id: 2, role_name: 'manager', description: 'Legacy Manager role (deprecated in favor of IAM custom roles)', is_system: 0 },
+      { id: 3, role_name: 'vendor', description: 'Merchant/Shop Owner account', is_system: 1 },
+      { id: 4, role_name: 'shipper', description: 'Delivery Partner account', is_system: 1 },
+      { id: 5, role_name: 'user', description: 'Customer/Buyer account', is_system: 1 },
+      { id: 6, role_name: 'staff_order', description: 'Order and Return processing specialist', is_system: 0 },
+      { id: 7, role_name: 'staff_content', description: 'Product and Shop moderation specialist', is_system: 0 }
     ], { ignoreDuplicates: true });
 
     // 2. Insert Users

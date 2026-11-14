@@ -8,7 +8,7 @@ import notificationService from "../notification/notification.service.js";
 // 1. QUẢN LÝ TÀI KHOẢN MANAGER
 // ============================================================
 
-const createUser = async (adminId, { email, password, full_name, role, phone, gender, shipper_shop_id }) => {
+const createUser = async (adminId, { email, password, full_name, role, phone, gender, shipper_shop_id, policy_ids }) => {
   const transaction = await db.sequelize.transaction();
   try {
     // Kiểm tra email đã tồn tại
@@ -16,9 +16,9 @@ const createUser = async (adminId, { email, password, full_name, role, phone, ge
     if (existingUser) throw new Error("Email đã được sử dụng");
 
     // Map customer -> user
-    let targetRoleName = role || "manager";
-    if (targetRoleName === "customer") {
-      targetRoleName = "user";
+    let targetRoleIdentifier = role || "user";
+    if (targetRoleIdentifier === "customer") {
+      targetRoleIdentifier = "user";
     }
 
     // Kiểm tra số điện thoại đã tồn tại
@@ -27,13 +27,20 @@ const createUser = async (adminId, { email, password, full_name, role, phone, ge
       if (existingPhone) throw new Error("Số điện thoại đã được sử dụng");
     }
 
-    // Tìm role
-    const dbRole = await db.Role.findOne({ where: { role_name: targetRoleName }, transaction });
-    if (!dbRole) throw new Error(`Không tìm thấy vai trò ${role} trong hệ thống`);
+    // Tìm role theo ID hoặc theo role_name
+    let dbRole;
+    if (typeof targetRoleIdentifier === "number" || (!isNaN(targetRoleIdentifier) && typeof targetRoleIdentifier === "string" && !targetRoleIdentifier.includes("_") && !["admin", "user", "vendor", "shipper", "manager"].includes(targetRoleIdentifier))) {
+      dbRole = await db.Role.findByPk(targetRoleIdentifier, { transaction });
+    }
+    if (!dbRole) {
+      dbRole = await db.Role.findOne({ where: { role_name: String(targetRoleIdentifier).trim().toLowerCase() }, transaction });
+    }
+    if (!dbRole) throw new Error(`Không tìm thấy vai trò '${role}' trong hệ thống`);
+    const targetRoleName = dbRole.role_name;
 
-    // Tạo mật khẩu ngẫu nhiên cho shipper
+    // Tạo mật khẩu ngẫu nhiên cho shipper nếu chưa có
     let finalPassword = password;
-    if (targetRoleName === "shipper") {
+    if (targetRoleName === "shipper" && !finalPassword) {
       const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
       finalPassword = "";
       for (let i = 0; i < 8; i++) {
@@ -67,6 +74,15 @@ const createUser = async (adminId, { email, password, full_name, role, phone, ge
       gender: gender || null,
       shipper_shop_id: shipper_shop_id || null,
     }, { transaction });
+
+    // Gán Policy trực tiếp cho User (Direct User Policies) nếu có
+    if (Array.isArray(policy_ids) && policy_ids.length > 0) {
+      const userPolicyRecords = policy_ids.map((pId) => ({
+        user_id: user.id,
+        policy_id: pId,
+      }));
+      await db.UserPolicy.bulkCreate(userPolicyRecords, { transaction, ignoreDuplicates: true });
+    }
 
     // Nếu role là vendor, tạo thêm shop mặc định
     if (targetRoleName === "vendor") {
@@ -109,6 +125,7 @@ const createUser = async (adminId, { email, password, full_name, role, phone, ge
       email: user.email,
       full_name,
       role: targetRoleName,
+      role_id: dbRole.id,
       status: user.status,
       created_at: user.created_at,
     };
