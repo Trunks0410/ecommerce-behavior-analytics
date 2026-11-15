@@ -1,6 +1,5 @@
 name: Build & Push Docker Images on Main Tag
 
-# Kích hoạt khi phát hiện tag mới được push lên GitHub
 on:
   push:
     tags:
@@ -10,7 +9,6 @@ env:
   DOCKER_REPO: nguyenkiet32/datn
 
 jobs:
-  # STAGE 1: Xác thực tag nằm trên nhánh main
   verify-main-tag:
     name: Stage 1 - Verify Tag on main
     runs-on: ubuntu-latest
@@ -26,15 +24,17 @@ jobs:
       - name: Kiểm tra tag thuộc nhánh main
         id: meta
         run: |
-          git fetch origin main:refs/remotes/origin/main
-          if ! git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main; then
-            echo "::error::Tag ${GITHUB_REF_NAME} không nằm trên nhánh main. Hủy build!"
+          git fetch --no-tags origin main
+          MAIN_SHA=$(git rev-parse FETCH_HEAD)
+          TAG_COMMIT=$(git rev-parse "${GITHUB_SHA}^{commit}")
+          echo "Tag commit: ${TAG_COMMIT} | origin/main: ${MAIN_SHA}"
+          if ! git merge-base --is-ancestor "$TAG_COMMIT" "$MAIN_SHA"; then
+            echo "::error::Tag ${GITHUB_REF_NAME} (${TAG_COMMIT}) không nằm trên nhánh main (${MAIN_SHA}). Hủy build!"
             exit 1
           fi
           echo "tag_name=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
           echo "Verified tag ${GITHUB_REF_NAME} on main."
 
-  # STAGE 2: Build từng service và push lên Docker Hub (nguyenkiet32/datn)
   build-and-push:
     name: Stage 2 - Build & Push (${{ matrix.service }})
     runs-on: ubuntu-latest
