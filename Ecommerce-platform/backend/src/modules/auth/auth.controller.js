@@ -30,7 +30,8 @@ const register = async (req, res) => {
 // LOGIN
 const login = async (req, res) => {
   try {
-    const { email_or_phone, password } = req.body;
+    const email_or_phone = typeof req.body?.email_or_phone === "string" ? req.body.email_or_phone.trim() : req.body?.email_or_phone;
+    const { password } = req.body;
     console.log(`\n📨 [AUTH] Login attempt for: "${email_or_phone}"`);
 
     if (!email_or_phone || !password) {

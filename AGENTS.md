@@ -4,15 +4,18 @@ Workspace rules and architectural context for AI coding agents working in `ecomm
 
 ## Project Overview
 
-**E-Commerce Behavior Analytics Platform** — a multi-service full-stack e-commerce and delivery ecosystem with dataset pipelines for behavior analytics:
+**E-Commerce Behavior Analytics Platform** — a multi-service e-commerce, delivery, and customer behavior analytics ecosystem:
 
 - **`Ecommerce-platform/`**: Core multi-role platform (Customer, Shop/Vendor, Staff Roles, Root Admin).
   - **`backend/`** (Port `8080`): Node.js (ESM), Express 5, Sequelize 6 ORM, MySQL (`mysql2`), JWT + Google OAuth, Cloudinary uploads, VNPay, Nodemailer, `node-cron` (`src/worker.js`).
   - **`frontend/`** (Port `5173`): React 19 (with React Compiler), TypeScript, Vite 8, Tailwind CSS v4, Redux Toolkit (`authSlice`, `cartSlice`) +TanStack Query, React Hook Form + Yup, Recharts, Playwright E2E.
+- **`analytics-platform/`**: Standalone Analytics Dashboard and Multimodal Vector Search Microservice ecosystem.
+  - **`backend/`** (Port `8088`): Express 5 Microservice hosting the Multimodal Vector Search Engine (Qwen3-VL 2048-dim embeddings in RAM), 2-Stage E-Commerce Search Reranker (Semantic Vector + Lexical Exact Match + Popularity), Personalization/Similar Products API (`/api/v1/search`, `/api/v1/recommendations`, `/health`), and Auth proxy (`/auth/login`). Houses `vector-data/` (`product_embeddings.npz`, `product_metadata.json`, `metric_stats.json`).
+  - **`frontend/`** (Port `5175`): Standalone React 19 + TypeScript/Vite analytics dashboard for overview, conversion funnel, RFM segments, live events, and recommendation-weight simulation. Logins post to `http://localhost:8088/auth/login`, and dashboard links return to the main frontend at `5173`.
 - **`shipment/`**: Standalone Shipment & Shipper Portal microservice.
   - **`backend/`** (Port `8090`): Express 5 + Sequelize API (`/api/v1/shipments`, `/api/v1/shipper`).
   - **`frontend/`** (Port `5174`): React + TypeScript + Vite Shipper Dashboard (orders, proof of delivery, COD reconciliation).
-- **`scripts/` & `data/`**: Python 3 scripts (`download_abo_products.py`, `classify_products.py`, `embed_multimodal_products.py`) and processed Amazon Berkeley Objects dataset (`data/abo_500_products/` — JSON metadata, hierarchical taxonomy, SQL category seeds, multimodal embeddings).
+- **`scripts/`**: Python and Node.js utilities for ABO dataset download/validation, multimodal embedding generation, cleanup, and product seeding. Current tracked scripts are `check_dataset.py`, `clear_data.py`, `download_abo_products.py`, `download_balanced_abo.py`, `embed_multimodal_products.py`, and `seed_products_from_metadata.js`. Vector assets live in `analytics-platform/backend/vector-data/` (`product_embeddings.npz`, `product_metadata.json`, `metric_stats.json`).
 - **Reference Docs**:
   - `CONTROLLER_API_LIFECYCLE.md`: Detailed Controller → Service → Database & transaction flow specs across backend modules.
   - `Ecommerce-platform/backend/src/database/schema.sql` & `plan.md`: Canonical database schema and design notes.
@@ -33,16 +36,27 @@ Run commands from their respective package directories:
 - Lint: `npm run lint`
 - Run Playwright E2E tests: `npx playwright test`
 
+### Analytics & Search Microservice (`analytics-platform`)
+- Start both backend & frontend: `npm run dev` (runs `node dev.js`)
+- Start backend only (`:8088`): `npm run dev:backend`
+- Start frontend only (`:5175`): `npm run dev:frontend`
+- Build frontend: `npm run build:frontend`
+
 ### Shipment Microservice (`shipment`)
 - Start both shipment backend & frontend: `npm run dev` (runs `node dev.js`)
 - Start backend only (`:8090`): `npm run dev:backend`
 - Start frontend only (`:5174`): `npm run dev:frontend`
 - Build frontend: `npm run build:frontend`
+- Run backend tests from `shipment/backend`: `npm test` (`node --test`)
 
 ### Data Pipeline (`scripts`)
-- Download ABO dataset subset: `python scripts/download_abo_products.py`
-- Classify products & export SQL taxonomy seeds: `python scripts/classify_products.py`
-- Multimodal embeddings generation: `python scripts/embed_multimodal_products.py`
+- Download ABO dataset: `python scripts/download_abo_products.py`
+- Download a balanced ABO subset: `python scripts/download_balanced_abo.py`
+- Validate/inspect dataset: `python scripts/check_dataset.py`
+- Generate multimodal embeddings: `python scripts/embed_multimodal_products.py`
+- Seed products from metadata (run in `Ecommerce-platform/backend` so its `.env` is loaded): `node ../../scripts/seed_products_from_metadata.js`
+
+The root `.github/workflows/CI.yml` currently contains placeholder echo/sleep stages rather than actual build or test commands; run the package-level validation commands above when changing code.
 
 ## Architecture & Coding Conventions
 

@@ -31,8 +31,34 @@ const markAllAsRead = async (req, res) => {
   }
 };
 
+const streamNotifications = (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders?.();
+
+  res.write(": connected\n\n");
+
+  const unregister = notificationService.registerClient(req.user.id, res);
+  const heartbeat = setInterval(() => {
+    try {
+      res.write(": heartbeat\n\n");
+    } catch {
+      clearInterval(heartbeat);
+      unregister();
+    }
+  }, 25000);
+
+  req.on("close", () => {
+    clearInterval(heartbeat);
+    unregister();
+  });
+};
+
 export default {
   getNotifications,
+  streamNotifications,
   markAsRead,
   markAllAsRead,
 };

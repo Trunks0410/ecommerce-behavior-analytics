@@ -128,8 +128,8 @@ connectDB()
     // Tự động khởi tạo hệ thống IAM Roles & Policies nếu chưa có
     await iamService.initDefaultIAM();
 
-    // Nạp ma trận Multimodal Vector Search (Qwen3-VL 2048-dim) vào bộ nhớ RAM
-    vectorSearchService.init();
+    // Kiểm tra kết nối tới Search & Analytics Microservice (Port 8088)
+    vectorSearchService.checkServiceHealth();
     
     app.listen(port, () => {
       console.log("Backend nodejs is running on the port: " + port);

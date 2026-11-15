@@ -1,5 +1,18 @@
 import productService from "./product.service.js";
 import vectorSearchService from "./vectorSearch.service.js";
+import visualSimilarityService from "./visualSimilarity.service.js";
+
+const getReqLang = (req) => {
+  const queryLang = req.query.lang;
+  if (queryLang) return queryLang.toLowerCase().startsWith("en") ? "en" : "vi";
+  const headerLang = req.headers["accept-language"];
+  if (headerLang) {
+    const primary = headerLang.split(",")[0].trim().toLowerCase();
+    if (primary.startsWith("en")) return "en";
+    if (primary.startsWith("vi")) return "vi";
+  }
+  return "vi";
+};
 
 // GET /products?keyword=&categorySlug=&gender=&minPrice=&maxPrice=&sortBy=&page=
 const getProducts = async (req, res, next) => {
@@ -172,6 +185,16 @@ const syncVectorDatabase = async (req, res, next) => {
       message: "Đồng bộ Vector từ Database hoàn tất",
       data: result,
     });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+// POST /products/visual-search
+const visualSearch = async (req, res, next) => {
+  try {
+    const result = await visualSimilarityService.searchProductsByImage(req.file, req.body || {});
+    return res.status(200).json({ message: "Success", data: result });
   } catch (error) {
     return next(error);
   }
