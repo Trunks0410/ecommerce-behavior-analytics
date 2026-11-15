@@ -1,5 +1,40 @@
 import db from "../../database/models/index.js";
 
+// Lưu các kết nối SSE đang mở theo userId (0 query DB khi chờ thông báo mới)
+const sseClients = new Map();
+
+const registerClient = (userId, res) => {
+  const key = Number(userId);
+  if (!sseClients.has(key)) {
+    sseClients.set(key, new Set());
+  }
+  const clients = sseClients.get(key);
+  clients.add(res);
+
+  return () => {
+    clients.delete(res);
+    if (clients.size === 0) {
+      sseClients.delete(key);
+    }
+  };
+};
+
+const pushToUser = (userId, notification) => {
+  const clients = sseClients.get(Number(userId));
+  if (!clients || clients.size === 0) return;
+
+  const payload = typeof notification?.toJSON === "function" ? notification.toJSON() : notification;
+  const message = `event: notification\ndata: ${JSON.stringify(payload)}\n\n`;
+
+  for (const res of clients) {
+    try {
+      res.write(message);
+    } catch {
+      clients.delete(res);
+    }
+  }
+};
+
 const getNotificationsByUserId = async (userId) => {
   return await db.Notification.findAll({
     where: { user_id: userId },
@@ -8,13 +43,15 @@ const getNotificationsByUserId = async (userId) => {
 };
 
 const createNotification = async (userId, title, content, type) => {
-  return await db.Notification.create({
+  const created = await db.Notification.create({
     user_id: userId,
     title,
     content,
     type,
     is_read: false,
   });
+  pushToUser(userId, created);
+  return created;
 };
 
 const markAsRead = async (notificationId, userId) => {
@@ -51,7 +88,11 @@ const createNotificationForRole = async (roleName, title, content, type) => {
       is_read: false,
     }));
 
-    return await db.Notification.bulkCreate(notifs);
+    const createdList = await db.Notification.bulkCreate(notifs);
+    for (const notif of createdList) {
+      pushToUser(notif.user_id, notif);
+    }
+    return createdList;
   } catch (error) {
     console.error(`Failed to create bulk notification for role ${roleName}:`, error);
     return [];
@@ -59,6 +100,7 @@ const createNotificationForRole = async (roleName, title, content, type) => {
 };
 
 export default {
+  registerClient,
   getNotificationsByUserId,
   createNotification,
   createNotificationForRole,

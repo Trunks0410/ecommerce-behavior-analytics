@@ -26,6 +26,8 @@ function slugify(text) {
 
 function findMetadataPath() {
   const candidatePaths = [
+    path.resolve(__dirname, "../analytics-platform/backend/vector-data/product_metadata.json"),
+    path.resolve(process.cwd(), "analytics-platform/backend/vector-data/product_metadata.json"),
     path.resolve(__dirname, "../Ecommerce-platform/vector-data/product_metadata.json"),
     path.resolve(__dirname, "../data/multimodal_embeddings/product_metadata.json"),
     path.resolve(__dirname, "../vector-data/product_metadata.json"),

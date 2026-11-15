@@ -1,7 +1,6 @@
 import db from "../../database/models/index.js";
 import { Op, Sequelize } from "sequelize";
 import vectorSearchService from "./vectorSearch.service.js";
-import { Op } from "sequelize";
 import { getOrSetCache } from "../../core/cache/redis.js";
 import translateService from "../translate/translate.service.js";
 
@@ -163,7 +162,7 @@ const fetchProducts = async (filters, lang = "vi") => {
   const where = { approval_status: "APPROVED" };
   let vectorRankedIds = null;
 
-  if (keyword && vectorSearchService.isReady()) {
+  if (keyword) {
     const semanticIds = await vectorSearchService.searchProductsBySemantic(keyword, 40);
     if (semanticIds && semanticIds.length > 0) {
       vectorRankedIds = semanticIds;
@@ -197,6 +196,7 @@ const fetchProducts = async (filters, lang = "vi") => {
       as: "images",
       where: { is_primary: true },
       required: false,
+      separate: true, // Tránh Sequelize sinh subQuery làm mất thứ tự ORDER BY FIELD()
     },
     {
       model: db.Shop,
@@ -284,6 +284,12 @@ const fetchProducts = async (filters, lang = "vi") => {
       offset,
       distinct: true,
     });
+
+    // Bảo toàn 100% thứ tự xếp hạng từ Vector Search (khớp tuyệt đối giữa Dropdown và Grid)
+    if (vectorRankedIds && vectorRankedIds.length > 0 && (!sortBy || sortBy === "relevance")) {
+      const rankMap = new Map(vectorRankedIds.map((id, idx) => [Number(id), idx]));
+      rows.sort((a, b) => (rankMap.get(Number(a.id)) ?? 999999) - (rankMap.get(Number(b.id)) ?? 999999));
+    }
 
     const enrichedProducts = await enrichProductsRating(rows);
     const translatedProducts = await enrichProductsTranslation(enrichedProducts, lang);
@@ -720,8 +726,19 @@ const getRecommendedProducts = async (userId, viewedIdsParam, limit = 10) => {
     }
   }
 
-  return await getFeaturedProducts(parsedLimit);
+  return await fetchFeaturedProducts(parsedLimit);
 };
+
+const getProducts = (filters = {}, lang = "vi") =>
+  getOrSetCache(`products:list:${lang}:${JSON.stringify(filters)}`, () => fetchProducts(filters, lang), 60);
+const getFeaturedProducts = (limit = 10, lang = "vi") =>
+  getOrSetCache(`products:featured:${limit}:${lang}`, () => fetchFeaturedProducts(limit, lang), 60);
+const getNewestProducts = (limit = 10, lang = "vi") =>
+  getOrSetCache(`products:newest:${limit}:${lang}`, () => fetchNewestProducts(limit, lang), 60);
+const getBestSellerProducts = (limit = 10, lang = "vi") =>
+  getOrSetCache(`products:best_sellers:${limit}:${lang}`, () => fetchBestSellerProducts(limit, lang), 60);
+const getMostViewedProducts = (limit = 10, lang = "vi") =>
+  getOrSetCache(`products:most_viewed:${limit}:${lang}`, () => fetchMostViewedProducts(limit, lang), 60);
 
 export default {
   enrichProductsTranslation,
