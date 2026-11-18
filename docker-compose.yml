@@ -1,0 +1,92 @@
+services:
+  analyze-server:
+    image: nguyenkiet32/analyze-server:${IMAGE_TAG:-latest}
+    container_name: datn-analyze-server
+    pull_policy: always
+    restart: unless-stopped
+    ports:
+      - "8088:8088"
+    env_file:
+      - ./analytics-platform/backend/.env
+    environment:
+      PORT: 8088
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8088/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - datn-network
+
+  analyze-gui:
+    image: nguyenkiet32/analyze-gui:${IMAGE_TAG:-latest}
+    container_name: datn-analyze-gui
+    pull_policy: always
+    restart: unless-stopped
+    ports:
+      - "5175:80"
+    depends_on:
+      - analyze-server
+    networks:
+      - datn-network
+
+  shipment-server:
+    image: nguyenkiet32/shipment-server:${IMAGE_TAG:-latest}
+    container_name: datn-shipment-server
+    pull_policy: always
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+    env_file:
+      - ./shipment/backend/.env
+    environment:
+      PORT_SHIPMENT: 8090
+    networks:
+      - datn-network
+
+  shipment-gui:
+    image: nguyenkiet32/shipment-gui:${IMAGE_TAG:-latest}
+    container_name: datn-shipment-gui
+    pull_policy: always
+    restart: unless-stopped
+    ports:
+      - "5174:80"
+    depends_on:
+      - shipment-server
+    networks:
+      - datn-network
+
+  ecommerce-server:
+    image: nguyenkiet32/ecommerce-server:${IMAGE_TAG:-latest}
+    container_name: datn-ecommerce-server
+    pull_policy: always
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./Ecommerce-platform/backend/.env
+    environment:
+      PORT: 8080
+      ANALYTICS_SERVICE_URL: http://analyze-server:8088
+      UTE_SHIPMENT_SERVICE_URL: http://shipment-server:8090
+    depends_on:
+      - analyze-server
+      - shipment-server
+    networks:
+      - datn-network
+
+  ecommerce-gui:
+    image: nguyenkiet32/ecommerce-gui:${IMAGE_TAG:-latest}
+    container_name: datn-ecommerce-gui
+    pull_policy: always
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - ecommerce-server
+    networks:
+      - datn-network
+
+networks:
+  datn-network:
+    driver: bridge
