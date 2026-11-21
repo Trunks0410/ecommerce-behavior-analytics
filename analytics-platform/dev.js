@@ -17,7 +17,7 @@ console.log("[Analytics] Đang khởi động Search & Analytics Backend Microse
 const backendProcess = spawn(process.execPath, ["server.js"], {
   cwd: backendDir,
   env: { ...process.env },
-  stdio: ["inherit", "pipe", "pipe"],
+  stdio: ["ignore", "pipe", "pipe"],
 });
 
 backendProcess.stdout.on("data", (data) => {
@@ -40,7 +40,7 @@ const npmCmd = isWin ? "npm.cmd" : "npm";
 const frontendProcess = spawn(npmCmd, ["run", "dev"], {
   cwd: frontendDir,
   env: { ...process.env },
-  stdio: ["inherit", "pipe", "pipe"],
+  stdio: ["ignore", "pipe", "pipe"],
   shell: isWin,
 });
 
