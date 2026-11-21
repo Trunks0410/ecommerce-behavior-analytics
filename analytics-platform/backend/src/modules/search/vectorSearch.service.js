@@ -367,45 +367,69 @@ class VectorSearchEngine {
 
     if (words.length === 0) return [];
 
-    // 1. Tìm các Anchor Items chứa nhiều từ khóa (hoặc từ đồng nghĩa) nhất
-    const anchors = [];
-    for (let i = 0; i < this.totalRecords; i++) {
-      const titleLower = (this.metadata[i]?.title || "").toLowerCase();
-      let matches = 0;
-      for (const w of words) {
-        const synonyms = expandWordWithSynonyms(w);
-        if (synonyms.some((syn) => titleLower.includes(syn))) {
-          matches++;
+    // Nếu đã bật service model AI trực tiếp (MODEL_INFERENCE_URL), ưu tiên encode query trực tiếp
+    let qVec = null;
+    const modelInferenceUrl = process.env.MODEL_INFERENCE_URL?.trim();
+    if (modelInferenceUrl) {
+      try {
+        const res = await fetch(`${modelInferenceUrl.replace(/\/$/, "")}/embed`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: englishQuery }),
+          signal: AbortSignal.timeout(5000),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data?.vector) && data.vector.length === this.vectorDim) {
+            qVec = Float32Array.from(data.vector);
+          }
+        }
+      } catch (err) {
+        console.warn(`⚠️ [MODEL INFERENCE] Fallback về Anchor Centroid: ${err.message}`);
+      }
+    }
+
+    if (!qVec) {
+      // 1. Tìm các Anchor Items chứa nhiều từ khóa (hoặc từ đồng nghĩa) nhất
+      const anchors = [];
+      for (let i = 0; i < this.totalRecords; i++) {
+        const titleLower = (this.metadata[i]?.title || "").toLowerCase();
+        let matches = 0;
+        for (const w of words) {
+          const synonyms = expandWordWithSynonyms(w);
+          if (synonyms.some((syn) => titleLower.includes(syn))) {
+            matches++;
+          }
+        }
+        if (matches > 0) {
+          anchors.push({ idx: i, matches });
         }
       }
-      if (matches > 0) {
-        anchors.push({ idx: i, matches });
+
+      if (anchors.length === 0) return [];
+
+      // Chọn top anchor tốt nhất để dựng Vector Centroid cho câu query
+      anchors.sort((a, b) => b.matches - a.matches);
+      const topAnchors = anchors.slice(0, 8);
+
+      qVec = new Float32Array(this.vectorDim);
+      for (const anchor of topAnchors) {
+        const rowOffset = anchor.idx * this.vectorDim;
+        for (let d = 0; d < this.vectorDim; d++) {
+          qVec[d] += this.vectors[rowOffset + d];
+        }
       }
-    }
 
-    if (anchors.length === 0) return [];
-
-    // Chọn top anchor tốt nhất để dựng Vector Centroid cho câu query
-    anchors.sort((a, b) => b.matches - a.matches);
-    const topAnchors = anchors.slice(0, 8);
-
-    const qVec = new Float32Array(this.vectorDim);
-    for (const anchor of topAnchors) {
-      const rowOffset = anchor.idx * this.vectorDim;
+      // Chuẩn hóa L2 norm cho query vector
+      let norm = 0;
       for (let d = 0; d < this.vectorDim; d++) {
-        qVec[d] += this.vectors[rowOffset + d];
+        norm += qVec[d] * qVec[d];
       }
-    }
-
-    // Chuẩn hóa L2 norm cho query vector
-    let norm = 0;
-    for (let d = 0; d < this.vectorDim; d++) {
-      norm += qVec[d] * qVec[d];
-    }
-    norm = Math.sqrt(norm);
-    if (norm > 0) {
-      for (let d = 0; d < this.vectorDim; d++) {
-        qVec[d] /= norm;
+      norm = Math.sqrt(norm);
+      if (norm > 0) {
+        for (let d = 0; d < this.vectorDim; d++) {
+          qVec[d] /= norm;
+        }
       }
     }
 

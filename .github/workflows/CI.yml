@@ -55,6 +55,8 @@ jobs:
             context: ./shipment/backend
           - service: shipment-gui
             context: ./shipment/frontend
+          - service: qwen-inference
+            context: ./analytics-platform/model-service
 
     steps:
       - name: Checkout source code
