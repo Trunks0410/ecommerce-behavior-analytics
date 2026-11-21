@@ -678,24 +678,24 @@ const ProductDetailPage = () => {
             <div className="grid grid-cols-3 gap-3 pt-4 border-t border-gray-100 dark:border-slate-700 text-center">
               <div className="flex flex-col items-center gap-1">
                 <ShieldCheck size={20} className="text-[#ee4d2d]" />
-                <span className="text-[11px] font-bold text-gray-800 dark:text-slate-200">
+                <span className="text-xs font-bold text-gray-800 dark:text-slate-200">
                   {t("guarantee_authentic")}
                 </span>
-                <span className="text-[10px] text-gray-400">{t("guarantee_authentic_sub")}</span>
+                <span className="text-xs text-gray-500">{t("guarantee_authentic_sub")}</span>
               </div>
               <div className="flex flex-col items-center gap-1">
                 <Truck size={20} className="text-blue-500" />
-                <span className="text-[11px] font-bold text-gray-800 dark:text-slate-200">
+                <span className="text-xs font-bold text-gray-800 dark:text-slate-200">
                   {t("guarantee_shipping")}
                 </span>
-                <span className="text-[10px] text-gray-400">{t("guarantee_shipping_sub")}</span>
+                <span className="text-xs text-gray-500">{t("guarantee_shipping_sub")}</span>
               </div>
               <div className="flex flex-col items-center gap-1">
                 <RotateCcw size={20} className="text-emerald-500" />
-                <span className="text-[11px] font-bold text-gray-800 dark:text-slate-200">
+                <span className="text-xs font-bold text-gray-800 dark:text-slate-200">
                   {t("guarantee_return")}
                 </span>
-                <span className="text-[10px] text-gray-400">{t("guarantee_return_sub")}</span>
+                <span className="text-xs text-gray-500">{t("guarantee_return_sub")}</span>
               </div>
             </div>
           </div>

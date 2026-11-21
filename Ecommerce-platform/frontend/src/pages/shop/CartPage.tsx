@@ -128,7 +128,7 @@ const CartPage = () => {
       return;
     }
     localStorage.setItem("checkout_items", JSON.stringify(selectedItems));
-    navigate("/checkout");
+    navigate("/checkout", { state: { selectedItemIds: selectedItems } });
   };
 
   return (

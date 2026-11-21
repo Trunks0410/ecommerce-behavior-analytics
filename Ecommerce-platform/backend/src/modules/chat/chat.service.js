@@ -144,7 +144,8 @@ const sendMessage = async (senderId, receiverId, content, attachmentUrl = null, 
           recipientId,
           "Tin nhắn mới",
           `Bạn có tin nhắn mới từ ${senderName}: "${previewText}"`,
-          "NEW_MESSAGE"
+          "NEW_MESSAGE",
+          { actionUrl: recipientId !== customerId ? "/vendor?tab=chats" : null }
         );
       }
     }

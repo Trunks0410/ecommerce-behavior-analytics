@@ -219,6 +219,67 @@ const getShopStatistics = async (shopId) => {
 
   const availableBalance = parseFloat(wallet.balance || 0);
 
+  // Thống kê danh sách việc cần làm (To-Do List) trực tiếp từ DB (tối ưu bằng SQL đếm trực tiếp)
+  const [
+    pendingOrdersCount,
+    toPackCount,
+    pendingReturnsCount,
+    lowStockRows,
+    unrepliedReviewsCount,
+  ] = await Promise.all([
+    db.ShopOrder.count({
+      where: { shop_id: shopId, status: "PENDING" },
+    }),
+    db.ShopOrder.count({
+      where: { shop_id: shopId, status: { [Op.in]: ["CONFIRMED", "PREPARING"] } },
+    }),
+    db.ReturnRequest.count({
+      where: { status: { [Op.in]: ["PENDING", "RETURN_PENDING"] } },
+      include: [
+        {
+          model: db.ShopOrder,
+          as: "shopOrder",
+          where: { shop_id: shopId },
+          required: true,
+        },
+      ],
+    }),
+    db.sequelize.query(
+      `SELECT COUNT(*) AS lowStockCount
+       FROM (
+         SELECT p.id
+         FROM products p
+         LEFT JOIN product_variants pv ON pv.product_id = p.id
+         WHERE p.shop_id = :shopId
+           AND p.approval_status = 'APPROVED'
+           AND p.deleted_at IS NULL
+         GROUP BY p.id
+         HAVING COALESCE(SUM(pv.stock_quantity), 0) <= 5
+       ) AS low_stock_products`,
+      {
+        replacements: { shopId },
+        type: db.Sequelize.QueryTypes.SELECT,
+      },
+    ),
+    db.sequelize.models.ProductReview
+      ? db.sequelize.models.ProductReview.count({
+          where: {
+            [Op.or]: [{ vendor_reply: null }, { vendor_reply: "" }],
+          },
+          include: [
+            {
+              model: db.Product,
+              as: "product",
+              where: { shop_id: shopId },
+              required: true,
+            },
+          ],
+        })
+      : Promise.resolve(0),
+  ]);
+
+  const lowStockCount = Number(lowStockRows?.[0]?.lowStockCount || 0);
+
   return {
     revenue: parseFloat(wallet.total_earned || 0),
     pendingBalance: parseFloat(wallet.pending_balance || 0),
@@ -229,6 +290,13 @@ const getShopStatistics = async (shopId) => {
     productsCount,
     commentsCount,
     dailyRevenue,
+    todoStats: {
+      pendingOrdersCount,
+      toPackCount,
+      pendingReturnsCount,
+      lowStockCount,
+      unrepliedReviewsCount,
+    },
   };
 };
 

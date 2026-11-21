@@ -913,6 +913,7 @@ CREATE TABLE `notifications` (
   `title`      VARCHAR(255) NOT NULL,
   `content`    TEXT         NOT NULL,
   `type`       VARCHAR(50)  NOT NULL,
+  `action_url` VARCHAR(255) NULL,
   `is_read`    TINYINT(1)   NOT NULL DEFAULT 0,
   `created_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

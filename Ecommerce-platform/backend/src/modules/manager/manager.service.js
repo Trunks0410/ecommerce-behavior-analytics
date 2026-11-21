@@ -105,7 +105,9 @@ const updateProductStatus = async (productId, status) => {
       }
 
       if (title && content) {
-        await notificationService.createNotification(shop.vendor_id, title, content, "PRODUCT_STATUS");
+        await notificationService.createNotification(shop.vendor_id, title, content, "PRODUCT_STATUS", {
+          actionUrl: "/vendor?tab=products",
+        });
       }
     }
   } catch (notifErr) {
@@ -359,7 +361,9 @@ const updateVendorStatus = async (shopId, status, reason) => {
     }
 
     if (title && content) {
-      await notificationService.createNotification(shop.vendor_id, title, content, "SHOP_STATUS");
+      await notificationService.createNotification(shop.vendor_id, title, content, "SHOP_STATUS", {
+        actionUrl: "/vendor?tab=overview",
+      });
     }
   } catch (notifErr) {
     console.error("Failed to notify vendor of shop status change:", notifErr);

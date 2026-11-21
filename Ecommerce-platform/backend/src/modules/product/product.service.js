@@ -310,7 +310,7 @@ const fetchProducts = async (filters, lang = "vi") => {
   }
 };
 
-const getProductBySlug = async (slug, lang = "vi") => {
+const fetchProductBySlug = async (slug, lang = "vi") => {
   const product = await db.Product.findOne({
     where: { slug, approval_status: "APPROVED" },
     include: [
@@ -348,7 +348,10 @@ const getProductBySlug = async (slug, lang = "vi") => {
   return translatedProduct;
 };
 
-const getSimilarProducts = async (categoryId, excludeProductId, limit = 6) => {
+const getProductBySlug = (slug, lang = "vi") =>
+  getOrSetCache(`products:detail:${lang}:${slug}`, () => fetchProductBySlug(slug, lang), 300);
+
+const fetchSimilarProducts = async (categoryId, excludeProductId, limit = 6, lang = "vi") => {
   // Ưu tiên lấy sản phẩm tương tự theo Cosine Vector Similarity (nếu có)
   if (vectorSearchService.isReady() && excludeProductId) {
     const similarVectorIds = await vectorSearchService.getSimilarProductIds(excludeProductId, limit);
@@ -406,6 +409,9 @@ const getSimilarProducts = async (categoryId, excludeProductId, limit = 6) => {
   const enriched = await enrichProductsRating(products);
   return await enrichProductsTranslation(enriched, lang);
 };
+
+const getSimilarProducts = (categoryId, excludeProductId, limit = 6, lang = "vi") =>
+  getOrSetCache(`products:similar:${lang}:${categoryId}:${excludeProductId}:${limit}`, () => fetchSimilarProducts(categoryId, excludeProductId, limit, lang), 600);
 
 const fetchFeaturedProducts = async (limit = 10, lang = "vi") => {
   // Validate limit
@@ -729,16 +735,29 @@ const getRecommendedProducts = async (userId, viewedIdsParam, limit = 10) => {
   return await fetchFeaturedProducts(parsedLimit);
 };
 
+const normalizeFiltersKey = (filters) => {
+  if (!filters || typeof filters !== "object") return "";
+  return Object.keys(filters)
+    .sort()
+    .filter((k) => filters[k] !== undefined && filters[k] !== "")
+    .map((k) => `${k}=${filters[k]}`)
+    .join("&");
+};
+
 const getProducts = (filters = {}, lang = "vi") =>
-  getOrSetCache(`products:list:${lang}:${JSON.stringify(filters)}`, () => fetchProducts(filters, lang), 60);
+  getOrSetCache(`products:list:${lang}:${normalizeFiltersKey(filters)}`, () => fetchProducts(filters, lang), 300);
+
 const getFeaturedProducts = (limit = 10, lang = "vi") =>
-  getOrSetCache(`products:featured:${limit}:${lang}`, () => fetchFeaturedProducts(limit, lang), 60);
+  getOrSetCache(`products:featured:${limit}:${lang}`, () => fetchFeaturedProducts(limit, lang), 900);
+
 const getNewestProducts = (limit = 10, lang = "vi") =>
-  getOrSetCache(`products:newest:${limit}:${lang}`, () => fetchNewestProducts(limit, lang), 60);
+  getOrSetCache(`products:newest:${limit}:${lang}`, () => fetchNewestProducts(limit, lang), 900);
+
 const getBestSellerProducts = (limit = 10, lang = "vi") =>
-  getOrSetCache(`products:best_sellers:${limit}:${lang}`, () => fetchBestSellerProducts(limit, lang), 60);
+  getOrSetCache(`products:best_sellers:${limit}:${lang}`, () => fetchBestSellerProducts(limit, lang), 900);
+
 const getMostViewedProducts = (limit = 10, lang = "vi") =>
-  getOrSetCache(`products:most_viewed:${limit}:${lang}`, () => fetchMostViewedProducts(limit, lang), 60);
+  getOrSetCache(`products:most_viewed:${limit}:${lang}`, () => fetchMostViewedProducts(limit, lang), 900);
 
 export default {
   enrichProductsTranslation,

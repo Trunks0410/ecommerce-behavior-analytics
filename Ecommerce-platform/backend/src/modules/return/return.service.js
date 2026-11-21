@@ -118,7 +118,8 @@ const returnService = {
             shop.vendor_id,
             "Yêu cầu trả hàng mới",
             `Đơn hàng ${order.shop_order_code} có yêu cầu trả hàng mới.`,
-            "ORDER_UPDATE"
+            "RETURN_REQUEST",
+            { actionUrl: "/vendor?tab=returns" }
           );
         }
       } catch (notifErr) {
@@ -494,7 +495,8 @@ const returnService = {
             returnRequest.user_id,
             "Khiếu nại trả hàng đã được duyệt",
             `Yêu cầu khiếu nại trả hàng đơn ${shopOrder.shop_order_code} đã được Admin phê duyệt. Shipper sẽ đến lấy hàng hoàn trả.`,
-            "ORDER_UPDATE"
+            "ORDER_UPDATE",
+            { actionUrl: `/orders/${shopOrder.parent_order_id}` }
           );
         } catch (notifErr) {
           console.error("Error sending notification to customer:", notifErr);
@@ -508,7 +510,8 @@ const returnService = {
               shop.vendor_id,
               "Khiếu nại trả hàng được quyết định bởi Admin",
               `Admin đã duyệt yêu cầu hoàn tiền cho đơn hàng ${shopOrder.shop_order_code} sau khi xem xét tranh chấp.`,
-              "ORDER_UPDATE"
+              "RETURN_REQUEST",
+              { actionUrl: "/vendor?tab=returns" }
             );
           }
         } catch (notifErr) {
@@ -544,7 +547,8 @@ const returnService = {
             returnRequest.user_id,
             "Khiếu nại trả hàng bị từ chối",
             `Yêu cầu khiếu nại trả hàng đơn ${shopOrder.shop_order_code} đã bị Admin bác bỏ. Phán quyết cuối cùng giữ nguyên từ chối của Shop. Lý do: ${resolveNote || 'Không có'}`,
-            "ORDER_UPDATE"
+            "ORDER_UPDATE",
+            { actionUrl: `/orders/${shopOrder.parent_order_id}` }
           );
         } catch (notifErr) {
           console.error("Error sending notification to customer:", notifErr);
@@ -558,7 +562,8 @@ const returnService = {
               shop.vendor_id,
               "Khiếu nại trả hàng của khách bị bác bỏ",
               `Admin đã bác bỏ yêu cầu khiếu nại của khách hàng cho đơn hàng ${shopOrder.shop_order_code}. Doanh thu đã được mở khóa.`,
-              "ORDER_UPDATE"
+              "RETURN_REQUEST",
+              { actionUrl: "/vendor?tab=returns" }
             );
           }
         } catch (notifErr) {

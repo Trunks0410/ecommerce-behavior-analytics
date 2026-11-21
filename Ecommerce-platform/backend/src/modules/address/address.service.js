@@ -1,30 +1,55 @@
 import db from "../../database/models/index.js";
 
+const cleanPart = (val) => {
+  if (!val) return "";
+  const trimmed = String(val).trim();
+  return trimmed.toLowerCase() === "unknown" ? "" : trimmed;
+};
+
 const parseAddress = (addressLine) => {
-  if (!addressLine) return { province: "Unknown", district: "Unknown", ward: "Unknown", street: "" };
-  const parts = addressLine.split(',').map(p => p.trim());
-  const province = parts.length > 0 ? parts[parts.length - 1] : "Unknown";
-  const district = parts.length > 1 ? parts[parts.length - 2] : "Unknown";
-  const ward = parts.length > 2 ? parts[parts.length - 3] : "Unknown";
-  const street = parts.length > 3 ? parts.slice(0, parts.length - 3).join(', ') : addressLine;
+  if (!addressLine) return { province: "", district: "", ward: "", street: "" };
+  const parts = addressLine.split(",").map((p) => cleanPart(p)).filter(Boolean);
+  if (parts.length === 1) {
+    return { province: "", district: "", ward: "", street: parts[0] };
+  }
+  if (parts.length === 2) {
+    return { province: parts[1], district: "", ward: "", street: parts[0] };
+  }
+  if (parts.length === 3) {
+    return { province: parts[2], district: parts[1], ward: "", street: parts[0] };
+  }
+  const province = parts[parts.length - 1];
+  const district = parts[parts.length - 2];
+  const ward = parts[parts.length - 3];
+  const street = parts.slice(0, parts.length - 3).join(", ");
   return { province, district, ward, street };
 };
 
 const formatAddress = (address) => {
   if (!address) return null;
+  const street = cleanPart(address.street);
+  const ward = cleanPart(address.ward);
+  const district = cleanPart(address.district);
+  const province = cleanPart(address.province);
+
   const addressLineParts = [];
-  if (address.street) addressLineParts.push(address.street);
-  if (address.ward && address.ward !== "Unknown") addressLineParts.push(address.ward);
-  if (address.district && address.district !== "Unknown") addressLineParts.push(address.district);
-  if (address.province && address.province !== "Unknown") addressLineParts.push(address.province);
-  
+  for (const part of [street, ward, district, province]) {
+    if (part && !addressLineParts.includes(part)) {
+      addressLineParts.push(part);
+    }
+  }
+
   return {
     id: address.id,
     user_id: address.user_id,
     recipient_name: address.receiver_name,
     phone_number: address.phone,
+    street,
+    ward,
+    district,
+    province,
     address_line: addressLineParts.join(", "),
-    is_default: address.is_default
+    is_default: address.is_default,
   };
 };
 
@@ -60,7 +85,20 @@ const createAddress = async (userId, data) => {
       }
     }
 
-    const { province, district, ward, street } = parseAddress(data.address_line);
+    const hasStructuredFields =
+      data.province !== undefined ||
+      data.district !== undefined ||
+      data.ward !== undefined ||
+      data.street !== undefined;
+
+    const { province, district, ward, street } = hasStructuredFields
+      ? {
+        province: cleanPart(data.province),
+        district: cleanPart(data.district),
+        ward: cleanPart(data.ward),
+        street: cleanPart(data.street),
+      }
+      : parseAddress(data.address_line);
 
     const newAddress = await db.UserAddress.create(
       {
@@ -104,7 +142,17 @@ const updateAddress = async (id, userId, data) => {
     const updateData = {};
     if (data.recipient_name) updateData.receiver_name = data.recipient_name;
     if (data.phone_number) updateData.phone = data.phone_number;
-    if (data.address_line) {
+    if (
+      data.province !== undefined ||
+      data.district !== undefined ||
+      data.ward !== undefined ||
+      data.street !== undefined
+    ) {
+      if (data.province !== undefined) updateData.province = cleanPart(data.province);
+      if (data.district !== undefined) updateData.district = cleanPart(data.district);
+      if (data.ward !== undefined) updateData.ward = cleanPart(data.ward);
+      if (data.street !== undefined) updateData.street = cleanPart(data.street);
+    } else if (data.address_line) {
       const parsed = parseAddress(data.address_line);
       updateData.province = parsed.province;
       updateData.district = parsed.district;
@@ -130,7 +178,7 @@ const deleteAddress = async (id, userId) => {
   if (!address) {
     throw new Error("Address not found");
   }
-  
+
   const wasDefault = address.is_default;
   await address.destroy();
 

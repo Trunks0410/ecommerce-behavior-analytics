@@ -31,6 +31,12 @@ const dbConfig = {
     multipleStatements: true,
   },
   timezone: process.env.DB_TIMEZONE || "+07:00",
+  pool: {
+    max: 20,
+    min: 5,
+    acquire: 30000,
+    idle: 10000,
+  },
 };
 
 const config = {

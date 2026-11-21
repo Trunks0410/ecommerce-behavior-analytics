@@ -10,6 +10,39 @@ const getNotifications = async (req, res) => {
   }
 };
 
+const getNotificationsOverview = async (req, res) => {
+  try {
+    const data = await notificationService.getNotificationsOverview(req.user.id, req.query);
+    return res.status(200).json({ message: "Success", data });
+  } catch (error) {
+    console.error("Error getting notifications overview:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+const deleteNotification = async (req, res) => {
+  try {
+    const deleted = await notificationService.deleteNotification(req.params.id, req.user.id);
+    if (!deleted) {
+      return res.status(404).json({ message: "Notification not found" });
+    }
+    return res.status(200).json({ message: "Success" });
+  } catch (error) {
+    console.error("Error deleting notification:", error);
+    return res.status(400).json({ message: error.message || "Error" });
+  }
+};
+
+const deleteReadNotifications = async (req, res) => {
+  try {
+    const deletedCount = await notificationService.deleteReadNotifications(req.user.id);
+    return res.status(200).json({ message: "Success", data: { deletedCount } });
+  } catch (error) {
+    console.error("Error deleting read notifications:", error);
+    return res.status(400).json({ message: error.message || "Error" });
+  }
+};
+
 const markAsRead = async (req, res) => {
   try {
     const { id } = req.params;
@@ -58,7 +91,10 @@ const streamNotifications = (req, res) => {
 
 export default {
   getNotifications,
+  getNotificationsOverview,
   streamNotifications,
   markAsRead,
   markAllAsRead,
+  deleteNotification,
+  deleteReadNotifications,
 };

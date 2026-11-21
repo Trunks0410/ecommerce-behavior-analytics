@@ -11,7 +11,9 @@ const getCart = async (req, res) => {
 
 const addItem = async (req, res) => {
   try {
-    const { productId, variantId, quantity = 1 } = req.body;
+    const productId = req.body.productId ?? req.body.product_id;
+    const variantId = req.body.variantId ?? req.body.variant_id;
+    const { quantity = 1 } = req.body;
     if (!productId)
       return res.status(400).json({ message: "productId là bắt buộc" });
 

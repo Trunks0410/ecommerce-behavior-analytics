@@ -14,6 +14,7 @@ export default (sequelize, DataTypes) => {
       title: { type: DataTypes.STRING(255), allowNull: false },
       content: { type: DataTypes.TEXT, allowNull: false },
       type: { type: DataTypes.STRING(50), allowNull: false },
+      action_url: { type: DataTypes.STRING(255), allowNull: true },
       is_read: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     },
     {

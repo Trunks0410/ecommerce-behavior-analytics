@@ -26,9 +26,9 @@ export default (sequelize, DataTypes) => {
       subtotal: { type: DataTypes.DECIMAL(15, 2), allowNull: false },
       shipping_fee: { type: DataTypes.DECIMAL(15, 2), allowNull: false, defaultValue: 0 },
       discount_amount: { type: DataTypes.DECIMAL(15, 2), allowNull: false, defaultValue: 0 },
-      final_amount: { type: DataTypes.DECIMAL(15, 2), allowNull: false },
+      final_amount: { type: DataTypes.DECIMAL(15, 2), allowNull: true },
       commission_rate: { type: DataTypes.DECIMAL(5, 2), allowNull: false, defaultValue: 10.0 },
-      commission_amount: { type: DataTypes.DECIMAL(15, 2), allowNull: false, defaultValue: 0 },
+      commission_amount: { type: DataTypes.DECIMAL(15, 2), allowNull: true },
       cod_amount_collected: { type: DataTypes.DECIMAL(15, 2), allowNull: true },
       cod_status: {
         type: DataTypes.ENUM("NOT_COD", "HELD_BY_SHIPPER", "SUBMITTED", "CONFIRMED", "MISMATCH"),
