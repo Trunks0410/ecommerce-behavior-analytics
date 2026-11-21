@@ -628,9 +628,19 @@ const OrderDetailPage = () => {
               </h3>
               <div className="rounded-2xl border-2 border-black/5 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
                 <p className="text-sm font-medium leading-relaxed text-gray-600 dark:text-slate-300">
-                  {order.parentOrder?.shipping_address ||
-                    order.shipping_address ||
-                    t("order_detail_no_shipping_info")}
+                  {(() => {
+                    const rawAddr = order.parentOrder?.shipping_address || order.shipping_address;
+                    if (!rawAddr) return t("order_detail_no_shipping_info");
+                    const cleaned = String(rawAddr)
+                      .split(",")
+                      .map((p) => p.trim())
+                      .filter((p) => p && p.toLowerCase() !== "unknown");
+                    const uniqueParts: string[] = [];
+                    for (const part of cleaned) {
+                      if (!uniqueParts.includes(part)) uniqueParts.push(part);
+                    }
+                    return uniqueParts.length > 0 ? uniqueParts.join(", ") : t("order_detail_no_shipping_info");
+                  })()}
                 </p>
                 {order.parentOrder?.note && (
                   <div className="mt-4 pt-4 border-t border-dashed border-gray-200">

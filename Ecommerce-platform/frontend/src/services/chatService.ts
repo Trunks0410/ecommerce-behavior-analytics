@@ -42,6 +42,62 @@ export interface ConversationInfo {
   updated_at: string;
 }
 
+export interface AIChatOrder {
+  id: number;
+  parent_order_id: number;
+  checkout_code: string;
+  shop_order_code: string;
+  shop_name: string;
+  shop_logo: string | null;
+  total_amount: number;
+  status: string;
+  status_text: string;
+  payment_method: string;
+  payment_status: string;
+  tracking_number: string | null;
+  shipment_status: string | null;
+  shipment_status_text: string | null;
+  estimated_delivery_date: string | null;
+  items: Array<{
+    name: string;
+    quantity: number;
+    price: number;
+    details: string;
+  }>;
+  created_at: string;
+}
+
+export interface AIChatVoucher {
+  id: number;
+  code: string;
+  discount_type: "PERCENT" | "FIXED";
+  discount_value: number;
+  max_discount: number | null;
+  min_order_amount: number;
+  shop_name: string;
+  end_date: string;
+  description: string;
+}
+
+export interface AIChatProduct {
+  id: number;
+  name: string;
+  price: number;
+  sale_price: number | null;
+  slug: string;
+  shop_name: string;
+  image_url: string | null;
+  sold_count: number;
+}
+
+export interface AIChatResponse {
+  reply: string;
+  products?: AIChatProduct[];
+  orders?: AIChatOrder[];
+  vouchers?: AIChatVoucher[];
+  suggestions?: string[];
+}
+
 export const chatService = {
   // Lấy tổng số lượng tin nhắn chưa đọc
   getUnreadCount: async () => {
@@ -92,8 +148,8 @@ export const chatService = {
   },
 
   // Trò chuyện với trợ lý AI
-  chatWithAI: async (message: string) => {
-    const response = await axiosClient.post("/chat/ai", { message });
+  chatWithAI: async (message: string): Promise<AIChatResponse> => {
+    const response = await axiosClient.post<AIChatResponse>("/chat/ai", { message });
     return response.data;
   }
 };

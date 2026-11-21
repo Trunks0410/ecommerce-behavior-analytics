@@ -76,10 +76,10 @@ const fetchCategoryBySlug = async (slug, lang = "vi") => {
 };
 
 const getAllCategories = (lang = "vi") =>
-  getOrSetCache(`categories:all:${lang}`, () => fetchAllCategories(lang));
+  getOrSetCache(`categories:all:${lang}`, () => fetchAllCategories(lang), 86400);
 
 const getCategoryBySlug = (slug, lang = "vi") =>
-  getOrSetCache(`categories:slug:${slug}:${lang}`, () => fetchCategoryBySlug(slug, lang));
+  getOrSetCache(`categories:slug:${slug}:${lang}`, () => fetchCategoryBySlug(slug, lang), 43200);
 
 export default {
   getAllCategories,

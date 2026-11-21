@@ -1,14 +1,22 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import ReCAPTCHA from "react-google-recaptcha";
+import { useGoogleLogin } from "@react-oauth/google";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/shared/components/ui/Button";
 import { Input } from "@/shared/components/ui/Input";
 import { Card } from "@/shared/components/ui/Card";
 import { UserPlus, Gift, Crown } from "lucide-react";
 import { publicAxios } from "@/shared/api/axiosClient";
+import { googleLoginThunk } from "@/app/stores/slices/authSlice";
+import type { AppDispatch } from "@/app/stores/store";
+import { cartService } from "@/services/cartService";
 
 const Register = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
+  const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -29,6 +37,46 @@ const Register = () => {
 
   const handleRecaptchaChange = (token: string | null) => {
     setRecaptchaToken(token);
+  };
+
+  const handleGoogleRegister = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setError("");
+      setLoading(true);
+      try {
+        const result = await dispatch(
+          googleLoginThunk(tokenResponse.access_token),
+        );
+        if (googleLoginThunk.fulfilled.match(result)) {
+          const token = result.payload.accessToken;
+          await cartService.syncGuestCart(token);
+          queryClient.invalidateQueries({ queryKey: ["cart"] });
+          navigate("/", { replace: true });
+        } else {
+          setError((result.payload as string) || "Đăng ký bằng Google thất bại!");
+        }
+      } catch (err: any) {
+        setError("Không thể kết nối máy chủ khi đăng ký Google.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    onError: (err) => {
+      console.error("Google Register Failed:", err);
+      setError("Đăng ký Google thất bại hoặc đã bị hủy. Vui lòng kiểm tra lại Google Client ID.");
+    },
+  });
+
+  const onClickGoogleRegister = () => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (!clientId || clientId === "YOUR_GOOGLE_CLIENT_ID") {
+      setError(
+        "Chưa cấu hình VITE_GOOGLE_CLIENT_ID trong file Ecommerce-platform/frontend/.env. Vui lòng cập nhật Google Client ID mới."
+      );
+      return;
+    }
+    setError("");
+    handleGoogleRegister();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -188,6 +236,29 @@ const Register = () => {
                   {loading ? "Đang xử lý..." : "Tạo tài khoản"}
                 </Button>
               </form>
+
+              <div className="mt-6">
+                <div className="relative flex items-center justify-center">
+                  <div className="absolute border-t border-gray-300 w-full"></div>
+                  <span className="bg-white px-4 text-xs font-bold text-gray-500 uppercase tracking-widest relative">
+                    HOẶC ĐĂNG KÝ NHANH BẰNG
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={onClickGoogleRegister}
+                  disabled={loading}
+                  className="w-full mt-5 flex items-center justify-center space-x-2 border-2 border-black py-3 px-4 hover:bg-primary hover:text-white transition-all bg-white font-bold text-sm rounded-lg active:translate-x-[2px] active:translate-y-[2px] active:shadow-none cursor-pointer"
+                >
+                  <img
+                    src="https://www.svgrepo.com/show/475656/google-color.svg"
+                    alt="Google"
+                    className="w-5 h-5"
+                  />
+                  <span>Tiếp tục với Google</span>
+                </button>
+              </div>
 
               <div className="mt-8 text-center pt-6 border-t border-gray-200">
                 <p className="text-sm">

@@ -263,14 +263,37 @@ const googleLogin = (accessTokenFromGoogle) => {
   return new Promise(async (resolve, reject) => {
     try {
       // Dùng accessToken truy vấn Google lấy User Info
-      const { data: payload } = await axios.get(
-        "https://www.googleapis.com/oauth2/v3/userinfo",
-        {
-          headers: { Authorization: `Bearer ${accessTokenFromGoogle}` },
-        },
-      );
+      let payload;
+      try {
+        const res = await axios.get(
+          "https://www.googleapis.com/oauth2/v3/userinfo",
+          {
+            headers: { Authorization: `Bearer ${accessTokenFromGoogle}` },
+            timeout: 10000,
+          },
+        );
+        payload = res.data;
+      } catch (googleErr) {
+        console.error("❌ [GOOGLE AUTH] Failed to verify Google token:", googleErr.response?.data || googleErr.message);
+        return resolve({
+          status: 401,
+          message: "Token Google không hợp lệ hoặc đã hết hạn. Vui lòng thử đăng nhập lại.",
+        });
+      }
 
-      const { email, sub, given_name, family_name, picture } = payload;
+      const { email, sub, given_name, family_name, name, picture } = payload || {};
+
+      if (!email) {
+        return resolve({
+          status: 400,
+          message: "Không thể lấy địa chỉ email từ tài khoản Google của bạn.",
+        });
+      }
+
+      const fullNameFromGoogle =
+        [given_name, family_name].filter(Boolean).join(" ").trim() ||
+        name ||
+        email.split("@")[0];
 
       let user = await db.User.findOne({
         where: { email },
@@ -278,6 +301,10 @@ const googleLogin = (accessTokenFromGoogle) => {
           {
             model: db.Role,
             as: "role",
+          },
+          {
+            model: db.UserProfile,
+            as: "profile",
           },
         ],
       });
@@ -291,35 +318,53 @@ const googleLogin = (accessTokenFromGoogle) => {
           });
         }
 
-        // Cập nhật avatar nếu chưa có
-        const profile = await db.UserProfile.findOne({
-          where: { user_id: user.id },
-        });
-        if (profile && !profile.avatar_url) {
-          await profile.update({ avatar_url: picture });
+        // Cập nhật avatar / tên nếu chưa có
+        if (user.profile) {
+          const updates = {};
+          if (!user.profile.avatar_url && picture) updates.avatar_url = picture;
+          if (!user.profile.full_name && fullNameFromGoogle) updates.full_name = fullNameFromGoogle;
+          if (Object.keys(updates).length > 0) {
+            await user.profile.update(updates);
+          }
+        } else {
+          user.profile = await db.UserProfile.create({
+            user_id: user.id,
+            full_name: fullNameFromGoogle,
+            avatar_url: picture || null,
+          });
         }
       } else {
-        // Create new user
+        // Tìm role mặc định "user" thay vì hardcode
+        const defaultUserRole = await db.Role.findOne({
+          where: { role_name: "user" },
+        });
+        const defaultRoleId = defaultUserRole ? defaultUserRole.id : 5;
+
+        // Tạo mới user & profile
         user = await db.User.create({
           email,
           auth_provider: "google",
           auth_provider_id: sub,
           status: "ACTIVE",
-          role_id: 5, // Default user role
+          role_id: defaultRoleId,
         });
 
         await db.UserProfile.create({
           user_id: user.id,
-          full_name: `${given_name} ${family_name}`.trim(),
-          avatar_url: picture,
+          full_name: fullNameFromGoogle,
+          avatar_url: picture || null,
         });
 
-        // reload user with role
+        // Reload user kèm role và profile
         user = await db.User.findByPk(user.id, {
           include: [
             {
               model: db.Role,
               as: "role",
+            },
+            {
+              model: db.UserProfile,
+              as: "profile",
             },
           ],
         });
@@ -328,7 +373,7 @@ const googleLogin = (accessTokenFromGoogle) => {
       if (user.status !== "ACTIVE") {
         return resolve({
           status: 403,
-          message: "Account is not active",
+          message: "Tài khoản của bạn hiện đang bị khóa hoặc chưa được kích hoạt.",
         });
       }
 
@@ -355,6 +400,8 @@ const googleLogin = (accessTokenFromGoogle) => {
       let redirectUrl = "/";
       if (user.role_id === 1 || user.role?.role_name === "admin" || user.role?.role_name === "manager") {
         redirectUrl = "/admin";
+      } else if (user.role?.role_name === "vendor") {
+        redirectUrl = "/vendor";
       }
 
       resolve({
@@ -369,6 +416,10 @@ const googleLogin = (accessTokenFromGoogle) => {
             email: user.email,
             phone: user.phone || "",
             role: user.role?.role_name,
+            fullName: user.profile?.full_name || fullNameFromGoogle,
+            dateOfBirth: user.profile?.birthday || null,
+            gender: user.profile?.gender || null,
+            avatarUrl: user.profile?.avatar_url || picture || null,
           },
         },
       });

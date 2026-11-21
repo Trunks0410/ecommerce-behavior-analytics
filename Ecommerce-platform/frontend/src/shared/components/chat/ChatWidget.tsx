@@ -13,6 +13,12 @@ import {
   Download,
   Loader2,
   ChevronUp,
+  Package,
+  Ticket,
+  Truck,
+  Copy,
+  Check,
+  ExternalLink,
 } from "lucide-react";
 import useAuth from "@/hooks/useAuth";
 import { chatService, ChatMessage, ConversationInfo } from "@/services/chatService";
@@ -91,13 +97,28 @@ const ChatWidget = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [conversations, setConversations] = useState<ConversationInfo[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [copiedVoucher, setCopiedVoucher] = useState<string | null>(null);
   const [aiMessages, setAiMessages] = useState<any[]>([
     {
       id: "ai-initial",
       sender_id: 0,
-      body: "Xin chào! Tôi là Trợ Lý AI của MeeMart. Bạn có thắc mắc gì về chính sách đổi trả, phương thức thanh toán hoặc đang tìm kiếm sản phẩm nào không?",
-      sent_at: new Date().toISOString()
-    }
+      body: `Dạ xin chào! Em là **Trợ lý AI Thông Minh của MeeMart** 🤖.
+Em có thể hỗ trợ anh/chị:
+• 📦 Tra cứu tiến trình đơn hàng & vận đơn UTE Express
+• 🎟️ Săn mã giảm giá hot hôm nay
+• 🔍 Gợi ý sản phẩm đa ngành hàng & so sánh giá
+• 🚚 Chính sách giao hàng (Freeship > 500k), đổi trả 7 ngày & thanh toán
+
+Anh/chị có thể bấm nhanh các gợi ý bên dưới hoặc nhắn trực tiếp cho em nha!`,
+      suggestions: [
+        "📦 Tra cứu đơn hàng của tôi",
+        "🎟️ Săn mã giảm giá hot",
+        "🚚 Phí ship & thời gian giao",
+        "🔄 Chính sách đổi trả & bảo hành",
+        "💬 Chat với chủ Shop",
+      ],
+      sent_at: new Date().toISOString(),
+    },
   ]);
   const [isAiTyping, setIsAiTyping] = useState(false);
   const [activeShop, setActiveShop] = useState<ActiveShop | null>(null);
@@ -120,7 +141,7 @@ const ChatWidget = () => {
     if (isOpen && !isMinimized && view === "detail") {
       scrollToBottom();
     }
-  }, [messages, isOpen, isMinimized, view]);
+  }, [messages, aiMessages, isOpen, isMinimized, view]);
 
   // 1. Polling lấy tổng số lượng tin nhắn chưa đọc (mỗi 5 giây)
   useEffect(() => {
@@ -302,6 +323,56 @@ const ChatWidget = () => {
     setAttachedFile(null);
   };
 
+  const sendAiMessage = async (content: string) => {
+    if (!content.trim() || isAiTyping) return;
+    setMessage("");
+    const userMsg = {
+      id: `user-${Date.now()}`,
+      sender_id: user?.id,
+      body: content,
+      sent_at: new Date().toISOString(),
+    };
+    setAiMessages((prev) => [...prev, userMsg]);
+    setIsAiTyping(true);
+
+    try {
+      const res = await chatService.chatWithAI(content);
+      const aiReply = {
+        id: `ai-${Date.now()}`,
+        sender_id: 0,
+        body: res.reply,
+        products: res.products,
+        orders: res.orders,
+        vouchers: res.vouchers,
+        suggestions: res.suggestions,
+        sent_at: new Date().toISOString(),
+      };
+      setAiMessages((prev) => [...prev, aiReply]);
+    } catch (err: any) {
+      const errorReply = {
+        id: `ai-err-${Date.now()}`,
+        sender_id: 0,
+        body: "Xin lỗi, tôi gặp lỗi kết nối với máy chủ AI. Vui lòng thử lại sau hoặc chọn các gợi ý bên dưới.",
+        suggestions: [
+          "🚚 Phí ship & thời gian giao",
+          "🔄 Chính sách đổi trả & bảo hành",
+        ],
+        sent_at: new Date().toISOString(),
+      };
+      setAiMessages((prev) => [...prev, errorReply]);
+    } finally {
+      setIsAiTyping(false);
+    }
+  };
+
+  const handleQuickSuggestion = (suggestion: string) => {
+    if (suggestion === "💬 Chat với chủ Shop") {
+      setView("list");
+      return;
+    }
+    sendAiMessage(suggestion);
+  };
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     const content = message.trim();
@@ -309,37 +380,7 @@ const ChatWidget = () => {
     if (!activeShop || !isAuthenticated || isUploading) return;
 
     if (activeShop.id === 0) {
-      setMessage("");
-      const userMsg = {
-        id: `user-${Date.now()}`,
-        sender_id: user?.id,
-        body: content,
-        sent_at: new Date().toISOString(),
-      };
-      setAiMessages((prev) => [...prev, userMsg]);
-      setIsAiTyping(true);
-
-      try {
-        const res = await chatService.chatWithAI(content);
-        const aiReply = {
-          id: `ai-${Date.now()}`,
-          sender_id: 0,
-          body: res.reply,
-          products: res.products,
-          sent_at: new Date().toISOString(),
-        };
-        setAiMessages((prev) => [...prev, aiReply]);
-      } catch (err: any) {
-        const errorReply = {
-          id: `ai-err-${Date.now()}`,
-          sender_id: 0,
-          body: "Xin lỗi, tôi gặp lỗi kết nối với máy chủ AI. Vui lòng thử lại sau.",
-          sent_at: new Date().toISOString(),
-        };
-        setAiMessages((prev) => [...prev, errorReply]);
-      } finally {
-        setIsAiTyping(false);
-      }
+      await sendAiMessage(content);
       return;
     }
 
@@ -388,7 +429,7 @@ const ChatWidget = () => {
       >
         <MessageCircle size={28} className="group-hover:scale-110 transition-transform" />
         {unreadCount > 0 && (
-          <div className="absolute -top-1 -right-1 w-5.5 h-5.5 bg-red-500 border-2 border-white rounded-full flex items-center justify-center text-[9px] font-black text-white animate-pulse shadow-md">
+          <div className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 border-2 border-white rounded-full flex items-center justify-center text-[11px] font-black text-white animate-pulse shadow-md">
             {unreadCount}
           </div>
         )}
@@ -397,11 +438,11 @@ const ChatWidget = () => {
   }
 
   return (
-    <div className={`fixed bottom-8 right-8 w-[380px] bg-white/95 backdrop-blur-xl border border-gray-100 rounded-3xl shadow-premium z-50 overflow-hidden transition-all duration-300 flex flex-col ${isMinimized ? 'h-20' : 'h-[550px]'}`}>
+    <div className={`fixed bottom-6 right-6 w-[420px] max-w-[calc(100vw-2rem)] bg-white/95 backdrop-blur-xl border border-gray-100 rounded-3xl shadow-premium z-50 overflow-hidden transition-all duration-300 flex flex-col ${isMinimized ? 'h-20' : 'h-[600px] max-h-[85vh]'}`}>
       {/* Header */}
       <div 
         onClick={() => isMinimized && setIsMinimized(false)}
-        className={`p-5 border-b border-gray-100 flex items-center justify-between bg-white/80 relative z-10 select-none ${isMinimized ? 'cursor-pointer hover:bg-gray-50/50' : ''}`}
+        className={`p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between bg-white/80 relative z-10 select-none ${isMinimized ? 'cursor-pointer hover:bg-gray-50/50' : ''}`}
       >
         <div className="flex items-center gap-3">
           {view === "detail" && (
@@ -413,7 +454,7 @@ const ChatWidget = () => {
               className="p-1.5 border border-gray-200 rounded-lg hover:bg-gray-100 transition-all cursor-pointer active:scale-95 animate-in fade-in duration-200"
               title="Quay lại danh sách"
             >
-              <ArrowLeft size={14} className="stroke-[2.5px]" />
+              <ArrowLeft size={16} className="stroke-[2.5px]" />
             </button>
           )}
           
@@ -440,21 +481,21 @@ const ChatWidget = () => {
           
           <div>
             <div className="flex items-center gap-1.5 mb-0.5">
-              <h4 className="text-xs font-bold uppercase tracking-tight truncate max-w-[150px]">
+              <h4 className="text-sm font-bold tracking-tight truncate max-w-[180px]">
                 {view === "detail" ? (activeShop?.name || "Cửa hàng") : "Hộp thư hỗ trợ"}
               </h4>
               {view === "detail" && activeShop?.id === 0 && (
-                <span className="bg-purple-600 text-white text-[7px] font-black uppercase px-1 py-0.5 rounded shadow-sm shrink-0">Trợ lý AI</span>
+                <span className="bg-purple-600 text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shadow-sm shrink-0">Trợ lý AI</span>
               )}
               {view === "detail" && activeShop?.role?.toUpperCase() === 'MANAGER' && (
-                <span className="bg-blue-500 text-white text-[7px] font-black uppercase px-1 py-0.5 rounded shadow-sm shrink-0">Quản lý</span>
+                <span className="bg-blue-500 text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shadow-sm shrink-0">Quản lý</span>
               )}
               {view === "detail" && activeShop?.role?.toUpperCase() === 'ADMIN' && (
-                <span className="bg-red-500 text-white text-[7px] font-black uppercase px-1 py-0.5 rounded shadow-sm shrink-0">Admin</span>
+                <span className="bg-red-500 text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shadow-sm shrink-0">Admin</span>
               )}
             </div>
-            <p className={`text-[8px] font-bold uppercase tracking-widest flex items-center gap-1 ${activeShop?.id === 0 ? "text-purple-500" : "text-green-500"}`}>
-              {view === "detail" ? (activeShop?.id === 0 ? "Sẵn sàng trả lời" : "Đang hoạt động") : "Dữ liệu thực tế"}
+            <p className={`text-[11px] font-semibold flex items-center gap-1 ${activeShop?.id === 0 ? "text-purple-600" : "text-green-600"}`}>
+              {view === "detail" ? (activeShop?.id === 0 ? "Sẵn sàng trả lời" : "Đang hoạt động") : "Hỗ trợ trực tuyến"}
             </p>
           </div>
         </div>
@@ -500,14 +541,14 @@ const ChatWidget = () => {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Tìm kiếm cửa hàng đã chat..."
-                    className="w-full bg-white border border-gray-200 rounded-xl pl-9 pr-4 py-2 text-[10px] font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
+                    className="w-full bg-white border border-gray-200 rounded-xl pl-9 pr-4 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
                   />
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
                 </div>
               </div>
 
               {/* List Conversations */}
-              <div className="flex-grow overflow-y-auto p-2 space-y-1.5 scrollbar-thin">
+              <div className="flex-grow overflow-y-auto p-2.5 space-y-2 scrollbar-thin">
                 {!searchQuery && (
                   <button
                     onClick={() => {
@@ -519,7 +560,7 @@ const ChatWidget = () => {
                       });
                       setView("detail");
                     }}
-                    className="w-full flex items-center gap-3 p-2.5 rounded-2xl hover:bg-purple-50/50 transition-all text-left cursor-pointer group active:scale-95 border-2 border-dashed border-purple-200"
+                    className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-purple-50/50 transition-all text-left cursor-pointer group active:scale-95 border-2 border-dashed border-purple-200"
                   >
                     <div className="relative shrink-0">
                       <div className="w-10 h-10 rounded-full border border-purple-200 bg-purple-100 overflow-hidden flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
@@ -527,16 +568,16 @@ const ChatWidget = () => {
                       </div>
                     </div>
                     <div className="flex-grow min-w-0">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-[10px] font-black uppercase tracking-tight text-purple-700">
+                      <div className="flex justify-between items-center mb-0.5">
+                        <span className="text-xs font-extrabold tracking-tight text-purple-700">
                           Trợ lý AI Thông Minh
                         </span>
-                        <span className="bg-purple-600 text-white text-[7px] font-black uppercase px-1 py-0.5 rounded shadow-sm shrink-0">
+                        <span className="bg-purple-600 text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shadow-sm shrink-0">
                           AI Bot
                         </span>
                       </div>
-                      <p className="text-[10px] truncate text-gray-500 font-semibold">
-                        Hỏi về sản phẩm, chính sách đổi trả...
+                      <p className="text-xs truncate text-gray-500 font-medium">
+                        Hỏi về sản phẩm, đơn hàng, mã giảm giá...
                       </p>
                     </div>
                   </button>
@@ -546,10 +587,10 @@ const ChatWidget = () => {
                   !searchQuery ? null : (
                     <div className="text-center py-20 flex flex-col items-center justify-center p-6">
                       <MessageSquare size={36} className="text-gray-300 mb-3" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                      <span className="text-xs font-bold uppercase tracking-wider text-gray-500">
                         Không có cuộc trò chuyện nào
                       </span>
-                      <p className="text-[9px] font-bold text-gray-400 mt-2 uppercase text-center max-w-[240px] leading-relaxed">
+                      <p className="text-xs text-gray-400 mt-2 text-center max-w-[260px] leading-relaxed">
                         Hãy ghé qua gian hàng bất kỳ và bấm nút "Chat ngay" để bắt đầu!
                       </p>
                     </div>
@@ -559,7 +600,7 @@ const ChatWidget = () => {
                     <button
                       key={conv.id}
                       onClick={() => handleSelectConversation(conv)}
-                      className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 transition-all text-left cursor-pointer group active:scale-95"
+                      className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-all text-left cursor-pointer group active:scale-95"
                     >
                       <div className="relative shrink-0">
                         <div className="w-10 h-10 rounded-full border border-gray-100 bg-primary/10 overflow-hidden flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
@@ -575,29 +616,29 @@ const ChatWidget = () => {
                       </div>
                       
                       <div className="flex-grow min-w-0">
-                        <div className="flex justify-between items-center mb-1">
+                        <div className="flex justify-between items-center mb-0.5">
                           <div className="flex items-center gap-1.5 truncate">
-                            <span className="text-[10px] font-bold uppercase tracking-tight group-hover:text-primary transition-colors truncate">
+                            <span className="text-xs font-bold tracking-tight group-hover:text-primary transition-colors truncate">
                               {conv.partner.name}
                             </span>
                             {conv.partner.role?.toUpperCase() === 'MANAGER' && (
-                              <span className="bg-blue-500 text-white text-[7px] font-black uppercase px-1 py-0.5 rounded shadow-sm shrink-0">Quản lý</span>
+                              <span className="bg-blue-500 text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shadow-sm shrink-0">Quản lý</span>
                             )}
                             {conv.partner.role?.toUpperCase() === 'ADMIN' && (
-                              <span className="bg-red-500 text-white text-[7px] font-black uppercase px-1 py-0.5 rounded shadow-sm shrink-0">Admin</span>
+                              <span className="bg-red-500 text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shadow-sm shrink-0">Admin</span>
                             )}
                           </div>
-                          <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest shrink-0 pl-2">
+                          <span className="text-[11px] font-medium text-gray-400 shrink-0 pl-2">
                             {conv.lastMessage ? new Date(conv.lastMessage.sent_at).toLocaleTimeString(getCurrentLocale(), { hour: '2-digit', minute: '2-digit' }) : ""}
                           </span>
                         </div>
                         
                         <div className="flex justify-between items-center gap-2">
-                          <p className={`text-[10px] truncate font-medium ${conv.unreadCount > 0 ? "text-black font-black" : "text-gray-500"}`}>
+                          <p className={`text-xs truncate ${conv.unreadCount > 0 ? "text-black font-bold" : "text-gray-500 font-medium"}`}>
                             {conv.lastMessage ? conv.lastMessage.body : "Chưa có tin nhắn"}
                           </p>
                           {conv.unreadCount > 0 && (
-                            <span className="bg-red-500 text-white border border-white rounded-full px-1.5 py-0.5 text-[7px] font-bold shrink-0 shadow-sm animate-pulse">
+                            <span className="bg-red-500 text-white border border-white rounded-full px-1.5 py-0.5 text-[10px] font-bold shrink-0 shadow-sm animate-pulse">
                               {conv.unreadCount}
                             </span>
                           )}
@@ -614,16 +655,16 @@ const ChatWidget = () => {
           {view === "detail" && (
             <>
               {/* Messages Area */}
-              <div className="flex-grow overflow-y-auto p-6 space-y-4 bg-[#F9F9F7] bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] scrollbar-thin">
+              <div className="flex-grow overflow-y-auto p-4 sm:p-5 space-y-4 bg-[#F9F9F7] bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] scrollbar-thin">
                 {(() => {
                   const activeMessages = activeShop?.id === 0 ? aiMessages : messages;
                   if (activeMessages.length === 0) {
                     return (
                       <div className="text-center py-12 flex flex-col items-center justify-center">
-                        <span className="bg-white border border-gray-100 px-4 py-2 rounded-xl text-[9px] font-bold uppercase tracking-widest text-gray-400 shadow-sm">
+                        <span className="bg-white border border-gray-100 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-gray-500 shadow-sm">
                           Mở đầu hộp thư
                         </span>
-                        <p className="text-[9px] font-bold text-gray-400 mt-3.5 uppercase tracking-wide">
+                        <p className="text-xs font-medium text-gray-400 mt-3">
                           Gửi lời chào đầu tiên đến shop!
                         </p>
                       </div>
@@ -642,7 +683,7 @@ const ChatWidget = () => {
                           <React.Fragment key={msg.id}>
                             {showDateSeparator && (
                               <div className="flex justify-center my-3 select-none">
-                                <span className="bg-white border border-gray-100 px-3.5 py-1.5 rounded-full text-[8px] font-bold uppercase tracking-widest text-gray-400 shadow-sm">
+                                <span className="bg-white border border-gray-100 px-3.5 py-1 rounded-full text-[11px] font-semibold text-gray-500 shadow-sm">
                                   {new Date(msg.sent_at).toLocaleDateString(getCurrentLocale(), {
                                     weekday: "long",
                                     day: "numeric",
@@ -652,11 +693,11 @@ const ChatWidget = () => {
                               </div>
                             )}
                             
-                            <div className={`flex gap-3 max-w-[85%] animate-in fade-in slide-in-from-bottom-1 duration-200 ${isMe ? "ml-auto flex-row-reverse text-right" : ""}`}>
+                            <div className={`flex gap-2.5 max-w-[90%] animate-in fade-in slide-in-from-bottom-1 duration-200 ${isMe ? "ml-auto flex-row-reverse text-right" : ""}`}>
                               {!isMe && (
                                 <div className="w-8 h-8 rounded-full border border-gray-100 bg-primary/10 overflow-hidden shrink-0 flex items-center justify-center shadow-sm">
                                   {activeShop?.id === 0 ? (
-                                    <span className="text-xs">🤖</span>
+                                    <span className="text-sm">🤖</span>
                                   ) : (
                                     <img
                                       src={activeShop?.logo || DEFAULT_SHOP_LOGO}
@@ -667,20 +708,20 @@ const ChatWidget = () => {
                                 </div>
                               )}
                               {isMe && (
-                                <div className="w-8 h-8 rounded-full bg-secondary text-white flex items-center justify-center text-[8px] font-bold shrink-0 uppercase shadow-sm">
+                                <div className="w-8 h-8 rounded-full bg-secondary text-white flex items-center justify-center text-[11px] font-bold shrink-0 uppercase shadow-sm">
                                   {user?.profile?.full_name ? user.profile.full_name.substring(0, 2) : "ME"}
                                 </div>
                               )}
-                              <div className="space-y-1 max-w-[calc(100%-2.5rem)]">
+                              <div className="space-y-1.5 max-w-[calc(100%-2.5rem)]">
                                 <div className="flex items-center gap-2 mb-0.5">
                                   {!isMe && msg.sender?.role?.role_name?.toUpperCase() === 'MANAGER' && (
-                                    <span className="bg-blue-500 text-white text-[8px] font-black uppercase px-1.5 py-0.5 rounded shadow-sm">Quản lý</span>
+                                    <span className="bg-blue-500 text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shadow-sm">Quản lý</span>
                                   )}
                                   {!isMe && msg.sender?.role?.role_name?.toUpperCase() === 'ADMIN' && (
-                                    <span className="bg-red-500 text-white text-[8px] font-black uppercase px-1.5 py-0.5 rounded shadow-sm">Admin</span>
+                                    <span className="bg-red-500 text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shadow-sm">Admin</span>
                                   )}
                                 </div>
-                                <div className={`p-3.5 rounded-2xl shadow-sm text-left ${isMe ? "bg-primary text-white rounded-tr-none" : "bg-white text-black rounded-tl-none border border-gray-100"}`}>
+                                <div className={`p-3.5 rounded-2xl shadow-sm text-left ${isMe ? "bg-primary text-white rounded-tr-none" : "bg-white text-gray-800 rounded-tl-none border border-gray-100"}`}>
                                   {msg.attachment_url && (
                                     <div className="mb-2 max-w-full overflow-hidden rounded-xl">
                                       {msg.attachment_type?.startsWith("image/") ? (
@@ -696,10 +737,10 @@ const ChatWidget = () => {
                                           href={msg.attachment_url} 
                                           target="_blank" 
                                           rel="noopener noreferrer" 
-                                          className={`flex items-center gap-2 p-2.5 rounded-xl border text-[10px] font-bold transition-all ${isMe ? "bg-primary-dark/30 border-white/20 text-white hover:bg-primary-dark/50" : "bg-gray-50 border-gray-100 text-black hover:bg-gray-100"}`}
+                                          className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs font-semibold transition-all ${isMe ? "bg-primary-dark/30 border-white/20 text-white hover:bg-primary-dark/50" : "bg-gray-50 border-gray-100 text-black hover:bg-gray-100"}`}
                                         >
                                           <FileText size={16} className={isMe ? "text-white/80" : "text-primary"} />
-                                          <span className="truncate max-w-[120px]" title={msg.attachment_name || "File"}>
+                                          <span className="truncate max-w-[140px]" title={msg.attachment_name || "File"}>
                                             {msg.attachment_name || "Tệp đính kèm"}
                                           </span>
                                           <Download size={14} className="ml-auto opacity-70 shrink-0" />
@@ -708,42 +749,205 @@ const ChatWidget = () => {
                                     </div>
                                   )}
                                   {msg.body && (
-                                    <p className="text-[11px] font-medium leading-relaxed break-words">
+                                    <p className="text-[13px] font-normal leading-relaxed break-words">
                                       {renderMessageBody(msg.body)}
                                     </p>
                                   )}
+
+                                  {/* Thẻ Đơn Hàng (Order Cards) */}
+                                  {msg.orders && msg.orders.length > 0 && (
+                                    <div className="mt-3 space-y-2">
+                                      {msg.orders.map((order: any) => (
+                                        <div
+                                          key={order.id || order.shop_order_code}
+                                          className="bg-white border border-gray-200 rounded-2xl p-3 shadow-xs hover:border-primary/40 transition-all text-left"
+                                        >
+                                          <div className="flex items-center justify-between gap-1.5 border-b border-gray-100 pb-2 mb-2">
+                                            <div className="flex items-center gap-1.5 min-w-0">
+                                              <Package size={15} className="text-primary shrink-0" />
+                                              <span className="text-xs font-bold text-gray-900 truncate">
+                                                #{order.checkout_code}
+                                              </span>
+                                            </div>
+                                            <span
+                                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide shrink-0 ${
+                                                order.status === "DELIVERED" || order.status === "COMPLETED"
+                                                  ? "bg-green-100 text-green-700"
+                                                  : order.status === "SHIPPING"
+                                                  ? "bg-blue-100 text-blue-700 animate-pulse"
+                                                  : order.status === "CANCELLED"
+                                                  ? "bg-red-100 text-red-700"
+                                                  : "bg-amber-100 text-amber-700"
+                                              }`}
+                                            >
+                                              {order.status_text}
+                                            </span>
+                                          </div>
+
+                                          <div className="space-y-1.5 text-xs text-gray-600">
+                                            <div className="flex justify-between gap-2">
+                                              <span className="text-gray-400 font-medium">Shop:</span>
+                                              <span className="font-semibold text-gray-800 truncate max-w-[160px]">{order.shop_name}</span>
+                                            </div>
+                                            {order.tracking_number && (
+                                              <div className="flex justify-between items-center bg-blue-50/70 rounded-lg px-2 py-1 border border-blue-100/70">
+                                                <span className="text-blue-700 font-medium flex items-center gap-1">
+                                                  <Truck size={13} className="text-blue-500" /> UTE:
+                                                </span>
+                                                <span className="font-mono font-bold text-blue-700">{order.tracking_number}</span>
+                                              </div>
+                                            )}
+                                            {order.shipment_status_text && (
+                                              <div className="flex justify-between gap-2">
+                                                <span className="text-gray-400 font-medium">Tiến trình:</span>
+                                                <span className="font-semibold text-gray-700 text-right">{order.shipment_status_text}</span>
+                                              </div>
+                                            )}
+                                            <div className="flex justify-between pt-1.5 border-t border-gray-100">
+                                              <span className="text-gray-500 font-medium">Tổng tiền:</span>
+                                              <span className="font-bold text-primary text-xs">
+                                                {Number(order.total_amount).toLocaleString(getCurrentLocale())}đ
+                                              </span>
+                                            </div>
+                                          </div>
+
+                                          <div className="mt-2.5 pt-2 border-t border-gray-100">
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setIsOpen(false);
+                                                navigate("/orders");
+                                              }}
+                                              className="w-full flex items-center justify-center gap-1.5 py-2 bg-gray-900 text-white rounded-xl text-xs font-semibold hover:bg-black transition-all cursor-pointer"
+                                            >
+                                              <span>Xem chi tiết đơn</span>
+                                              <ExternalLink size={12} />
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  {/* Thẻ Mã Giảm Giá (Voucher Cards) */}
+                                  {msg.vouchers && msg.vouchers.length > 0 && (
+                                    <div className="mt-3 space-y-2">
+                                      {msg.vouchers.map((voucher: any) => (
+                                        <div
+                                          key={voucher.id || voucher.code}
+                                          className="bg-gradient-to-r from-amber-50/80 to-orange-50/80 border border-amber-200 rounded-2xl p-2.5 flex items-center justify-between gap-2 shadow-xs text-left"
+                                        >
+                                          <div className="flex items-center gap-2 min-w-0">
+                                            <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+                                              <Ticket size={16} className="text-primary" />
+                                            </div>
+                                            <div className="min-w-0">
+                                              <div className="flex items-center gap-1.5">
+                                                <span className="font-mono font-bold text-xs text-gray-900 tracking-wide">
+                                                  {voucher.code}
+                                                </span>
+                                                <span className="bg-primary text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded">
+                                                  {voucher.discount_type === "PERCENT" ? `-${voucher.discount_value}%` : "VOUCHER"}
+                                                </span>
+                                              </div>
+                                              <p className="text-[11px] text-gray-600 line-clamp-2 font-medium mt-0.5">
+                                                {voucher.description}
+                                              </p>
+                                            </div>
+                                          </div>
+
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              navigator.clipboard.writeText(voucher.code);
+                                              setCopiedVoucher(voucher.code);
+                                              setTimeout(() => setCopiedVoucher(null), 2000);
+                                            }}
+                                            className="px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-[11px] font-semibold text-gray-700 hover:text-primary hover:border-primary shrink-0 transition-all shadow-xs flex items-center gap-1 cursor-pointer active:scale-95"
+                                          >
+                                            {copiedVoucher === voucher.code ? (
+                                              <>
+                                                <Check size={12} className="text-green-600" />
+                                                <span className="text-green-600 font-bold">Đã chép</span>
+                                              </>
+                                            ) : (
+                                              <>
+                                                <Copy size={12} />
+                                                <span>Sao chép</span>
+                                              </>
+                                            )}
+                                          </button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  {/* Thẻ Sản Phẩm (Product Cards) */}
                                   {msg.products && msg.products.length > 0 && (
-                                    <div className="mt-3 flex gap-2 overflow-x-auto pb-2 scrollbar-thin max-w-full">
+                                    <div className="mt-3 flex gap-2.5 overflow-x-auto pb-2 scrollbar-thin max-w-full">
                                       {msg.products.map((prod: any) => (
                                         <div
                                           key={prod.id}
                                           onClick={() => {
-                                            setIsOpen(false); // Close chat widget when navigating to product
+                                            setIsOpen(false);
                                             navigate(`/products/${prod.slug}`);
                                           }}
-                                          className="flex-shrink-0 w-[110px] bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition-all cursor-pointer group"
+                                          className="flex-shrink-0 w-[138px] bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-md hover:border-primary/40 transition-all cursor-pointer group text-left"
                                         >
-                                          <div className="w-full h-[75px] bg-gray-50 overflow-hidden relative">
+                                          <div className="w-full h-[88px] bg-gray-50 overflow-hidden relative">
                                             <img
                                               src={prod.image_url || "https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=300"}
                                               alt={prod.name}
                                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                             />
+                                            {prod.sale_price && prod.sale_price < prod.price && (
+                                              <span className="absolute top-1.5 left-1.5 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-xs">
+                                                GIẢM
+                                              </span>
+                                            )}
                                           </div>
-                                          <div className="p-2">
-                                            <h5 className="text-[9px] font-black text-gray-800 line-clamp-2 min-h-[24px]">
+                                          <div className="p-2.5">
+                                            <h5 className="text-xs font-semibold text-gray-800 line-clamp-2 min-h-[32px] leading-snug">
                                               {prod.name}
                                             </h5>
-                                            <p className="text-[9px] font-extrabold text-primary mt-1">
-                                              {Number(prod.price).toLocaleString(getCurrentLocale())}đ
-                                            </p>
+                                            <div className="mt-1.5 flex items-baseline gap-1 flex-wrap">
+                                              <span className="text-xs font-bold text-primary">
+                                                {Number(prod.sale_price || prod.price).toLocaleString(getCurrentLocale())}đ
+                                              </span>
+                                              {prod.sale_price && prod.sale_price < prod.price && (
+                                                <span className="text-[11px] text-gray-400 line-through">
+                                                  {Number(prod.price).toLocaleString(getCurrentLocale())}đ
+                                                </span>
+                                              )}
+                                            </div>
+                                            {prod.shop_name && (
+                                              <p className="text-[11px] text-gray-400 truncate mt-0.5 font-medium">
+                                                {prod.shop_name}
+                                              </p>
+                                            )}
                                           </div>
                                         </div>
                                       ))}
                                     </div>
                                   )}
                                 </div>
-                                <span className="text-[8px] font-bold text-gray-400 block px-1 select-none">
+
+                                {/* Gợi ý nhanh (Quick Suggestions) */}
+                                {activeShop?.id === 0 && !isMe && index === activeMessages.length - 1 && msg.suggestions && msg.suggestions.length > 0 && !isAiTyping && (
+                                  <div className="mt-2.5 flex flex-wrap gap-1.5 animate-in fade-in duration-300">
+                                    {msg.suggestions.map((sug: string, sIdx: number) => (
+                                      <button
+                                        key={sIdx}
+                                        type="button"
+                                        onClick={() => handleQuickSuggestion(sug)}
+                                        className="text-xs font-medium px-3 py-1.5 bg-white hover:bg-purple-50 text-gray-700 hover:text-purple-700 border border-gray-200 hover:border-purple-300 rounded-full transition-all shadow-2xs cursor-pointer active:scale-95"
+                                      >
+                                        {sug}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                                <span className="text-[11px] font-medium text-gray-400 block px-1 select-none">
                                   {new Date(msg.sent_at).toLocaleTimeString(getCurrentLocale(), {
                                     hour: "2-digit",
                                     minute: "2-digit",
@@ -757,7 +961,7 @@ const ChatWidget = () => {
                       {isAiTyping && (
                         <div className="flex gap-3 max-w-[85%] animate-in fade-in slide-in-from-bottom-1 duration-200">
                           <div className="w-8 h-8 rounded-full border border-purple-100 bg-purple-100 overflow-hidden shrink-0 flex items-center justify-center shadow-sm">
-                            <span className="text-xs">🤖</span>
+                            <span className="text-sm">🤖</span>
                           </div>
                           <div className="bg-white border border-gray-100 p-3 rounded-2xl rounded-tl-none shadow-sm flex items-center gap-1">
                             <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
@@ -773,13 +977,13 @@ const ChatWidget = () => {
               </div>
 
               {/* Input Area */}
-              <form onSubmit={handleSend} className="p-5 border-t border-gray-100 bg-white select-none">
+              <form onSubmit={handleSend} className="p-4 border-t border-gray-100 bg-white select-none">
                 {/* File Upload Preview */}
                 {(isUploading || attachedFile) && (
-                  <div className="mb-3 p-2 bg-gray-50 border border-gray-100 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                  <div className="mb-3 p-2.5 bg-gray-50 border border-gray-100 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
                     {isUploading ? (
-                      <div className="flex items-center gap-2 text-gray-400 text-[10px] font-bold py-1">
-                        <Loader2 className="animate-spin text-primary" size={14} />
+                      <div className="flex items-center gap-2 text-gray-500 text-xs font-medium py-1">
+                        <Loader2 className="animate-spin text-primary" size={15} />
                         <span>Đang tải tệp lên...</span>
                       </div>
                     ) : attachedFile ? (
@@ -792,10 +996,10 @@ const ChatWidget = () => {
                           )}
                         </div>
                         <div className="flex-grow min-w-0">
-                          <p className="text-[10px] font-black uppercase text-gray-600 truncate">
+                          <p className="text-xs font-semibold text-gray-700 truncate">
                             {attachedFile.name}
                           </p>
-                          <span className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">
+                          <span className="text-[11px] text-gray-400 font-medium">
                             {attachedFile.type.startsWith("image/") ? "Hình ảnh" : "Tài liệu"}
                           </span>
                         </div>
@@ -805,14 +1009,14 @@ const ChatWidget = () => {
                           className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all shrink-0 cursor-pointer active:scale-95"
                           title="Hủy đính kèm"
                         >
-                          <X size={14} />
+                          <X size={15} />
                         </button>
                       </>
                     ) : null}
                   </div>
                 )}
 
-                <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl p-1.5 pl-3 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
+                <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl p-1.5 pl-3 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
                   <EmojiPicker
                     onSelectEmoji={(emoji) => setMessage((prev) => prev + emoji)}
                     theme="modern"
@@ -832,7 +1036,7 @@ const ChatWidget = () => {
                     onChange={(e) => setMessage(e.target.value)}
                     onKeyDown={handleKeyPress}
                     placeholder="Nhập tin nhắn..."
-                    className="flex-grow bg-transparent border-none focus:outline-none text-[11px] font-bold py-1.5"
+                    className="flex-grow bg-transparent border-none focus:outline-none text-[13px] font-medium py-1.5"
                     disabled={!activeShop || isUploading}
                   />
                   <input 
@@ -850,8 +1054,8 @@ const ChatWidget = () => {
                     <Send size={18} />
                   </button>
                 </div>
-                <div className="flex justify-end mt-2 px-1">
-                  <span className="text-[8px] font-bold text-gray-300">Nhấn Enter để gửi</span>
+                <div className="flex justify-end mt-1.5 px-1">
+                  <span className="text-[11px] font-medium text-gray-400">Nhấn Enter để gửi</span>
                 </div>
               </form>
             </>

@@ -3,8 +3,8 @@ import { createClient } from "redis";
 const redisUrl = process.env.REDIS_URL;
 const redisClient = redisUrl ? createClient({ url: redisUrl }) : null;
 
-// In-memory TTL cache fallback khi chưa cài/chạy Redis (giới hạn tối đa 150 keys ~ 3MB RAM)
-const MAX_MEMORY_CACHE_KEYS = 150;
+// In-memory TTL cache fallback khi chưa cài/chạy Redis (giới hạn tối đa 2000 keys ~ 30MB RAM)
+const MAX_MEMORY_CACHE_KEYS = 2000;
 const memoryCache = new Map();
 
 const getMemoryCache = (key) => {

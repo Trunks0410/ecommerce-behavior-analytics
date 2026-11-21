@@ -8,14 +8,48 @@ export interface Notification {
   title: string;
   content: string;
   type: string;
+  action_url?: string | null;
   is_read: boolean;
   created_at: string;
   updated_at: string;
 }
 
+export interface NotificationOverviewResponse {
+  items: Notification[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  summary: {
+    total: number;
+    unread: number;
+    read: number;
+    byCategory: {
+      order: number;
+      return: number;
+      social: number;
+      shop: number;
+      system: number;
+    };
+  };
+}
+
 export const notificationService = {
   getNotifications: async (): Promise<{ data: Notification[] }> => {
     const response = await axiosClient.get("/notifications");
+    return response.data;
+  },
+
+  getNotificationsOverview: async (params?: {
+    page?: number;
+    limit?: number;
+    status?: "all" | "unread" | "read";
+    category?: "all" | "order" | "return" | "social" | "shop" | "system";
+    q?: string;
+  }): Promise<{ data: NotificationOverviewResponse }> => {
+    const response = await axiosClient.get("/notifications/overview", { params });
     return response.data;
   },
 
@@ -100,5 +134,15 @@ export const notificationService = {
   markAllAsRead: async (): Promise<any> => {
     const response = await axiosClient.post("/notifications/read-all");
     return response.data;
-  }
+  },
+
+  deleteNotification: async (id: number): Promise<any> => {
+    const response = await axiosClient.delete(`/notifications/${id}`);
+    return response.data;
+  },
+
+  deleteReadNotifications: async (): Promise<{ data: { deletedCount: number } }> => {
+    const response = await axiosClient.delete("/notifications/read");
+    return response.data;
+  },
 };

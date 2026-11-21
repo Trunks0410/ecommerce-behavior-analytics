@@ -6,10 +6,14 @@ const chatWithAI = async (req, res) => {
     if (!message || !message.trim()) {
       return res.status(400).json({ error: "Tin nhắn không được bỏ trống" });
     }
-    const result = await aiChatService.chatWithAI(message);
+    const userId = req.user?.id || null;
+    const result = await aiChatService.chatWithAI(message, userId);
     return res.status(200).json({
       reply: result.reply,
-      products: result.products
+      products: result.products || [],
+      orders: result.orders || [],
+      vouchers: result.vouchers || [],
+      suggestions: result.suggestions || []
     });
   } catch (error) {
     console.error("Error in aiChatController:", error);

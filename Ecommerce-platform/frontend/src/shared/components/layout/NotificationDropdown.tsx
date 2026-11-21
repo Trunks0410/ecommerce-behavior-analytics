@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   Bell,
   CheckCircle2,
@@ -18,6 +18,7 @@ import {
 } from "@/services/notificationService";
 import { useLanguage } from "@/shared/context/LanguageContext";
 import { useAppSelector } from "@/app/stores/hooks";
+import { resolveNotificationTarget } from "@/shared/utils/notificationUtils";
 
 interface NotificationDropdownProps {
   variant?: "header" | "button";
@@ -31,9 +32,15 @@ export const NotificationDropdown = ({
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [selectedNotif, setSelectedNotif] = useState<Notification | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
   const { language, t } = useLanguage();
   const accessToken = useAppSelector((state) => state.auth.accessToken);
+  const userRole = useAppSelector((state) => state.auth.user?.role);
   const locale = language === "vi" ? "vi-VN" : "en-US";
+
+  const getTargetUrl = (notif: Notification) =>
+    resolveNotificationTarget(notif, userRole, location.pathname);
 
   const playNotificationSound = () => {
     const audio = new Audio(
@@ -109,9 +116,15 @@ export const NotificationDropdown = ({
   };
 
   const handleNotifClick = async (notif: Notification) => {
-    setSelectedNotif(notif);
     if (!notif.is_read) {
       await handleMarkAsRead(notif.id);
+    }
+    const targetUrl = getTargetUrl(notif);
+    if (targetUrl) {
+      setIsOpen(false);
+      navigate(targetUrl);
+    } else {
+      setSelectedNotif(notif);
     }
   };
 
@@ -289,18 +302,30 @@ export const NotificationDropdown = ({
                           <span className="w-2 h-2 rounded-full bg-[#ee4d2d] shrink-0" />
                         )}
                       </div>
-                      <p className="text-[11px] text-gray-600 dark:text-slate-300 mt-0.5 line-clamp-2 leading-relaxed">
+                      <p className="text-xs text-gray-600 dark:text-slate-300 mt-1 line-clamp-2 leading-relaxed">
                         {notif.content}
                       </p>
-                      <p className="text-[10px] text-gray-400 dark:text-slate-500 mt-1.5">
-                        {new Date(notif.created_at).toLocaleString(locale, {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                        })}
-                      </p>
+                      <div className="mt-1.5 flex items-center justify-between gap-2">
+                        <p className="text-[11px] text-gray-400 dark:text-slate-500">
+                          {new Date(notif.created_at).toLocaleString(locale, {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                          })}
+                        </p>
+                        {getTargetUrl(notif) ? (
+                          <span className="text-[11px] font-medium text-[#ee4d2d] inline-flex items-center gap-0.5 shrink-0">
+                            <span>Xem chi tiết</span>
+                            <ChevronRight size={11} />
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-gray-400 dark:text-slate-500 shrink-0">
+                            Đọc thông báo
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))
@@ -310,7 +335,7 @@ export const NotificationDropdown = ({
             {/* Footer: View All Link */}
             <div className="border-t border-gray-100 dark:border-slate-700/80 bg-[#fbfbfb] dark:bg-slate-800 p-2 text-center">
               <Link
-                to="/profile?tab=notifications"
+                to="/notifications"
                 onClick={() => setIsOpen(false)}
                 className="text-xs font-medium text-gray-700 dark:text-slate-300 hover:text-[#ee4d2d] dark:hover:text-[#ee4d2d] inline-flex items-center gap-1 transition-colors py-1 px-3"
               >

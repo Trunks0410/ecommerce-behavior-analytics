@@ -44,9 +44,13 @@ const ProductCard = ({
   const [showModal, setShowModal] = useState(false);
   const { t } = useLanguage();
 
-  const finalImage = image.startsWith('http') || image.startsWith('data:') || image.startsWith('/placeholder') 
+  const rawImage = image.startsWith('http') || image.startsWith('data:') || image.startsWith('/placeholder') 
     ? image 
-    : `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8088"}${image.startsWith('/') ? '' : '/'}${image}`;
+    : `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8080"}${image.startsWith('/') ? '' : '/'}${image}`;
+
+  const finalImage = rawImage.includes("cloudinary.com") && rawImage.includes("/upload/")
+    ? rawImage.replace("/upload/", "/upload/w_350,h_350,c_fill,q_auto,f_auto/")
+    : rawImage;
 
   // Calculate discount percentage
   const discountPercent = originalPrice && originalPrice > price 
@@ -358,9 +362,11 @@ const AddToCartModal = ({
 
     addToCartMutation.mutate(
       {
-        product_id: product.id,
-        variant_id: activeVariant ? activeVariant.id : undefined,
+        productId: product.id,
+        variantId: activeVariant ? activeVariant.id : undefined,
         quantity: quantity,
+        product,
+        variant: activeVariant,
       },
       {
         onSuccess: () => {

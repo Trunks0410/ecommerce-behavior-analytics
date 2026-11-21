@@ -45,6 +45,14 @@ import { formatPrice } from "@/shared/utils/format";
 import { useLanguage } from "@/shared/context/LanguageContext";
 import { getCurrentLocale } from "@/shared/utils/format";
 import ProductCard from "@/shared/components/ui/ProductCard";
+import { AddressCombobox, ComboboxOption } from "@/shared/components/address/AddressCombobox";
+import { AddressMapPicker } from "@/shared/components/address/AddressMapPicker";
+import {
+  getProvinces34,
+  getWardsByProvinceCode,
+  VNProvince,
+  VNWard,
+} from "@/shared/services/vietnamAddressApi";
 
 const API_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8088";
 
@@ -65,7 +73,10 @@ const Profile = () => {
   const addressSchema = useMemo(() => yup.object().shape({
     recipient_name: yup.string().required(t("profile_recipient_required")),
     phone_number: yup.string().required(t("profile_address_phone_required")),
-    address_line: yup.string().required(t("profile_address_line_required")),
+    province: yup.string().required("Vui lòng chọn Tỉnh / Thành phố"),
+    district: yup.string().optional(),
+    ward: yup.string().required("Vui lòng chọn Phường / Xã"),
+    street: yup.string().required("Vui lòng nhập địa chỉ cụ thể (Số nhà, tên đường)"),
   }), [language, t]);
 
   const schema = useMemo(() => yup.object({
@@ -153,6 +164,37 @@ const Profile = () => {
   const deleteAddressMutation = useDeleteAddress();
   const [isAddingAddress, setIsAddingAddress] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState<number | null>(null);
+  const [provincesList, setProvincesList] = useState<VNProvince[]>([]);
+  const [wardsList, setWardsList] = useState<VNWard[]>([]);
+  const [selectedProvinceCode, setSelectedProvinceCode] = useState<number | null>(null);
+  const [isLoadingWards, setIsLoadingWards] = useState(false);
+
+  useEffect(() => {
+    getProvinces34().then(setProvincesList);
+  }, []);
+
+  useEffect(() => {
+    if (!selectedProvinceCode) {
+      setWardsList([]);
+      return;
+    }
+    setIsLoadingWards(true);
+    getWardsByProvinceCode(selectedProvinceCode)
+      .then(setWardsList)
+      .finally(() => setIsLoadingWards(false));
+  }, [selectedProvinceCode]);
+
+  const provinceOptions: ComboboxOption[] = provincesList.map((p) => ({
+    value: p.name,
+    label: p.name,
+    code: p.code,
+  }));
+
+  const wardOptions: ComboboxOption[] = wardsList.map((w) => ({
+    value: w.name,
+    label: w.name,
+    code: w.code,
+  }));
 
   // Profile data hooks
   const { data: profile } = useProfile({ enabled: !!user });
@@ -183,12 +225,22 @@ const Profile = () => {
     register: registerAddress,
     handleSubmit: handleAddressSubmit,
     reset: resetAddress,
+    watch: watchAddress,
+    setValue: setAddressValue,
     formState: { errors: addressErrors },
   } = useForm({
     resolver: yupResolver(addressSchema),
   });
 
+  const watchedProvince = watchAddress("province") || "";
+  const watchedWard = watchAddress("ward") || "";
+  const watchedStreet = watchAddress("street") || "";
+
   const onSubmitAddress = async (data: any) => {
+    const addressLine = [data.street, data.ward, data.district, data.province]
+      .map((s) => (s || "").trim())
+      .filter(Boolean)
+      .join(", ");
     try {
       if (editingAddressId) {
         await updateAddressMutation.mutateAsync({
@@ -196,7 +248,11 @@ const Profile = () => {
           payload: {
             recipient_name: data.recipient_name,
             phone_number: data.phone_number,
-            address_line: data.address_line,
+            province: data.province,
+            district: data.district,
+            ward: data.ward,
+            street: data.street,
+            address_line: addressLine,
           },
         });
         alert(t("profile_update_address_success"));
@@ -204,7 +260,11 @@ const Profile = () => {
         await createAddressMutation.mutateAsync({
           recipient_name: data.recipient_name,
           phone_number: data.phone_number,
-          address_line: data.address_line,
+          province: data.province,
+          district: data.district,
+          ward: data.ward,
+          street: data.street,
+          address_line: addressLine,
           is_default: addresses?.length === 0,
         });
         alert(t("profile_add_address_success"));
@@ -222,8 +282,13 @@ const Profile = () => {
     resetAddress({
       recipient_name: addr.recipient_name,
       phone_number: addr.phone_number,
-      address_line: addr.address_line,
+      province: addr.province || "",
+      district: addr.district || "",
+      ward: addr.ward || "",
+      street: addr.street || addr.address_line || "",
     });
+    const matchedProvince = provincesList.find((p) => p.name === addr.province);
+    setSelectedProvinceCode(matchedProvince ? matchedProvince.code : null);
     setIsAddingAddress(true);
   };
 
@@ -424,55 +489,50 @@ const Profile = () => {
             <div className="flex items-center space-x-1 sm:space-x-2 border-t border-gray-100 dark:border-slate-800 mt-6 pt-1 overflow-x-auto">
               <button
                 onClick={() => setActiveTab("overview")}
-                className={`px-4 py-3 text-xs sm:text-sm font-semibold transition-colors border-b-2 cursor-pointer whitespace-nowrap ${
-                  activeTab === "overview"
+                className={`px-4 py-3 text-xs sm:text-sm font-semibold transition-colors border-b-2 cursor-pointer whitespace-nowrap ${activeTab === "overview"
                     ? "border-[#ee4d2d] text-[#ee4d2d]"
                     : "border-transparent text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800/60 rounded-t-lg"
-                }`}
+                  }`}
               >
                 {t("profile_tab_overview")}
               </button>
 
               <button
                 onClick={() => setActiveTab("addresses")}
-                className={`px-4 py-3 text-xs sm:text-sm font-semibold transition-colors border-b-2 cursor-pointer whitespace-nowrap ${
-                  activeTab === "addresses"
+                className={`px-4 py-3 text-xs sm:text-sm font-semibold transition-colors border-b-2 cursor-pointer whitespace-nowrap ${activeTab === "addresses"
                     ? "border-[#ee4d2d] text-[#ee4d2d]"
                     : "border-transparent text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800/60 rounded-t-lg"
-                }`}
+                  }`}
               >
                 {t("profile_tab_addresses")}
               </button>
 
               <button
                 onClick={() => setActiveTab("favorites")}
-                className={`px-4 py-3 text-xs sm:text-sm font-semibold transition-colors border-b-2 cursor-pointer whitespace-nowrap ${
-                  activeTab === "favorites"
+                className={`px-4 py-3 text-xs sm:text-sm font-semibold transition-colors border-b-2 cursor-pointer whitespace-nowrap ${activeTab === "favorites"
                     ? "border-[#ee4d2d] text-[#ee4d2d]"
                     : "border-transparent text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800/60 rounded-t-lg"
-                }`}
+                  }`}
               >
                 {t("profile_tab_favorites")} ({favorites?.length || 0})
               </button>
 
               <button
                 onClick={() => setActiveTab("viewed")}
-                className={`px-4 py-3 text-xs sm:text-sm font-semibold transition-colors border-b-2 cursor-pointer whitespace-nowrap ${
-                  activeTab === "viewed"
+                className={`px-4 py-3 text-xs sm:text-sm font-semibold transition-colors border-b-2 cursor-pointer whitespace-nowrap ${activeTab === "viewed"
                     ? "border-[#ee4d2d] text-[#ee4d2d]"
                     : "border-transparent text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800/60 rounded-t-lg"
-                }`}
+                  }`}
               >
                 {t("viewed_label")} ({viewedProducts?.length || 0})
               </button>
 
               <button
                 onClick={() => setActiveTab("points")}
-                className={`px-4 py-3 text-xs sm:text-sm font-semibold transition-colors border-b-2 cursor-pointer whitespace-nowrap ${
-                  activeTab === "points"
+                className={`px-4 py-3 text-xs sm:text-sm font-semibold transition-colors border-b-2 cursor-pointer whitespace-nowrap ${activeTab === "points"
                     ? "border-[#ee4d2d] text-[#ee4d2d]"
                     : "border-transparent text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-800/60 rounded-t-lg"
-                }`}
+                  }`}
               >
                 {t("profile_tab_vouchers")}
               </button>
@@ -508,8 +568,8 @@ const Profile = () => {
                   <span>
                     {(user as any)?.date_of_birth || (user as any)?.dateOfBirth
                       ? new Date(
-                          (user as any)?.date_of_birth || (user as any)?.dateOfBirth
-                        ).toLocaleDateString(getCurrentLocale())
+                        (user as any)?.date_of_birth || (user as any)?.dateOfBirth
+                      ).toLocaleDateString(getCurrentLocale())
                       : t("profile_no_birthday")}
                   </span>
                 </div>
@@ -766,7 +826,7 @@ const Profile = () => {
                   <button
                     onClick={() => {
                       setEditingAddressId(null);
-                      resetAddress({ recipient_name: "", phone_number: "", address_line: "" });
+                      resetAddress({ recipient_name: "", phone_number: "", province: "", district: "", ward: "", street: "" });
                       setIsAddingAddress(true);
                     }}
                     className="bg-[#ee4d2d] hover:bg-[#d03e1e] text-white text-xs font-semibold px-3.5 py-2 rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
@@ -811,18 +871,56 @@ const Profile = () => {
                         )}
                       </div>
                     </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <AddressCombobox
+                        label="Tỉnh / Thành phố"
+                        required
+                        placeholder="Gõ hoặc chọn Tỉnh / Thành phố..."
+                        value={watchedProvince}
+                        options={provinceOptions}
+                        error={addressErrors.province?.message ? String(addressErrors.province.message) : undefined}
+                        onChange={(val, opt) => {
+                          setAddressValue("province", val, { shouldValidate: true });
+                          setAddressValue("district", "");
+                          setAddressValue("ward", "", { shouldValidate: false });
+                          setSelectedProvinceCode(opt?.code || null);
+                        }}
+                      />
+                      <AddressCombobox
+                        label="Phường / Xã / Đặc khu"
+                        required
+                        placeholder={watchedProvince ? "Gõ để lọc Phường / Xã..." : "Chọn Tỉnh/TP trước..."}
+                        value={watchedWard}
+                        options={wardOptions}
+                        disabled={!watchedProvince}
+                        loading={isLoadingWards}
+                        error={addressErrors.ward?.message ? String(addressErrors.ward.message) : undefined}
+                        onChange={(val) => {
+                          setAddressValue("ward", val, { shouldValidate: true });
+                        }}
+                      />
+                    </div>
                     <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-slate-300 mb-1">
+                        Địa chỉ cụ thể (Số nhà, tên đường, tòa nhà...) <span className="text-red-500">*</span>
+                      </label>
                       <input
-                        {...registerAddress("address_line")}
-                        placeholder={t("profile_address_placeholder")}
+                        {...registerAddress("street")}
+                        placeholder="Ví dụ: Số 1 đường Võ Văn Ngân"
                         className="input-modern"
                       />
-                      {addressErrors.address_line && (
-                        <p className="text-[11px] text-red-500 mt-0.5">
-                          {String(addressErrors.address_line.message)}
+                      {addressErrors.street && (
+                        <p className="text-xs text-red-500 mt-0.5">
+                          {String(addressErrors.street.message)}
                         </p>
                       )}
                     </div>
+
+                    <AddressMapPicker
+                      province={watchedProvince}
+                      ward={watchedWard}
+                      street={watchedStreet}
+                    />
                     <div className="flex justify-end gap-2 pt-2">
                       <button
                         type="button"

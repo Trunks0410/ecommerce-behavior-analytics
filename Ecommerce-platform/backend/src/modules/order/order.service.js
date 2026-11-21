@@ -52,6 +52,8 @@ const calculateCheckout = async (userId, { items, platformCouponCode, shopCoupon
 
   // 1. Fetch details & group by Shop
   const shopsData = {};
+  let originalSubtotal = 0;
+
   for (const item of rawItems) {
     const product = await db.Product.findByPk(item.product_id, {
       include: [{ model: db.Shop, as: "shop" }]
@@ -59,17 +61,18 @@ const calculateCheckout = async (userId, { items, platformCouponCode, shopCoupon
     if (!product || product.approval_status !== "APPROVED") throw new Error(`Sản phẩm ${item.product_id} không hợp lệ`);
 
     let variant = null;
-    let price = 0;
-
     if (item.product_variant_id || item.variant_id) {
       variant = await db.ProductVariant.findByPk(item.product_variant_id || item.variant_id);
       if (!variant || variant.product_id !== product.id) throw new Error("Biến thể không hợp lệ");
-      price = variant.price;
     } else {
       variant = await db.ProductVariant.findOne({ where: { product_id: product.id } });
       if (!variant) throw new Error("Sản phẩm không có biến thể");
-      price = variant.price;
     }
+
+    const originalPrice = Number(variant.price || product.price || 0);
+    const rawSalePrice = variant.sale_price ?? product.sale_price;
+    const salePrice = rawSalePrice !== null && rawSalePrice !== undefined ? Number(rawSalePrice) : null;
+    const price = (salePrice !== null && salePrice > 0 && salePrice < originalPrice) ? salePrice : originalPrice;
 
     const shopId = product.shop_id;
     if (!shopsData[shopId]) {
@@ -84,7 +87,8 @@ const calculateCheckout = async (userId, { items, platformCouponCode, shopCoupon
       };
     }
 
-    const itemTotal = item.quantity * Number(price);
+    const itemTotal = item.quantity * price;
+    originalSubtotal += item.quantity * originalPrice;
     shopsData[shopId].subtotal += itemTotal;
     shopsData[shopId].items.push({
       cart_item_id: item.id || item.cart_item_id,
@@ -95,11 +99,14 @@ const calculateCheckout = async (userId, { items, platformCouponCode, shopCoupon
       size: variant.size,
       color: variant.color,
       quantity: item.quantity,
-      unit_price: Number(price),
+      original_price: originalPrice,
+      unit_price: price,
       total_price: itemTotal,
       category_id: product.category_id
     });
   }
+
+  const productSaleDiscount = Math.max(0, originalSubtotal - Object.values(shopsData).reduce((sum, s) => sum + s.subtotal, 0));
 
   // 2. Apply Shop Coupons
   if (shopCoupons && Object.keys(shopCoupons).length > 0) {
@@ -249,6 +256,8 @@ const calculateCheckout = async (userId, { items, platformCouponCode, shopCoupon
 
   return {
     shops: Object.values(shopsData),
+    originalSubtotal,
+    productSaleDiscount,
     parentSubtotal,
     totalShippingFee,
     totalShopDiscount,
@@ -275,7 +284,25 @@ const createOrder = async (userId, data) => {
   const address = await db.UserAddress.findByPk(addressId);
   if (!address) throw new Error("Địa chỉ không hợp lệ");
 
-  const shippingAddressStr = `${address.receiver_name}, ${address.phone}, ${address.street || ''}, ${address.ward}, ${address.district}, ${address.province}`;
+  const cleanAddrPart = (val) => {
+    if (!val) return "";
+    const trimmed = String(val).trim();
+    return trimmed.toLowerCase() === "unknown" ? "" : trimmed;
+  };
+  const shippingParts = [];
+  for (const part of [
+    cleanAddrPart(address.receiver_name),
+    cleanAddrPart(address.phone),
+    cleanAddrPart(address.street),
+    cleanAddrPart(address.ward),
+    cleanAddrPart(address.district),
+    cleanAddrPart(address.province),
+  ]) {
+    if (part && !shippingParts.includes(part)) {
+      shippingParts.push(part);
+    }
+  }
+  const shippingAddressStr = shippingParts.join(", ");
 
   const transaction = await db.sequelize.transaction();
   try {
@@ -340,7 +367,8 @@ const createOrder = async (userId, data) => {
         }
       }
 
-      const finalAmountAfterGlobalDiscount = Math.max(0, shop.final_amount - shopGlobalDiscount);
+      const totalShopAndGlobalDiscount = Number(shop.shop_discount || 0) + Number(shopGlobalDiscount || 0);
+      const finalAmountAfterGlobalDiscount = Math.max(0, shop.subtotal + shop.shipping_fee - totalShopAndGlobalDiscount);
 
       const shopOrder = await db.ShopOrder.create({
         parent_order_id: parentOrder.id,
@@ -348,15 +376,28 @@ const createOrder = async (userId, data) => {
         shop_order_code: generateOrderCode("SHOP"),
         subtotal: shop.subtotal,
         shipping_fee: shop.shipping_fee,
-        discount_amount: shop.shop_discount,
-        final_amount: finalAmountAfterGlobalDiscount,
+        discount_amount: totalShopAndGlobalDiscount,
         commission_rate: commissionRate,
-        commission_amount: commissionAmount,
         shop_coupon_id: shop.shop_coupon_id,
         points_used: shopPointsUsed,
         points_earned: shopPointsEarned,
         status: "PENDING",
-      }, { transaction });
+      }, {
+        fields: [
+          "parent_order_id",
+          "shop_id",
+          "shop_order_code",
+          "subtotal",
+          "shipping_fee",
+          "discount_amount",
+          "commission_rate",
+          "shop_coupon_id",
+          "points_used",
+          "points_earned",
+          "status",
+        ],
+        transaction,
+      });
 
       // Create Order Items
       const orderItems = shop.items.map(item => ({
@@ -385,8 +426,9 @@ const createOrder = async (userId, data) => {
           await notificationService.createNotification(
             shopObj.vendor_id,
             "Đơn hàng mới chờ xử lý",
-            `Gian hàng của bạn nhận được đơn hàng mới mã ${shopOrder.shop_order_code} trị giá ${Number(shopOrder.final_amount).toLocaleString()}₫.`,
-            "NEW_ORDER"
+            `Gian hàng của bạn nhận được đơn hàng mới mã ${shopOrder.shop_order_code} trị giá ${Number(finalAmountAfterGlobalDiscount).toLocaleString()}₫.`,
+            "NEW_ORDER",
+            { actionUrl: "/vendor?tab=orders&status=PENDING" }
           );
         } catch (notifErr) {
           console.error("Failed to create vendor order notification:", notifErr);
@@ -460,7 +502,8 @@ const createOrder = async (userId, data) => {
         userId,
         "Đặt hàng thành công",
         `Bạn đã đặt thành công đơn hàng checkout ${parentOrder.checkout_code} trị giá ${Number(parentOrder.total_amount).toLocaleString()}₫. Vui lòng chờ shop xác nhận.`,
-        "NEW_ORDER"
+        "NEW_ORDER",
+        { actionUrl: `/orders/${parentOrder.id}` }
       );
     } catch (notifErr) {
       console.error("Failed to create user order notification:", notifErr);
@@ -1031,7 +1074,13 @@ const updateOrderStatus = async (shopOrderId, userId, newStatus, role, note = nu
         actorContent = `Bạn đã bắt đầu chuyển hoàn đơn hàng ${shopOrder.shop_order_code} về cho cửa hàng.`;
       }
     }
-    await notificationService.createNotification(userId, actorTitle, actorContent, "ORDER_UPDATE");
+    const actorActionUrl =
+      userId === vendorId
+        ? "/vendor?tab=orders"
+        : userId === customerId
+          ? `/orders/${shopOrder.parent_order_id}`
+          : null;
+    await notificationService.createNotification(userId, actorTitle, actorContent, "ORDER_UPDATE", { actionUrl: actorActionUrl });
 
     // 2. Thông báo cho các bên liên quan (nếu người thực hiện không phải là họ)
     if (vendorId && userId !== vendorId) {
@@ -1059,7 +1108,9 @@ const updateOrderStatus = async (shopOrderId, userId, newStatus, role, note = nu
         vendorTitle = "Đơn hàng bị hủy";
         vendorContent = `Khách hàng đã hủy đơn hàng ${shopOrder.shop_order_code}.`;
       }
-      await notificationService.createNotification(vendorId, vendorTitle, vendorContent, "ORDER_UPDATE");
+      await notificationService.createNotification(vendorId, vendorTitle, vendorContent, "ORDER_UPDATE", {
+        actionUrl: "/vendor?tab=orders",
+      });
     }
 
     if (customerId && userId !== customerId) {
@@ -1096,7 +1147,9 @@ const updateOrderStatus = async (shopOrderId, userId, newStatus, role, note = nu
         customerTitle = "Đã chuyển hoàn xong";
         customerContent = `Đơn hàng ${shopOrder.shop_order_code} đã hoàn trả thành công về người bán.`;
       }
-      await notificationService.createNotification(customerId, customerTitle, customerContent, "ORDER_UPDATE");
+      await notificationService.createNotification(customerId, customerTitle, customerContent, "ORDER_UPDATE", {
+        actionUrl: `/orders/${shopOrder.parent_order_id}`,
+      });
     }
 
     const actualShipperId = shopOrder.shipper_id || (role === "shipper" ? userId : null);
@@ -1311,7 +1364,8 @@ const cancelOrder = async (shopOrderId, userId, reason) => {
       isPreparing
         ? `Bạn đã gửi yêu cầu hủy đơn hàng ${shopOrder.shop_order_code}. Vui lòng chờ shop xác nhận.`
         : `Bạn đã hủy đơn hàng ${shopOrder.shop_order_code} thành công.`,
-      "ORDER_UPDATE"
+      "ORDER_UPDATE",
+      { actionUrl: `/orders/${shopOrder.parent_order_id}` }
     );
 
     // 2. Cho Vendor
@@ -1323,7 +1377,8 @@ const cancelOrder = async (shopOrderId, userId, reason) => {
         isPreparing
           ? `Khách hàng yêu cầu hủy đơn hàng ${shopOrder.shop_order_code} (đơn hàng đã ở trạng thái chuẩn bị hàng).`
           : `Khách hàng đã hủy đơn hàng ${shopOrder.shop_order_code}.`,
-        "ORDER_UPDATE"
+        "ORDER_UPDATE",
+        { actionUrl: "/vendor?tab=orders" }
       );
     }
   } catch (notifErr) {

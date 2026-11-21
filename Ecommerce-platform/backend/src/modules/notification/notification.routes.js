@@ -7,8 +7,11 @@ const router = express.Router();
 router.use(verifyToken);
 
 router.get("/", notificationController.getNotifications);
+router.get("/overview", notificationController.getNotificationsOverview);
 router.get("/stream", notificationController.streamNotifications);
 router.patch("/:id/read", notificationController.markAsRead);
 router.post("/read-all", notificationController.markAllAsRead);
+router.delete("/read", notificationController.deleteReadNotifications);
+router.delete("/:id", notificationController.deleteNotification);
 
 export default router;
