@@ -317,7 +317,7 @@ const searchVectorMicroserviceByImage = async (fileBuffer, topK = 60) => {
     process.env.VECTOR_SERVICE_URL ||
     "http://localhost:8088"
   ).replace(/\/+$/, "");
-  const timeoutMs = Number(process.env.ANALYTICS_SERVICE_TIMEOUT_MS) || 12000;
+  const timeoutMs = Number(process.env.ANALYTICS_SERVICE_TIMEOUT_MS) || 60000;
 
   try {
     const res = await fetch(`${serviceUrl}/api/v1/search/visual`, {

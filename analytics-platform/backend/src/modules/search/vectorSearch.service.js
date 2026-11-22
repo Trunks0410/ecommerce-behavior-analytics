@@ -376,13 +376,14 @@ class VectorSearchEngine {
     // Nếu mode !== "ram" và có MODEL_INFERENCE_URL, ưu tiên encode query trực tiếp bằng model AI
     let qVec = null;
     const modelInferenceUrl = process.env.MODEL_INFERENCE_URL?.trim();
+    const modelTimeoutMs = Number(process.env.MODEL_INFERENCE_TIMEOUT_MS) || 45000;
     if (mode !== "ram" && modelInferenceUrl) {
       try {
         const res = await fetch(`${modelInferenceUrl.replace(/\/$/, "")}/embed`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text: englishQuery }),
-          signal: AbortSignal.timeout(5000),
+          signal: AbortSignal.timeout(modelTimeoutMs),
         });
         if (res.ok) {
           const data = await res.json();
@@ -530,13 +531,17 @@ class VectorSearchEngine {
     const modelInferenceUrl = process.env.MODEL_INFERENCE_URL?.trim();
     if (!modelInferenceUrl) return [];
 
+    const modelImageTimeoutMs =
+      Number(process.env.MODEL_IMAGE_TIMEOUT_MS || process.env.MODEL_INFERENCE_TIMEOUT_MS) ||
+      60000;
+
     let qVec = null;
     try {
       const res = await fetch(`${modelInferenceUrl.replace(/\/$/, "")}/embed-image`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ imageBase64 }),
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(modelImageTimeoutMs),
       });
       if (!res.ok) {
         console.warn(`⚠️ [VISUAL SEARCH] Model inference HTTP ${res.status}`);
