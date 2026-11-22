@@ -193,6 +193,9 @@ const syncVectorDatabase = async (req, res, next) => {
 // POST /products/visual-search
 const visualSearch = async (req, res, next) => {
   try {
+    if (!req.file) {
+      return res.status(400).json({ message: "Vui lòng tải lên hình ảnh để tìm kiếm" });
+    }
     const result = await visualSimilarityService.searchProductsByImage(req.file, req.body || {});
     return res.status(200).json({ message: "Success", data: result });
   } catch (error) {
