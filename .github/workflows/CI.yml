@@ -130,6 +130,19 @@ jobs:
 
       - name: Run Ecommerce Backend Unit Tests
         working-directory: ./Ecommerce-platform/backend
+        env:
+          ACCESS_TOKEN_SECRET: ci_access_secret_123
+          REFRESH_TOKEN_SECRET: ci_refresh_secret_456
+          VNPAY_TMN_CODE: CITESTTMN
+          VNPAY_HASH_SECRET: CITESTHASHSECRET123456
+          VNPAY_URL: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+          VNPAY_RETURN_URL: http://localhost:5173/payment/vnpay-return
+          DB_HOST: 127.0.0.1
+          DB_PORT: "3306"
+          DB_NAME: ecommerce_test
+          DB_USER: root
+          DB_PASSWORD: ""
+          DB_DIALECT: mysql
         run: |
           if [ -f package-lock.json ]; then npm ci; else npm install; fi
           npm test
