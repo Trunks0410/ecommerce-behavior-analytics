@@ -9,6 +9,8 @@ export const searchProducts = async (req, res) => {
   try {
     const query = req.query.query || req.query.keyword || req.body?.query || req.body?.keyword || "";
     const limit = Number(req.query.limit || req.body?.limit) || 20;
+    const mode = req.query.mode || req.body?.mode;
+    const rerank = req.query.rerank ?? req.body?.rerank;
 
     if (!query.trim()) {
       return res.status(200).json({
@@ -20,7 +22,7 @@ export const searchProducts = async (req, res) => {
       });
     }
 
-    const ranked = await vectorSearchEngine.search(query, limit);
+    const ranked = await vectorSearchEngine.search(query, limit, { mode, rerank });
     const productIds = ranked.map((r) => r.id);
 
     return res.status(200).json({

@@ -10,6 +10,8 @@ services:
       - ./analytics-platform/backend/.env
     environment:
       PORT: 8088
+      SEARCH_MODE: ${SEARCH_MODE:-auto}
+      ENABLE_RERANK: ${ENABLE_RERANK:-true}
       MODEL_INFERENCE_URL: ${MODEL_INFERENCE_URL:-}
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8088/health"]
@@ -88,25 +90,7 @@ services:
     networks:
       - datn-network
 
-  # Service model AI tùy chọn — chỉ chạy khi đủ phần cứng và bật profile ai-model
-  qwen-inference:
-    image: nguyenkiet32/qwen-inference:${IMAGE_TAG:-latest}
-    container_name: datn-qwen-inference
-    profiles: ["ai-model"]
-    pull_policy: always
-    restart: unless-stopped
-    ports:
-      - "8000:8000"
-    environment:
-      MODEL_NAME: Qwen/Qwen3-VL-Embedding-2B
-    volumes:
-      - huggingface_cache:/root/.cache/huggingface
-    networks:
-      - datn-network
-
-volumes:
-  huggingface_cache:
-
 networks:
   datn-network:
+    name: datn-network
     driver: bridge

@@ -350,8 +350,14 @@ class VectorSearchEngine {
    * Giai đoạn 1: Thu hồi ứng viên nhanh bằng Vector Similarity (Candidate Retrieval)
    * Giai đoạn 2: Tái xếp hạng chính xác bằng Multi-Signal Reranker (Reranking)
    */
-  async search(keyword, limit = 20) {
+  async search(keyword, limit = 20, options = {}) {
     if (!this.ready || !keyword || typeof keyword !== "string") return [];
+
+    const mode = String(options.mode || process.env.SEARCH_MODE || "auto").toLowerCase();
+    const enableRerank =
+      options.rerank !== undefined
+        ? String(options.rerank).toLowerCase() !== "false"
+        : String(process.env.ENABLE_RERANK || "true").toLowerCase() !== "false";
 
     const englishQuery = await this.translateToEnglish(keyword);
     const stopWords = new Set(["for", "the", "and", "with", "in", "on", "of", "to", "a", "an", "color", "colored"]);
@@ -367,10 +373,10 @@ class VectorSearchEngine {
 
     if (words.length === 0) return [];
 
-    // Nếu đã bật service model AI trực tiếp (MODEL_INFERENCE_URL), ưu tiên encode query trực tiếp
+    // Nếu mode !== "ram" và có MODEL_INFERENCE_URL, ưu tiên encode query trực tiếp bằng model AI
     let qVec = null;
     const modelInferenceUrl = process.env.MODEL_INFERENCE_URL?.trim();
-    if (modelInferenceUrl) {
+    if (mode !== "ram" && modelInferenceUrl) {
       try {
         const res = await fetch(`${modelInferenceUrl.replace(/\/$/, "")}/embed`, {
           method: "POST",
@@ -448,6 +454,17 @@ class VectorSearchEngine {
 
     candidateScores.sort((a, b) => b.score - a.score);
     const topCandidates = candidateScores.slice(0, recallK);
+
+    // Nếu tắt Stage 2 Reranker (ENABLE_RERANK=false hoặc ?rerank=false) -> trả thẳng Stage 1
+    if (!enableRerank) {
+      return topCandidates.slice(0, limit).map((item) => ({
+        id: item.id,
+        finalScore: item.score,
+        semanticScore: item.score,
+        lexicalScore: 0,
+        title: this.metadata[item.id - 1]?.title,
+      }));
+    }
 
     // Giai đoạn 2 (Stage 2): Chạy qua Reranker đa mục tiêu để xếp hạng chính xác nhất
     const rankedResults = this.rerankCandidates(englishQuery, topCandidates, limit);
