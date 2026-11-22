@@ -520,6 +520,55 @@ class VectorSearchEngine {
     scores.sort((a, b) => b.score - a.score);
     return scores.slice(0, limit);
   }
+
+  /**
+   * Tìm kiếm sản phẩm tương đồng bằng hình ảnh (Visual Search via Qwen3-VL /embed-image)
+   */
+  async searchByImageVector(imageBase64, limit = 24) {
+    if (!this.ready || !imageBase64 || typeof imageBase64 !== "string") return [];
+
+    const modelInferenceUrl = process.env.MODEL_INFERENCE_URL?.trim();
+    if (!modelInferenceUrl) return [];
+
+    let qVec = null;
+    try {
+      const res = await fetch(`${modelInferenceUrl.replace(/\/$/, "")}/embed-image`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64 }),
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!res.ok) {
+        console.warn(`⚠️ [VISUAL SEARCH] Model inference HTTP ${res.status}`);
+        return [];
+      }
+      const data = await res.json();
+      if (!Array.isArray(data?.vector) || data.vector.length !== this.vectorDim) {
+        return [];
+      }
+      qVec = Float32Array.from(data.vector);
+    } catch (err) {
+      console.warn(`⚠️ [VISUAL SEARCH] Model inference unreachable: ${err.message}`);
+      return [];
+    }
+
+    const scores = [];
+    for (let i = 0; i < this.totalRecords; i++) {
+      let dot = 0;
+      const rowOffset = i * this.vectorDim;
+      for (let d = 0; d < this.vectorDim; d++) {
+        dot += qVec[d] * this.vectors[rowOffset + d];
+      }
+      scores.push({
+        id: i + 1,
+        score: dot,
+        title: this.metadata?.[i]?.title,
+      });
+    }
+
+    scores.sort((a, b) => b.score - a.score);
+    return scores.slice(0, Math.max(1, Number(limit) || 24));
+  }
 }
 
 const vectorSearchEngine = new VectorSearchEngine();

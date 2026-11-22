@@ -7,6 +7,7 @@ import {
   upsertVector,
   deleteVector,
   syncDbVectors,
+  visualSearchByImage,
 } from "./search.controller.js";
 
 const router = express.Router();
@@ -14,6 +15,7 @@ const router = express.Router();
 // Search endpoints
 router.get("/search", searchProducts);
 router.post("/search", searchProducts);
+router.post("/visual", visualSearchByImage);
 
 // Recommendations & Similar endpoints
 router.get("/similar/:productId", getSimilarProducts);

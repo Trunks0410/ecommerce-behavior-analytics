@@ -120,3 +120,36 @@ export const syncDbVectors = (req, res) => {
     total_vectors: vectorSearchEngine.totalRecords,
   });
 };
+
+export const visualSearchByImage = async (req, res) => {
+  try {
+    const { imageBase64, limit = 24 } = req.body || {};
+    if (!imageBase64 || typeof imageBase64 !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "imageBase64 is required",
+        productIds: [],
+        results: [],
+      });
+    }
+
+    const results = await vectorSearchEngine.searchByImageVector(
+      imageBase64,
+      Number(limit) || 24
+    );
+    const productIds = results.map((r) => r.id);
+
+    return res.status(200).json({
+      success: true,
+      count: productIds.length,
+      productIds,
+      results,
+    });
+  } catch (error) {
+    console.error("[Visual Search Controller Error]:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
