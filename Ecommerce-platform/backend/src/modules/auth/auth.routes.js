@@ -3,6 +3,7 @@ const router = express.Router();
 import rateLimit from "express-rate-limit";
 import authController from "./auth.controller.js";
 import { verifyRecaptcha } from "../../core/middleware/recaptcha.js";
+import { verifyToken } from "../../core/middleware/auth.js";
 
 const authLimiter = rateLimit({
   windowMs: 1000 * 60 * 5,
@@ -19,6 +20,8 @@ router.post("/verify-otp", authController.verifyOTP);
 router.post("/login", authLimiter, authController.login);
 router.post("/refresh", authController.refresh);
 router.post("/logout", authController.logout);
+router.post("/sso-code", verifyToken, authController.createSsoCode);
+router.post("/sso-exchange", authController.exchangeSsoCode);
 router.post("/google", authController.googleLogin);
 
 export default router;

@@ -7,6 +7,11 @@ export interface ShopRegistrationData {
   address: string;
   industry: string;
   description?: string;
+  pickupProvince?: string;
+  pickupDistrict?: string;
+  pickupWard?: string;
+  pickupStreet?: string;
+  hasPickupAddress?: boolean;
 }
 
 export interface ShopProfileData extends ShopRegistrationData {
@@ -166,7 +171,12 @@ export const vendorService = {
   },
 
   getShopProfile: async (shopId: number | string) => {
-    const response = await publicAxios.get(`/shops/${shopId}`);
+    const response = await axiosClient.get(`/shops/${shopId}`);
+    return response.data;
+  },
+
+  toggleFollowShop: async (shopId: number | string) => {
+    const response = await axiosClient.post(`/shops/${shopId}/follow`);
     return response.data;
   },
 

@@ -286,7 +286,9 @@ const detectUserIntent = (message) => {
     lower.includes("khi nào giao") ||
     lower.includes("bao giờ nhận") ||
     lower.includes("giao tới đâu") ||
-    lower.includes("đang giao");
+    lower.includes("đang giao") ||
+    lower.includes("order") ||
+    lower.includes("track");
 
   const isVoucherQuery =
     lower.includes("mã giảm giá") ||
@@ -298,7 +300,9 @@ const detectUserIntent = (message) => {
     lower.includes("ưu đãi") ||
     lower.includes("freeship") ||
     lower.includes("miễn phí ship") ||
-    lower.includes("săn sale");
+    lower.includes("săn sale") ||
+    lower.includes("discount") ||
+    lower.includes("promo");
 
   const isShippingQuery =
     lower.includes("ship") ||
@@ -306,7 +310,8 @@ const detectUserIntent = (message) => {
     lower.includes("giao hàng") ||
     lower.includes("phí giao") ||
     lower.includes("tiền ship") ||
-    lower.includes("giao nhanh");
+    lower.includes("giao nhanh") ||
+    lower.includes("delivery");
 
   const isReturnWarrantyQuery =
     lower.includes("đổi trả") ||
@@ -316,7 +321,10 @@ const detectUserIntent = (message) => {
     lower.includes("bảo hành") ||
     lower.includes("bị lỗi") ||
     lower.includes("hỏng") ||
-    lower.includes("khiếu nại");
+    lower.includes("khiếu nại") ||
+    lower.includes("return") ||
+    lower.includes("refund") ||
+    lower.includes("warranty");
 
   const isPaymentQuery =
     lower.includes("thanh toán") ||
@@ -325,7 +333,9 @@ const detectUserIntent = (message) => {
     lower.includes("cod") ||
     lower.includes("tiền mặt") ||
     lower.includes("chuyển khoản") ||
-    lower.includes("visa");
+    lower.includes("visa") ||
+    lower.includes("payment") ||
+    lower.includes("pay");
 
   return {
     isOrderQuery,
@@ -496,15 +506,18 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 /**
  * Fallback cục bộ khi không có kết nối internet hoặc API hết hạn mức
  */
-const generateLocalFallbackResponse = async (message, context) => {
+const generateLocalFallbackResponse = async (message, context, language = "vi") => {
   const { intent, userInfo, orders, vouchers, products } = context;
+  const isEn = language === "en";
   const customerName = userInfo?.name ? ` ${userInfo.name}` : "";
 
   // 1. Ý định Tra cứu Đơn hàng
   if (intent.isOrderQuery) {
     if (!userInfo) {
       return {
-        reply: `Dạ chào bạn! Để tra cứu chính xác trạng thái đơn hàng và hành trình vận chuyển của bạn qua UTE Express, bạn vui lòng **Đăng nhập** tài khoản trước nhé ạ! Sau khi đăng nhập, em sẽ hiển thị ngay danh sách đơn hàng gần nhất của mình.`,
+        reply: isEn
+          ? `Hello! To accurately track your order status and UTE Express delivery journey, please **Log in** to your account first. Once logged in, I will display your recent orders right away.`
+          : `Dạ chào bạn! Để tra cứu chính xác trạng thái đơn hàng và hành trình vận chuyển của bạn qua UTE Express, bạn vui lòng **Đăng nhập** tài khoản trước nhé ạ! Sau khi đăng nhập, em sẽ hiển thị ngay danh sách đơn hàng gần nhất của mình.`,
         orders: [],
         products: [],
         vouchers: [],
@@ -512,14 +525,25 @@ const generateLocalFallbackResponse = async (message, context) => {
     }
 
     if (orders.length > 0) {
-      let reply = `Dạ chào anh/chị${customerName}! Em đã tra cứu thấy đơn hàng gần nhất của mình đây ạ:\n\n`;
+      let reply = isEn
+        ? `Hello${customerName}! Here are your most recent orders:\n\n`
+        : `Dạ chào anh/chị${customerName}! Em đã tra cứu thấy đơn hàng gần nhất của mình đây ạ:\n\n`;
       orders.forEach((o) => {
-        reply += `📦 **Mã đơn: #${o.checkout_code}** (${o.shop_name})\n`;
-        reply += `• Trạng thái đơn: **${o.status_text}**\n`;
-        reply += `• Vận chuyển UTE Express: **${o.shipment_status_text || "Đang xử lý"}** (Mã vận đơn: \`${o.tracking_number || "Đang cập nhật"}\`)\n`;
-        reply += `• Tổng thanh toán: **${o.total_amount.toLocaleString("vi-VN")}đ** (${o.payment_method})\n\n`;
+        if (isEn) {
+          reply += `📦 **Order: #${o.checkout_code}** (${o.shop_name})\n`;
+          reply += `• Order status: **${o.status}**\n`;
+          reply += `• UTE Express: **${o.shipment_status || "Processing"}** (Tracking: \`${o.tracking_number || "Updating"}\`)\n`;
+          reply += `• Total: **${o.total_amount.toLocaleString("en-US")}đ** (${o.payment_method})\n\n`;
+        } else {
+          reply += `📦 **Mã đơn: #${o.checkout_code}** (${o.shop_name})\n`;
+          reply += `• Trạng thái đơn: **${o.status_text}**\n`;
+          reply += `• Vận chuyển UTE Express: **${o.shipment_status_text || "Đang xử lý"}** (Mã vận đơn: \`${o.tracking_number || "Đang cập nhật"}\`)\n`;
+          reply += `• Tổng thanh toán: **${o.total_amount.toLocaleString("vi-VN")}đ** (${o.payment_method})\n\n`;
+        }
       });
-      reply += `Anh/chị có thể bấm vào thẻ đơn hàng bên dưới để xem chi tiết nhé!`;
+      reply += isEn
+        ? `Click on any order card below to view full details!`
+        : `Anh/chị có thể bấm vào thẻ đơn hàng bên dưới để xem chi tiết nhé!`;
       return {
         reply,
         orders,
@@ -529,7 +553,9 @@ const generateLocalFallbackResponse = async (message, context) => {
     }
 
     return {
-      reply: `Dạ anh/chị${customerName}, hiện tại hệ thống chưa ghi nhận đơn hàng nào gần đây trên tài khoản của mình. Anh/chị có muốn em hỗ trợ tìm kiếm sản phẩm nào không ạ?`,
+      reply: isEn
+        ? `Hello${customerName}, we couldn't find any recent orders on your account. Would you like me to help search for products?`
+        : `Dạ anh/chị${customerName}, hiện tại hệ thống chưa ghi nhận đơn hàng nào gần đây trên tài khoản của mình. Anh/chị có muốn em hỗ trợ tìm kiếm sản phẩm nào không ạ?`,
       orders: [],
       products: [],
       vouchers: [],
@@ -539,11 +565,17 @@ const generateLocalFallbackResponse = async (message, context) => {
   // 2. Ý định Mã giảm giá & Voucher
   if (intent.isVoucherQuery) {
     if (vouchers.length > 0) {
-      let reply = `Dạ chào anh/chị${customerName}! MeeMart xin gửi anh/chị danh sách các **Mã giảm giá hot hôm nay** để mình áp dụng khi mua sắm nha:\n\n`;
+      let reply = isEn
+        ? `Hello${customerName}! Here are today's **Hot Vouchers** on MeeMart:\n\n`
+        : `Dạ chào anh/chị${customerName}! MeeMart xin gửi anh/chị danh sách các **Mã giảm giá hot hôm nay** để mình áp dụng khi mua sắm nha:\n\n`;
       vouchers.forEach((v) => {
-        reply += `🎟️ Mã: **${v.code}** — ${v.description} (${v.shop_name})\n`;
+        reply += isEn
+          ? `🎟️ Code: **${v.code}** — ${v.description} (${v.shop_name})\n`
+          : `🎟️ Mã: **${v.code}** — ${v.description} (${v.shop_name})\n`;
       });
-      reply += `\nAnh/chị có thể bấm sao chép mã ở thẻ bên dưới để áp dụng tại bước thanh toán nhé ạ!`;
+      reply += isEn
+        ? `\nTap the copy button on any voucher card below to apply at checkout!`
+        : `\nAnh/chị có thể bấm sao chép mã ở thẻ bên dưới để áp dụng tại bước thanh toán nhé ạ!`;
       return {
         reply,
         vouchers,
@@ -552,7 +584,9 @@ const generateLocalFallbackResponse = async (message, context) => {
       };
     }
     return {
-      reply: `Dạ hiện tại sàn MeeMart đang miễn phí vận chuyển toàn quốc cho đơn hàng từ **500.000đ**. Các mã giảm giá đặc biệt sẽ sớm được mở thêm trong đợt sale tới nha!`,
+      reply: isEn
+        ? `MeeMart currently offers nationwide free shipping on orders from **500,000đ**. More special promo codes will be released soon!`
+        : `Dạ hiện tại sàn MeeMart đang miễn phí vận chuyển toàn quốc cho đơn hàng từ **500.000đ**. Các mã giảm giá đặc biệt sẽ sớm được mở thêm trong đợt sale tới nha!`,
       vouchers: [],
       orders: [],
       products: [],
@@ -562,7 +596,12 @@ const generateLocalFallbackResponse = async (message, context) => {
   // 3. Ý định Vận chuyển / Phí ship
   if (intent.isShippingQuery) {
     return {
-      reply: `Dạ chào bạn! Chính sách vận chuyển của sàn MeeMart rất ưu đãi và minh bạch ạ:
+      reply: isEn
+        ? `Here is MeeMart's shipping policy:
+🚚 **Carrier:** Official partner **UTE Express** for fast door-to-door pickup and delivery.
+💵 **Standard shipping fee:** Flat **30,000đ** nationwide.
+🎁 **Free shipping:** Orders from **500,000đ** and above automatically get **100% FREE SHIPPING**!`
+        : `Dạ chào bạn! Chính sách vận chuyển của sàn MeeMart rất ưu đãi và minh bạch ạ:
 🚚 **Đơn vị vận chuyển:** Đối tác chính thức **UTE Express**, lấy hàng và giao tận tay nhanh chóng.
 💵 **Phí vận chuyển tiêu chuẩn:** Đồng giá **30.000đ** cho mọi đơn hàng toàn quốc.
 🎁 **Ưu đãi Freeship:** Đơn hàng có giá trị từ **500.000đ** trở lên sẽ được hệ thống tự động **MIỄN PHÍ VẬN CHUYỂN** 100%!`,
@@ -575,7 +614,12 @@ const generateLocalFallbackResponse = async (message, context) => {
   // 4. Ý định Đổi trả & Bảo hành
   if (intent.isReturnWarrantyQuery) {
     return {
-      reply: `Dạ chào bạn! Chính sách đổi trả & bảo hành của MeeMart nhằm bảo vệ quyền lợi tối đa cho khách hàng:
+      reply: isEn
+        ? `Here is MeeMart's Return & Warranty policy:
+🔄 **7-Day Returns:** Applicable for manufacturing defects, transit damage, or wrong items.
+🛠️ **Official Warranty:** Electronics and home appliances include warranty per seller's terms.
+📋 **How to request:** Open **Order Details** and click **"Request Return / Refund"**. Our team and the seller will process it within 24–48 hours!`
+        : `Dạ chào bạn! Chính sách đổi trả & bảo hành của MeeMart nhằm bảo vệ quyền lợi tối đa cho khách hàng:
 🔄 **Đổi trả hàng trong 7 ngày:** Áp dụng khi sản phẩm bị lỗi sản xuất, bể vỡ khi vận chuyển hoặc sai mẫu mô tả.
 🛠️ **Bảo hành điện tử chính hãng:** Với hàng điện tử, công nghệ và gia dụng, sản phẩm được kích hoạt bảo hành điện tử theo số seri/phiếu bảo hành của từng gian hàng.
 📋 **Cách thức đổi trả:** Bạn chỉ cần vào **Chi tiết đơn hàng** và bấm nút **"Yêu cầu Đổi trả/Hoàn tiền"**, hệ thống và shop sẽ xử lý trong vòng 24-48 giờ ạ!`,
@@ -588,7 +632,12 @@ const generateLocalFallbackResponse = async (message, context) => {
   // 5. Ý định Thanh toán
   if (intent.isPaymentQuery) {
     return {
-      reply: `Dạ sàn MeeMart hỗ trợ đa dạng các phương thức thanh toán an toàn, bảo mật cao:
+      reply: isEn
+        ? `MeeMart supports multiple secure payment methods:
+1. **COD:** Cash on delivery directly to the courier.
+2. **VNPay:** Scan VNPAY-QR via banking apps or domestic ATM cards.
+3. **International Cards:** Fast checkout with Visa, Mastercard, or JCB.`
+        : `Dạ sàn MeeMart hỗ trợ đa dạng các phương thức thanh toán an toàn, bảo mật cao:
 1. **COD:** Thanh toán tiền mặt trực tiếp cho nhân viên giao hàng khi nhận sản phẩm.
 2. **Cổng thanh toán VNPay:** Quét mã VNPAY-QR qua ứng dụng ngân hàng hoặc thẻ ATM nội địa.
 3. **Thẻ quốc tế:** Hỗ trợ thanh toán nhanh qua thẻ Visa, Mastercard, JCB.`,
@@ -600,11 +649,17 @@ const generateLocalFallbackResponse = async (message, context) => {
 
   // 6. Tìm kiếm sản phẩm
   if (products.length > 0) {
-    let reply = `Dạ chào bạn! Em đã tìm thấy một số sản phẩm rất phù hợp với nhu cầu của mình trên sàn MeeMart đây ạ:\n\n`;
+    let reply = isEn
+      ? `Hello! Here are some matching products I found on MeeMart:\n\n`
+      : `Dạ chào bạn! Em đã tìm thấy một số sản phẩm rất phù hợp với nhu cầu của mình trên sàn MeeMart đây ạ:\n\n`;
     products.forEach((p) => {
-      reply += `- **[${p.name}](http://localhost:5173/products/${p.slug})** | Giá: **${p.price.toLocaleString("vi-VN")}đ** (${p.shop_name})\n`;
+      reply += isEn
+        ? `- **[${p.name}](http://localhost:5173/products/${p.slug})** | Price: **${p.price.toLocaleString("en-US")}đ** (${p.shop_name})\n`
+        : `- **[${p.name}](http://localhost:5173/products/${p.slug})** | Giá: **${p.price.toLocaleString("vi-VN")}đ** (${p.shop_name})\n`;
     });
-    reply += `\nBạn có thể bấm vào thẻ sản phẩm bên dưới để xem hình ảnh và đặt hàng nhé!`;
+    reply += isEn
+      ? `\nClick any product card below to view images and place an order!`
+      : `\nBạn có thể bấm vào thẻ sản phẩm bên dưới để xem hình ảnh và đặt hàng nhé!`;
     return {
       reply,
       products,
@@ -615,7 +670,16 @@ const generateLocalFallbackResponse = async (message, context) => {
 
   // Mặc định
   return {
-    reply: `Dạ xin chào anh/chị${customerName}! Em là **Trợ lý AI Thông Minh của MeeMart** 🤖.
+    reply: isEn
+      ? `Hello${customerName}! I'm the **MeeMart Smart AI Assistant** 🤖.
+I can help you with:
+• 📦 **Order tracking & UTE Express status** (e.g., "Track my order")
+• 🎟️ **Hot vouchers & discounts** (e.g., "Today's vouchers")
+• 🔍 **Product search across categories** (Electronics, Home, Fashion, Beauty...)
+• 🚚 **Shipping, 7-day returns & payment policies**
+
+Choose a quick suggestion below or type your question!`
+      : `Dạ xin chào anh/chị${customerName}! Em là **Trợ lý AI Thông Minh của MeeMart** 🤖.
 Em có thể hỗ trợ anh/chị các nghiệp vụ mua sắm tiện ích sau:
 • 📦 **Tra cứu đơn hàng & hành trình UTE Express** (Ví dụ: "Đơn hàng của tôi")
 • 🎟️ **Săn mã giảm giá hot** (Ví dụ: "Mã giảm giá hôm nay")
@@ -626,34 +690,53 @@ Anh/chị hãy chọn một gợi ý nhanh bên dưới hoặc nhập câu hỏi
     products: [],
     orders: [],
     vouchers: [],
-    suggestions: [
-      "📦 Tra cứu đơn hàng của tôi",
-      "🎟️ Săn mã giảm giá hot",
-      "🚚 Phí ship & thời gian giao",
-      "🔄 Chính sách đổi trả & bảo hành",
-      "💬 Chat với chủ Shop"
-    ]
+    suggestions: isEn
+      ? [
+          "📦 Track my order",
+          "🎟️ Hot vouchers today",
+          "🚚 Shipping fees & delivery time",
+          "🔄 Return & warranty policy",
+          "💬 Chat with Seller",
+        ]
+      : [
+          "📦 Tra cứu đơn hàng của tôi",
+          "🎟️ Săn mã giảm giá hot",
+          "🚚 Phí ship & thời gian giao",
+          "🔄 Chính sách đổi trả & bảo hành",
+          "💬 Chat với chủ Shop",
+        ],
   };
 };
 
 /**
  * Xử lý chính ChatWithAI
  */
-const chatWithAI = async (message, userId = null) => {
+const chatWithAI = async (message, userId = null, language = "vi") => {
   const openAIKey = process.env.OPENAI_API_KEY;
   const geminiKey = process.env.GEMINI_API_KEY;
+  const isEn = language === "en";
 
   const context = await buildSystemPromptAndContext(message, userId);
-  const { systemPrompt, products, orders, vouchers } = context;
+  const { products, orders, vouchers } = context;
+  const systemPrompt = isEn
+    ? `${context.systemPrompt}\n\nIMPORTANT LANGUAGE RULE: The user's interface language is English. You MUST reply entirely in natural, friendly English.`
+    : context.systemPrompt;
   const maxRetries = 2;
 
   // Gợi ý nhanh mặc định
-  const suggestions = [
-    "📦 Tra cứu đơn hàng của tôi",
-    "🎟️ Săn mã giảm giá hot",
-    "🚚 Phí ship & thời gian giao",
-    "🔄 Chính sách đổi trả & bảo hành",
-  ];
+  const suggestions = isEn
+    ? [
+        "📦 Track my order",
+        "🎟️ Hot vouchers today",
+        "🚚 Shipping fees & delivery time",
+        "🔄 Return & warranty policy",
+      ]
+    : [
+        "📦 Tra cứu đơn hàng của tôi",
+        "🎟️ Săn mã giảm giá hot",
+        "🚚 Phí ship & thời gian giao",
+        "🔄 Chính sách đổi trả & bảo hành",
+      ];
 
   // ƯU TIÊN 1: Dùng OpenAI nếu có API Key
   if (openAIKey && openAIKey.trim().startsWith("sk-")) {
@@ -707,10 +790,10 @@ const chatWithAI = async (message, userId = null) => {
 
   // ƯU TIÊN 3: Chạy Fallback thông minh nội bộ
   console.log("[AI Chat] Chạy bằng Local Fallback Engine.");
-  const fallbackRes = await generateLocalFallbackResponse(message, context);
+  const fallbackRes = await generateLocalFallbackResponse(message, context, language);
   return {
     ...fallbackRes,
-    suggestions,
+    suggestions: fallbackRes.suggestions || suggestions,
   };
 };
 

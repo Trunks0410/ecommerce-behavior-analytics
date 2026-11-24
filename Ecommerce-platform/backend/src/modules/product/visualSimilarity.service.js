@@ -1,3 +1,4 @@
+import axios from "axios";
 import db from "../../database/models/index.js";
 import { Op } from "sequelize";
 
@@ -360,7 +361,136 @@ export const searchProductsByImage = async ({
   }
 
   // -------------------------------------------------------------------------
-  // TẦNG 2: TRUY VẤN CÁC TẬP ỨNG VIÊN CHUẨN XÁC THEO VẬT THỂ & MÀU SẮC
+  // TẦNG 1.5: AI MULTIMODAL VECTOR SEARCH QUA QWEN3-VL-EMBEDDING-2B
+  // -------------------------------------------------------------------------
+  const analyticsServiceUrl = (
+    process.env.ANALYTICS_SERVICE_URL ||
+    process.env.VECTOR_SERVICE_URL ||
+    "http://localhost:8088"
+  ).replace(/\/+$/, "");
+
+  if (fileBuffer && Buffer.isBuffer(fileBuffer) && fileBuffer.length > 0) {
+    try {
+      const imageBase64 = fileBuffer.toString("base64");
+      const qwenRes = await axios.post(
+        `${analyticsServiceUrl}/api/v1/search/visual`,
+        { imageBase64, limit: Math.max(Number(limit) * 2, 30) },
+        { timeout: 22000 }
+      );
+
+      const qwenResults = qwenRes.data?.results || [];
+      if (Array.isArray(qwenResults) && qwenResults.length > 0) {
+        const qwenIds = qwenResults.map((r) => r.id);
+        const qwenTitles = qwenResults.map((r) => r.title).filter(Boolean);
+        const scoreMap = new Map(qwenResults.map((r) => [Number(r.id), Number(r.score || 0)]));
+        const titleScoreMap = new Map(
+          qwenResults.filter((r) => r.title).map((r) => [r.title, Number(r.score || 0)])
+        );
+
+        const dbWhere = {
+          deleted_at: null,
+          approval_status: "APPROVED",
+          [Op.or]: [
+            { id: { [Op.in]: qwenIds } },
+            ...(qwenTitles.length > 0 ? [{ name: { [Op.in]: qwenTitles } }] : []),
+          ],
+        };
+        if (categoryId) {
+          dbWhere.category_id = Number(categoryId);
+        }
+
+        const matchedProducts = await db.Product.findAll({
+          where: dbWhere,
+          include: [
+            { model: db.Category, as: "category", attributes: ["id", "name", "slug"] },
+            { model: db.ProductImage, as: "images", attributes: ["id", "image_url", "is_primary", "sort_order"] },
+          ],
+        });
+
+        const directIds = new Set(Array.from(candidateMap.keys()));
+        const rankedQwenProducts = matchedProducts
+          .map((product) => {
+            const productJson = product.toJSON();
+            const isDirect = directIds.has(productJson.id);
+            const rawCosine =
+              scoreMap.get(Number(productJson.id)) ??
+              titleScoreMap.get(productJson.name) ??
+              0;
+            const hasColorMatch = colorKeywords.some(
+              (kw) =>
+                containsKeyword(productJson.name || "", kw) ||
+                containsKeyword(productJson.description || "", kw)
+            );
+            const basePct = Math.round(Math.min(97, Math.max(55, rawCosine * 100 + 25)));
+            const similarityScore = isDirect
+              ? 99
+              : Math.min(98, basePct + (hasColorMatch ? 3 : 0));
+
+            const primaryImg =
+              productJson.images?.find((img) => img.is_primary)?.image_url ||
+              productJson.images?.[0]?.image_url ||
+              "";
+
+            const reasons = [
+              `Qwen3-VL Multimodal (${Math.round(rawCosine * 100)}% vector)`,
+            ];
+            if (hasColorMatch) {
+              reasons.push(`Khớp tông màu ${dominantColor?.name}`);
+            }
+            if (productJson.category?.name) {
+              reasons.push(`Danh mục ${productJson.category.name}`);
+            }
+
+            return {
+              ...productJson,
+              primary_image: primaryImg,
+              similarity_score: similarityScore,
+              raw_cosine: rawCosine,
+              match_reasons: reasons,
+              isDirectMatch: isDirect,
+            };
+          })
+          .filter((p) => p.isDirectMatch || p.raw_cosine >= 0.25)
+          .sort((a, b) => {
+            if (a.isDirectMatch !== b.isDirectMatch) return a.isDirectMatch ? -1 : 1;
+            return b.raw_cosine - a.raw_cosine;
+          });
+
+        if (rankedQwenProducts.length > 0) {
+          const offset = (page - 1) * limit;
+          return {
+            total: rankedQwenProducts.length,
+            page: Number(page),
+            limit: Number(limit),
+            totalPages: Math.ceil(rankedQwenProducts.length / limit) || 1,
+            searchEngine: "qwen3-vl-multimodal",
+            visualFeatures: {
+              dominantColor: visualFeatures.dominantColor?.name || "Tự nhiên",
+              dominantColorHex: visualFeatures.dominantColor?.hex || "#1E293B",
+              detectedObject: visualFeatures.detectedObject,
+              smartTags: Array.from(
+                new Set(
+                  [
+                    rankedQwenProducts[0]?.category?.name,
+                    visualFeatures.detectedObject?.vietnameseTag,
+                    `Tông màu ${dominantColor?.name || "Tự nhiên"}`,
+                  ].filter(Boolean)
+                )
+              ),
+            },
+            products: rankedQwenProducts.slice(offset, offset + limit),
+          };
+        }
+      }
+    } catch (qwenErr) {
+      console.warn(
+        `⚠️ [VISUAL SEARCH] Qwen3-VL unavailable (${qwenErr.message}), fallback sang tìm kiếm từ khóa + màu sắc.`
+      );
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // TẦNG 2: TRUY VẤN CÁC TẬP ỨNG VIÊN CHUẨN XÁC THEO VẬT THỂ & MÀU SẮC (FALLBACK)
   // -------------------------------------------------------------------------
   const objectConditions = objectKeywords.map((kw) => ({ name: { [Op.like]: `%${kw}%` } }));
   const colorConditions = colorKeywords.map((kw) => ({ name: { [Op.like]: `%${kw}%` } }));

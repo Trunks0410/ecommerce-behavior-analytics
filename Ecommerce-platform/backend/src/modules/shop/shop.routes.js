@@ -1,6 +1,6 @@
 import express from "express";
 import shopController from "./shop.controller.js";
-import { verifyToken, isVendor } from "../../core/middleware/auth.js";
+import { verifyToken, optionalVerifyToken, isVendor } from "../../core/middleware/auth.js";
 import upload from "../../core/middleware/upload.js";
 
 const router = express.Router();
@@ -8,11 +8,14 @@ const router = express.Router();
 // Routes công khai (Public)
 router.get("/", shopController.getAllShops);
 router.get("/top", shopController.getTopShops);
-router.get("/:id", shopController.getShopProfile);
+router.get("/:id", optionalVerifyToken, shopController.getShopProfile);
 router.get("/:id/vouchers", shopController.getShopVouchers);
 
 // Các routes cần đăng nhập (Protected)
 router.use(verifyToken);
+
+// Theo dõi / Bỏ theo dõi gian hàng (dành cho mọi người dùng đã đăng nhập)
+router.post("/:id/follow", shopController.toggleFollowShop);
 
 // Chỉ đăng ký mới shop là cho phép User thường chưa có vai trò Vendor
 router.post("/", shopController.registerShop);

@@ -496,7 +496,7 @@ const returnService = {
             "Khiếu nại trả hàng đã được duyệt",
             `Yêu cầu khiếu nại trả hàng đơn ${shopOrder.shop_order_code} đã được Admin phê duyệt. Shipper sẽ đến lấy hàng hoàn trả.`,
             "ORDER_UPDATE",
-            { actionUrl: `/orders/${shopOrder.parent_order_id}` }
+            { actionUrl: `/orders/${shopOrder.id}` }
           );
         } catch (notifErr) {
           console.error("Error sending notification to customer:", notifErr);
@@ -548,7 +548,7 @@ const returnService = {
             "Khiếu nại trả hàng bị từ chối",
             `Yêu cầu khiếu nại trả hàng đơn ${shopOrder.shop_order_code} đã bị Admin bác bỏ. Phán quyết cuối cùng giữ nguyên từ chối của Shop. Lý do: ${resolveNote || 'Không có'}`,
             "ORDER_UPDATE",
-            { actionUrl: `/orders/${shopOrder.parent_order_id}` }
+            { actionUrl: `/orders/${shopOrder.id}` }
           );
         } catch (notifErr) {
           console.error("Error sending notification to customer:", notifErr);

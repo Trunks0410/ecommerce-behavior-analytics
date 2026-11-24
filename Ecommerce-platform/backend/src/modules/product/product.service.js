@@ -173,7 +173,11 @@ const fetchProducts = async (filters, lang = "vi") => {
   if (vectorRankedIds && vectorRankedIds.length > 0) {
     where.id = { [Op.in]: vectorRankedIds };
   } else if (keyword) {
-    where.name = { [Op.like]: `%${keyword}%` };
+    const { expandedTerms } = expandQueryTerms(keyword);
+    const likeConds = Array.from(expandedTerms).map((term) => ({
+      name: { [Op.like]: `%${term}%` },
+    }));
+    where[Op.or] = likeConds;
   }
   if (shopId) {
     where.shop_id = shopId;
@@ -668,35 +672,103 @@ const recordView = async (userId, productId) => {
   return true;
 };
 
+// Xáo trộn xen kẽ sản phẩm theo danh mục (kiểu Shopee Gợi ý hôm nay)
+const interleaveProductsByCategory = (products, limit) => {
+  if (!Array.isArray(products) || products.length === 0) return [];
+  const buckets = new Map();
+  for (const p of products) {
+    const catKey = p.category_id || p.category?.id || "other";
+    if (!buckets.has(catKey)) buckets.set(catKey, []);
+    buckets.get(catKey).push(p);
+  }
+
+  const queues = Array.from(buckets.values());
+  const result = [];
+  let hasMore = true;
+  while (hasMore && result.length < limit) {
+    hasMore = false;
+    for (const q of queues) {
+      if (q.length > 0 && result.length < limit) {
+        result.push(q.shift());
+        hasMore = true;
+      }
+    }
+  }
+  return result;
+};
+
 // GET /products/recommendations
-const getRecommendedProducts = async (userId, viewedIdsParam, limit = 10) => {
+const getRecommendedProducts = async (userId, viewedIdsParam, limit = 10, lang = "vi") => {
   const parsedLimit = Number(limit) || 10;
-  let viewedIds = [];
+  let browserViewedIds = [];
+  const signalWeights = {};
 
   if (Array.isArray(viewedIdsParam) && viewedIdsParam.length > 0) {
-    viewedIds = viewedIdsParam.map(Number).filter((n) => !isNaN(n) && n > 0);
+    browserViewedIds = viewedIdsParam.map(Number).filter((n) => !isNaN(n) && n > 0);
   } else if (typeof viewedIdsParam === "string" && viewedIdsParam.trim()) {
-    viewedIds = viewedIdsParam
+    browserViewedIds = viewedIdsParam
       .split(",")
       .map((s) => Number(s.trim()))
       .filter((n) => !isNaN(n) && n > 0);
   }
 
-  if (userId && viewedIds.length === 0) {
-    const history = await db.UserViewedProduct.findAll({
-      where: { user_id: userId },
-      order: [["viewed_at", "DESC"]],
-      limit: 15,
-      attributes: ["product_id"],
-      raw: true,
+  let viewedIds = [...browserViewedIds];
+
+  if (userId) {
+    const [history, wishlists, cartItems] = await Promise.all([
+      db.UserViewedProduct.findAll({
+        where: { user_id: userId },
+        order: [["viewed_at", "DESC"]],
+        limit: 10,
+        attributes: ["product_id"],
+        raw: true,
+      }),
+      db.Wishlist.findAll({
+        where: { user_id: userId },
+        order: [["created_at", "DESC"]],
+        limit: 10,
+        attributes: ["product_id"],
+        raw: true,
+      }),
+      db.CartItem.findAll({
+        where: { user_id: userId },
+        include: [
+          {
+            model: db.ProductVariant,
+            as: "variant",
+            attributes: ["product_id"],
+            required: true,
+          },
+        ],
+        limit: 10,
+      }),
+    ]);
+
+    const dbViewedIds = history.map((h) => Number(h.product_id));
+    const wishlistIds = wishlists.map((w) => Number(w.product_id));
+    const cartProductIds = cartItems
+      .map((c) => Number(c.variant?.product_id))
+      .filter((id) => !isNaN(id) && id > 0);
+
+    wishlistIds.forEach((id) => {
+      signalWeights[id] = Math.max(signalWeights[id] || 1, 1.3);
     });
-    viewedIds = history.map((h) => Number(h.product_id));
+    cartProductIds.forEach((id) => {
+      signalWeights[id] = Math.max(signalWeights[id] || 1, 1.5);
+    });
+
+    // Ưu tiên lịch sử DB của chính user + browserViewedIds của user đó
+    viewedIds = Array.from(
+      new Set([...dbViewedIds, ...cartProductIds, ...wishlistIds, ...browserViewedIds])
+    ).slice(0, 15);
   }
 
   if (viewedIds.length > 0 && vectorSearchService.isReady()) {
+    const overFetchLimit = Math.min(240, Math.max(parsedLimit * 3, 60));
     const recommendedIds = await vectorSearchService.getRecommendationsByUserHistory(
       viewedIds,
-      parsedLimit
+      overFetchLimit,
+      signalWeights
     );
     if (recommendedIds && recommendedIds.length > 0) {
       const products = await db.Product.findAll({
@@ -715,6 +787,7 @@ const getRecommendedProducts = async (userId, viewedIdsParam, limit = 10) => {
             as: "images",
             where: { is_primary: true },
             required: false,
+            separate: true,
           },
           {
             model: db.Shop,
@@ -724,15 +797,19 @@ const getRecommendedProducts = async (userId, viewedIdsParam, limit = 10) => {
           },
         ],
         order: [Sequelize.literal(`FIELD(\`Product\`.\`id\`, ${recommendedIds.join(",")})`)],
-        limit: parsedLimit,
+        limit: overFetchLimit,
       });
       if (products.length > 0) {
-        return await enrichProductsRating(products);
+        const interleaved = interleaveProductsByCategory(products, parsedLimit);
+        const rated = await enrichProductsRating(interleaved);
+        return await enrichProductsTranslation(rated, lang);
       }
     }
   }
 
-  return await fetchFeaturedProducts(parsedLimit);
+  // Với Guest hoặc tài khoản mới chưa có lịch sử: lấy nguồn sản phẩm đa dạng rồi xen kẽ theo danh mục
+  const diversePool = await fetchFeaturedProducts(Math.min(180, Math.max(parsedLimit * 3, 60)), lang);
+  return interleaveProductsByCategory(diversePool, parsedLimit);
 };
 
 const normalizeFiltersKey = (filters) => {
@@ -744,8 +821,269 @@ const normalizeFiltersKey = (filters) => {
     .join("&");
 };
 
+const SUGGEST_VI_EN_MAP = [
+  ["op lung dien thoai", ["phone case", "case"]],
+  ["ốp lưng điện thoại", ["phone case", "case"]],
+  ["op lung", ["phone case", "case"]],
+  ["ốp lưng", ["phone case", "case"]],
+  ["tai nghe", ["headphone", "headphones", "earphone", "earbud", "earbuds", "headset"]],
+  ["giay the thao", ["sneaker", "sneakers", "running shoe", "shoes"]],
+  ["giày thể thao", ["sneaker", "sneakers", "running shoe", "shoes"]],
+  ["giay", ["shoe", "shoes", "boot", "boots", "sneaker", "sandal"]],
+  ["giày", ["shoe", "shoes", "boot", "boots", "sneaker", "sandal"]],
+  ["dep", ["sandal", "sandals", "slipper", "slippers"]],
+  ["dép", ["sandal", "sandals", "slipper", "slippers"]],
+  ["tui xach", ["handbag", "bag", "tote", "purse"]],
+  ["túi xách", ["handbag", "bag", "tote", "purse"]],
+  ["tui", ["bag", "tote", "backpack", "handbag", "purse", "pouch"]],
+  ["túi", ["bag", "tote", "backpack", "handbag", "purse", "pouch"]],
+  ["balo", ["backpack", "bag"]],
+  ["ba lo", ["backpack", "bag"]],
+  ["dong ho", ["watch", "smartwatch", "clock"]],
+  ["đồng hồ", ["watch", "smartwatch", "clock"]],
+  ["ao thun", ["t-shirt", "tee", "shirt"]],
+  ["áo thun", ["t-shirt", "tee", "shirt"]],
+  ["ao", ["shirt", "t-shirt", "jacket", "hoodie", "sweater", "top", "blouse"]],
+  ["áo", ["shirt", "t-shirt", "jacket", "hoodie", "sweater", "top", "blouse"]],
+  ["quan", ["pants", "jeans", "trousers", "shorts"]],
+  ["quần", ["pants", "jeans", "trousers", "shorts"]],
+  ["tra", ["tea", "tea bags"]],
+  ["trà", ["tea", "tea bags"]],
+  ["ca phe", ["coffee"]],
+  ["cà phê", ["coffee"]],
+  ["dien thoai", ["phone", "smartphone", "iphone", "samsung"]],
+  ["điện thoại", ["phone", "smartphone", "iphone", "samsung"]],
+  ["ban phim", ["keyboard"]],
+  ["bàn phím", ["keyboard"]],
+  ["chuot", ["mouse"]],
+  ["chuột", ["mouse"]],
+  ["nhan", ["ring", "rings"]],
+  ["nhẫn", ["ring", "rings"]],
+  ["day chuyen", ["necklace", "pendant", "chain"]],
+  ["dây chuyền", ["necklace", "pendant", "chain"]],
+  ["bong tai", ["earring", "earrings"]],
+  ["bông tai", ["earring", "earrings"]],
+  ["vong tay", ["bracelet", "bangle"]],
+  ["vòng tay", ["bracelet", "bangle"]],
+  ["tu quan ao", ["wardrobe", "closet"]],
+  ["tủ quần áo", ["wardrobe", "closet"]],
+  ["tu", ["cabinet", "wardrobe", "dresser", "cupboard", "sideboard", "chest"]],
+  ["tủ", ["cabinet", "wardrobe", "dresser", "cupboard", "sideboard", "chest"]],
+  ["ke", ["shelf", "shelves", "bookshelf", "rack"]],
+  ["kệ", ["shelf", "shelves", "bookshelf", "rack"]],
+  ["ban", ["table", "desk", "nightstand"]],
+  ["bàn", ["table", "desk", "nightstand"]],
+  ["ghe", ["chair", "sofa", "couch", "stool", "armchair"]],
+  ["ghế", ["chair", "sofa", "couch", "stool", "armchair"]],
+  ["giuong", ["bed", "bedframe", "mattress"]],
+  ["giường", ["bed", "bedframe", "mattress"]],
+  ["den", ["lamp", "light", "chandelier"]],
+  ["đèn", ["lamp", "light", "chandelier"]],
+  ["tham", ["rug", "carpet", "mat"]],
+  ["thảm", ["rug", "carpet", "mat"]],
+  ["goi", ["pillow", "cushion"]],
+  ["gối", ["pillow", "cushion"]],
+  ["kinh", ["glasses", "sunglasses", "eyewear"]],
+  ["kính", ["glasses", "sunglasses", "eyewear"]],
+];
+
+const stripAccents = (str = "") =>
+  String(str)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase()
+    .trim();
+
+const hasWordBoundaryMatch = (textLower, term) => {
+  if (!textLower || !term) return false;
+  if (term.includes(" ")) return textLower.includes(term);
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = new RegExp(`(^|[^a-z0-9\\u00C0-\\u1EF9])${escaped}([^a-z0-9\\u00C0-\\u1EF9]|$)`, "i");
+  return regex.test(textLower);
+};
+
+const expandQueryTerms = (rawQuery) => {
+  const clean = String(rawQuery || "").trim();
+  const cleanLower = clean.toLowerCase();
+  const normalized = stripAccents(clean);
+  const expandedTerms = new Set([cleanLower]);
+  const translatedTerms = new Set();
+
+  for (const [viPhrase, enList] of SUGGEST_VI_EN_MAP) {
+    const viNorm = stripAccents(viPhrase);
+    if (hasWordBoundaryMatch(normalized, viNorm)) {
+      enList.forEach((en) => {
+        expandedTerms.add(en);
+        translatedTerms.add(en);
+      });
+    }
+  }
+
+  return { clean, cleanLower, normalized, expandedTerms, translatedTerms };
+};
+
+const hasAccentSafeKeywordMatch = (productName, cleanLower, normalized, translatedTerms) => {
+  const nameLower = String(productName || "").toLowerCase();
+  if (!nameLower) return false;
+
+  // 1. Khớp chính xác chuỗi có dấu người dùng gõ (hoặc word-boundary nếu query không dấu)
+  const hasVietnameseDiacritics = cleanLower !== normalized;
+  if (hasVietnameseDiacritics) {
+    if (nameLower.includes(cleanLower)) return true;
+  } else if (hasWordBoundaryMatch(nameLower, cleanLower)) {
+    return true;
+  }
+
+  // 2. Khớp các từ khóa tiếng Anh đã dịch theo ranh giới từ (tránh "ring" dính "earring"/"during")
+  for (const term of translatedTerms) {
+    if (hasWordBoundaryMatch(nameLower, term)) return true;
+  }
+
+  return false;
+};
+
+const fetchProductSuggestions = async (rawQuery, limit = 6, lang = "vi") => {
+  const clean = String(rawQuery || "").trim();
+  if (clean.length < 2) {
+    return { products: [], total: 0 };
+  }
+
+  const parsedLimit = Math.min(12, Math.max(1, parseInt(limit, 10) || 6));
+  const { cleanLower, normalized, expandedTerms, translatedTerms } = expandQueryTerms(clean);
+
+  // Tầng 1: Ưu tiên gọi Vector Search (Qwen3-VL /embed + Reranker) qua Analytics Service
+  const candidateMap = new Map();
+  let totalMatched = 0;
+
+  try {
+    const semanticIds = await vectorSearchService.searchProductsBySemantic(
+      clean,
+      Math.max(parsedLimit * 3, 18)
+    );
+    if (Array.isArray(semanticIds) && semanticIds.length > 0) {
+      const semanticProducts = await db.Product.findAll({
+        where: {
+          id: { [Op.in]: semanticIds },
+          approval_status: "APPROVED",
+        },
+        attributes: ["id", "name", "slug", "price", "sale_price", "sold_count"],
+        include: [
+          {
+            model: db.ProductImage,
+            as: "images",
+            attributes: ["image_url"],
+            where: { is_primary: true },
+            required: false,
+            separate: true,
+          },
+        ],
+      });
+      const rankMap = new Map(semanticIds.map((id, idx) => [Number(id), idx]));
+      semanticProducts
+        .sort((a, b) => (rankMap.get(Number(a.id)) ?? 999999) - (rankMap.get(Number(b.id)) ?? 999999))
+        .forEach((p) => candidateMap.set(Number(p.id), { prod: p, semanticRank: rankMap.get(Number(p.id)) ?? 999 }));
+      totalMatched = semanticProducts.length;
+    }
+  } catch (err) {
+    console.warn("⚠️ [SUGGEST] Semantic vector search fallback:", err.message);
+  }
+
+  // Tầng 2: Bổ sung / Dự phòng SQL LIKE có hậu kiểm chống khớp nhầm dấu MySQL (ví dụ "tủ" != "Artum"/"Latitude")
+  if (candidateMap.size < parsedLimit) {
+    const rawTokens = cleanLower.split(/\s+/).filter((t) => t.length >= 2);
+    const orConditions = [];
+    for (const term of expandedTerms) {
+      orConditions.push({ name: { [Op.like]: `%${term}%` } });
+    }
+    if (rawTokens.length > 1) {
+      orConditions.push({
+        [Op.and]: rawTokens.map((token) => ({
+          name: { [Op.like]: `%${token}%` },
+        })),
+      });
+    }
+
+    const sqlCandidates = await db.Product.findAll({
+      where: {
+        approval_status: "APPROVED",
+        [Op.or]: orConditions,
+      },
+      attributes: ["id", "name", "slug", "price", "sale_price", "sold_count"],
+      include: [
+        {
+          model: db.ProductImage,
+          as: "images",
+          attributes: ["image_url"],
+          where: { is_primary: true },
+          required: false,
+          separate: true,
+        },
+      ],
+      limit: 40,
+      order: [["sold_count", "DESC"], ["id", "DESC"]],
+    });
+
+    const verifiedSql = sqlCandidates.filter((prod) =>
+      hasAccentSafeKeywordMatch(prod.name, cleanLower, normalized, translatedTerms)
+    );
+
+    verifiedSql.forEach((prod) => {
+      if (!candidateMap.has(Number(prod.id))) {
+        candidateMap.set(Number(prod.id), { prod, semanticRank: null });
+      }
+    });
+    totalMatched = Math.max(totalMatched, candidateMap.size);
+  }
+
+  const rawTokens = cleanLower.split(/\s+/).filter((t) => t.length >= 2);
+  const scored = Array.from(candidateMap.values())
+    .map(({ prod, semanticRank }) => {
+      const nameLower = String(prod.name || "").toLowerCase();
+      let score = semanticRank !== null ? Math.max(60, 150 - semanticRank * 4) : 0;
+
+      if (nameLower.startsWith(cleanLower)) score += 120;
+      else if (hasAccentSafeKeywordMatch(prod.name, cleanLower, normalized, translatedTerms)) score += 85;
+
+      let matchedTokens = 0;
+      for (const token of rawTokens) {
+        if (hasWordBoundaryMatch(nameLower, token)) matchedTokens++;
+      }
+      score += matchedTokens * 20;
+
+      for (const term of translatedTerms) {
+        if (hasWordBoundaryMatch(nameLower, term)) {
+          score += 40;
+          break;
+        }
+      }
+      score += Math.min(15, Number(prod.sold_count || 0) / 20);
+      return { prod, score };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  const topItems = scored.slice(0, parsedLimit).map((item) => item.prod);
+  const translated = await enrichProductsTranslation(topItems, lang);
+
+  return {
+    products: translated,
+    total: totalMatched,
+  };
+};
+
+const getProductSuggestions = (q, limit = 6, lang = "vi") => {
+  const clean = String(q || "").trim();
+  if (clean.length < 2) return Promise.resolve({ products: [], total: 0 });
+  return getOrSetCache(
+    `products:suggest:v2:${lang}:${limit}:${clean.toLowerCase()}`,
+    () => fetchProductSuggestions(clean, limit, lang),
+    60
+  );
+};
+
 const getProducts = (filters = {}, lang = "vi") =>
-  getOrSetCache(`products:list:${lang}:${normalizeFiltersKey(filters)}`, () => fetchProducts(filters, lang), 300);
+  getOrSetCache(`products:list:v2:${lang}:${normalizeFiltersKey(filters)}`, () => fetchProducts(filters, lang), 300);
 
 const getFeaturedProducts = (limit = 10, lang = "vi") =>
   getOrSetCache(`products:featured:${limit}:${lang}`, () => fetchFeaturedProducts(limit, lang), 900);
@@ -761,6 +1099,7 @@ const getMostViewedProducts = (limit = 10, lang = "vi") =>
 
 export default {
   enrichProductsTranslation,
+  getProductSuggestions,
   getProducts,
   getProductBySlug,
   getSimilarProducts,

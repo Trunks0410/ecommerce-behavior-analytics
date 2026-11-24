@@ -144,13 +144,13 @@ class VectorSearchClient {
    * @param {number} limit
    * @returns {Promise<number[]>}
    */
-  async getRecommendationsByUserHistory(viewedProductIds, limit = 10) {
+  async getRecommendationsByUserHistory(viewedProductIds, limit = 10, signalWeights = {}) {
     if (!Array.isArray(viewedProductIds) || viewedProductIds.length === 0) return [];
 
     try {
       const response = await axios.post(
         `${this.serviceUrl}/api/v1/search/user-history`,
-        { viewedProductIds, limit },
+        { viewedProductIds, limit, signalWeights },
         { timeout: this.timeoutMs }
       );
 

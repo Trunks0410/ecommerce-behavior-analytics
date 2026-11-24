@@ -1,5 +1,6 @@
 import orderService from "./order.service.js";
 import vnpayService from "../payment/vnpay.service.js";
+import sepayService from "../payment/sepay.service.js";
 
 const createOrder = async (req, res) => {
   try {
@@ -30,6 +31,7 @@ const createOrder = async (req, res) => {
     });
 
     let paymentUrl = null;
+    let sepayCheckout = null;
     if (paymentMethod === "VNPAY") {
       let ipAddr =
         req.headers["x-forwarded-for"] ||
@@ -40,11 +42,18 @@ const createOrder = async (req, res) => {
       
       const orderInfo = `Thanh toan don hang ${order.checkout_code}`;
       paymentUrl = vnpayService.createPaymentUrl(ipAddr, order.checkout_code, order.total_amount, orderInfo);
+    } else if (paymentMethod === "SEPAY") {
+      sepayCheckout = sepayService.createCheckoutPayload({
+        checkoutCode: order.checkout_code,
+        amount: order.total_amount,
+        description: `Thanh toan don hang ${order.checkout_code}`,
+        customerId: req.user.id,
+      });
     }
 
     return res
       .status(201)
-      .json({ message: "Đặt hàng thành công", data: { ...order.toJSON(), paymentUrl } });
+      .json({ message: "Đặt hàng thành công", data: { ...order.toJSON(), paymentUrl, sepayCheckout } });
   } catch (error) {
     return res.status(400).json({ message: error.message });
   }

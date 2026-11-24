@@ -13,6 +13,7 @@ const memoryUpload = multer({
 
 router.use("/:id/reviews", reviewRoute);
 
+router.get("/suggestions", productController.getProductSuggestions);
 router.get("/featured", productController.getFeaturedProducts);
 router.get("/newest", productController.getNewestProducts);
 router.get("/best-sellers", productController.getBestSellerProducts);

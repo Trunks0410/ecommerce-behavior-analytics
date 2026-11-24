@@ -14,6 +14,19 @@ const getReqLang = (req) => {
   return "vi";
 };
 
+// GET /products/suggestions?q=&limit=6
+const getProductSuggestions = async (req, res, next) => {
+  try {
+    const q = String(req.query.q || req.query.keyword || "").trim();
+    const limit = req.query.limit || 6;
+    const lang = getReqLang(req);
+    const data = await productService.getProductSuggestions(q, limit, lang);
+    return res.status(200).json({ message: "Success", data });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 // GET /products?keyword=&categorySlug=&gender=&minPrice=&maxPrice=&sortBy=&page=
 const getProducts = async (req, res, next) => {
   try {
@@ -146,7 +159,8 @@ const getRecommendedProducts = async (req, res, next) => {
   try {
     const userId = req.user ? req.user.id : null;
     const { viewedIds, limit = 10 } = req.query;
-    const products = await productService.getRecommendedProducts(userId, viewedIds, limit);
+    const lang = getReqLang(req);
+    const products = await productService.getRecommendedProducts(userId, viewedIds, limit, lang);
     return res.status(200).json({ message: "Success", data: products });
   } catch (error) {
     return next(error);
@@ -193,7 +207,25 @@ const syncVectorDatabase = async (req, res, next) => {
 // POST /products/visual-search
 const visualSearch = async (req, res, next) => {
   try {
-    const result = await visualSimilarityService.searchProductsByImage(req.file, req.body || {});
+    let clientMetadata = {};
+    if (req.body?.metadata) {
+      try {
+        clientMetadata =
+          typeof req.body.metadata === "string"
+            ? JSON.parse(req.body.metadata)
+            : req.body.metadata;
+      } catch {
+        clientMetadata = {};
+      }
+    }
+
+    const result = await visualSimilarityService.searchProductsByImage({
+      fileBuffer: req.file?.buffer || null,
+      clientMetadata,
+      categoryId: req.body?.categoryId || null,
+      limit: Number(req.body?.limit) || 24,
+      page: Number(req.body?.page) || 1,
+    });
     return res.status(200).json({ message: "Success", data: result });
   } catch (error) {
     return next(error);
@@ -201,6 +233,7 @@ const visualSearch = async (req, res, next) => {
 };
 
 export default {
+  getProductSuggestions,
   getProducts,
   getProductBySlug,
   getSimilarProducts,

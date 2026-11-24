@@ -82,3 +82,29 @@ export const resolveNotificationTarget = (
   }
 };
 
+const NOTIFICATION_STATUS_MAP: Record<string, string> = {
+  PENDING: "Chờ xác nhận",
+  CONFIRMED: "Đã xác nhận",
+  PREPARING: "Đang chuẩn bị hàng",
+  SHIPPING: "Đang giao hàng",
+  PICKED_UP: "Shipper đã lấy hàng",
+  IN_TRANSIT: "Đang luân chuyển",
+  DELIVERING: "Đang giao hàng",
+  DELIVERED: "Đã giao hàng",
+  COMPLETED: "Hoàn thành",
+  CANCELLED: "Đã hủy",
+  FAILED: "Giao thất bại",
+  RETURN_PENDING: "Đang chuyển hoàn",
+  RETURNED: "Đã hoàn trả",
+  APPROVED: "Đã duyệt",
+  REJECTED: "Đã từ chối",
+};
+
+export const formatNotificationText = (text?: string | null): string => {
+  if (!text) return "";
+  return text.replace(
+    /\b(RETURN_PENDING|IN_TRANSIT|PICKED_UP|COMPLETED|DELIVERING|DELIVERED|PREPARING|CONFIRMED|CANCELLED|RETURNED|SHIPPING|APPROVED|REJECTED|PENDING|FAILED)\b/g,
+    (match) => NOTIFICATION_STATUS_MAP[match] || match
+  );
+};
+

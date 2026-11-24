@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   ShoppingBag,
@@ -30,7 +30,7 @@ import {
 import { useAppSelector } from "@/app/stores/hooks";
 import useAuth from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
-import { useCategories, useProducts } from "@/hooks/useProducts";
+import { useCategories, useProductSuggestions } from "@/hooks/useProducts";
 import { NotificationDropdown } from "./NotificationDropdown";
 import { useTheme } from "@/shared/context/ThemeContext";
 import { useLanguage } from "@/shared/context/LanguageContext";
@@ -121,18 +121,55 @@ const Header = () => {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isVisualSearchOpen, setIsVisualSearchOpen] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchTerm);
-    }, 400);
+    }, 220);
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const { data: searchResults } = useProducts({
-    keyword: debouncedSearch,
-    limit: 6,
-  });
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
+  const { data: searchResults, isFetching: isFetchingSuggestions } =
+    useProductSuggestions(debouncedSearch, 6);
+
+  const highlightMatch = (text: string, query: string) => {
+    const clean = query.trim();
+    if (clean.length < 2) return text;
+    const escaped = clean.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const parts = text.split(new RegExp(`(${escaped})`, "gi"));
+    return parts.map((part, idx) =>
+      part.toLowerCase() === clean.toLowerCase() ? (
+        <span key={idx} className="text-[#ee4d2d] font-bold">
+          {part}
+        </span>
+      ) : (
+        part
+      )
+    );
+  };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -438,7 +475,7 @@ const Header = () => {
         </Link>
 
         {/* Wide Center Search Bar */}
-        <div className="flex-1 max-w-2xl relative">
+        <div className="flex-1 max-w-2xl relative" ref={searchContainerRef}>
           <form onSubmit={handleSearchSubmit} className="relative flex items-center">
             <div className="relative w-full flex items-center bg-white dark:bg-slate-800 rounded-full border-2 border-[#ee4d2d] p-1 shadow-xs focus-within:shadow-md transition-shadow">
               <input
@@ -472,51 +509,62 @@ const Header = () => {
           </form>
 
           {/* Suggestions Dropdown */}
-          {showSuggestions &&
-            searchTerm.trim() &&
-            searchResults?.products &&
-            searchResults.products.length > 0 && (
-              <div
-                onMouseLeave={() => setShowSuggestions(false)}
-                className="absolute top-full left-0 w-full mt-1.5 bg-white dark:bg-slate-800 border border-black/[0.09] dark:border-slate-700 rounded-xs sm:rounded-sm shadow-[0_4px_24px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] p-2 z-50 animate-in fade-in zoom-in-95 duration-150"
-              >
-                <div className="px-2.5 py-1 text-[11px] font-semibold text-gray-400 dark:text-slate-400 uppercase tracking-wider">
-                  Gợi ý sản phẩm
-                </div>
-                {searchResults.products.map((product: any) => (
-                  <Link
-                    key={product.id}
-                    to={`/products/${product.slug || product.id}`}
-                    onClick={() => setShowSuggestions(false)}
-                    className="flex items-center gap-3 p-2 hover:bg-[#fafafa] dark:hover:bg-slate-700/60 rounded-xs transition-colors border-b border-gray-50 dark:border-slate-700/40 last:border-0"
-                  >
-                    <img
-                      src={product.images?.[0]?.image_url || "/placeholder.jpg"}
-                      alt={product.name}
-                      className="w-10 h-10 object-cover rounded-xs border border-gray-200 dark:border-slate-700 shrink-0"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-gray-800 dark:text-slate-200 hover:text-[#ee4d2d] transition-colors truncate">
-                        {product.name}
-                      </p>
-                      <p className="text-xs text-[#ee4d2d] font-bold mt-0.5">
-                        {product.sale_price
-                          ? Number(product.sale_price).toLocaleString()
-                          : Number(product.price).toLocaleString()}
-                        ₫
-                      </p>
-                    </div>
-                  </Link>
-                ))}
-                <Link
-                  to={`/products?keyword=${encodeURIComponent(searchTerm.trim())}`}
-                  onClick={() => setShowSuggestions(false)}
-                  className="block w-full text-center py-2 text-xs font-semibold text-[#ee4d2d] hover:bg-[#fef0ed] dark:hover:bg-slate-700 rounded-xs mt-1 transition-colors"
-                >
-                  {t("view_all")} ({searchResults.total || searchResults.products.length})
-                </Link>
+          {showSuggestions && searchTerm.trim().length >= 2 && (
+            <div className="absolute top-full left-0 w-full mt-1.5 bg-white dark:bg-slate-800 border border-black/[0.09] dark:border-slate-700 rounded-xs sm:rounded-sm shadow-[0_4px_24px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+              <div className="px-2.5 py-1 flex items-center justify-between text-[11px] font-semibold text-gray-400 dark:text-slate-400 uppercase tracking-wider">
+                <span>Gợi ý sản phẩm</span>
+                {isFetchingSuggestions && (
+                  <span className="text-[10px] lowercase font-normal text-[#ee4d2d]">
+                    đang tìm...
+                  </span>
+                )}
               </div>
-            )}
+              {searchResults?.products && searchResults.products.length > 0 ? (
+                <>
+                  {searchResults.products.map((product: any) => (
+                    <Link
+                      key={product.id}
+                      to={`/products/${product.slug || product.id}`}
+                      onClick={() => setShowSuggestions(false)}
+                      className="flex items-center gap-3 p-2 hover:bg-[#fafafa] dark:hover:bg-slate-700/60 rounded-xs transition-colors border-b border-gray-50 dark:border-slate-700/40 last:border-0"
+                    >
+                      <img
+                        src={product.images?.[0]?.image_url || "/placeholder.jpg"}
+                        alt={product.name}
+                        className="w-10 h-10 object-cover rounded-xs border border-gray-200 dark:border-slate-700 shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-800 dark:text-slate-200 hover:text-[#ee4d2d] transition-colors truncate">
+                          {highlightMatch(product.name, searchTerm)}
+                        </p>
+                        <p className="text-xs text-[#ee4d2d] font-bold mt-0.5">
+                          {product.sale_price
+                            ? Number(product.sale_price).toLocaleString()
+                            : Number(product.price).toLocaleString()}
+                          ₫
+                        </p>
+                      </div>
+                    </Link>
+                  ))}
+                  <Link
+                    to={`/products?keyword=${encodeURIComponent(searchTerm.trim())}`}
+                    onClick={() => setShowSuggestions(false)}
+                    className="block w-full text-center py-2 text-xs font-semibold text-[#ee4d2d] hover:bg-[#fef0ed] dark:hover:bg-slate-700 rounded-xs mt-1 transition-colors"
+                  >
+                    {t("view_all")} ({searchResults.total || searchResults.products.length})
+                  </Link>
+                </>
+              ) : isFetchingSuggestions ? (
+                <div className="py-4 px-3 text-center text-xs text-gray-400">
+                  Đang tìm gợi ý phù hợp...
+                </div>
+              ) : (
+                <div className="py-4 px-3 text-center text-xs text-gray-500 dark:text-slate-400">
+                  Không tìm thấy sản phẩm khớp với "{searchTerm.trim()}"
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Right Icon Actions: Wishlist & Cart & Account */}

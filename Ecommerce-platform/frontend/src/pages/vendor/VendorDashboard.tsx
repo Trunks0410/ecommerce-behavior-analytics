@@ -47,6 +47,14 @@ import { chatService } from '@/services/chatService';
 import { NotificationDropdown } from '@/shared/components/layout/NotificationDropdown';
 import EmojiPicker from '@/shared/components/chat/EmojiPicker';
 import { getCurrentLocale } from '@/shared/utils/format';
+import { AddressCombobox, ComboboxOption } from '@/shared/components/address/AddressCombobox';
+import { AddressMapPicker } from '@/shared/components/address/AddressMapPicker';
+import {
+  getProvinces34,
+  getWardsByProvinceCode,
+  VNProvince,
+  VNWard,
+} from '@/shared/services/vietnamAddressApi';
 
 
 const DEFAULT_SHOP_LOGO =
@@ -453,7 +461,51 @@ const VendorDashboard = () => {
     description: "",
     avatar_url: "",
     cover_url: "",
+    pickupProvince: "",
+    pickupDistrict: "",
+    pickupWard: "",
+    pickupStreet: "",
   });
+
+  const [provincesList, setProvincesList] = useState<VNProvince[]>([]);
+  const [wardsList, setWardsList] = useState<VNWard[]>([]);
+  const [selectedPickupProvinceCode, setSelectedPickupProvinceCode] = useState<number | null>(null);
+  const [isLoadingPickupWards, setIsLoadingPickupWards] = useState(false);
+
+  useEffect(() => {
+    getProvinces34().then(setProvincesList);
+  }, []);
+
+  useEffect(() => {
+    if (!selectedPickupProvinceCode) {
+      setWardsList([]);
+      return;
+    }
+    setIsLoadingPickupWards(true);
+    getWardsByProvinceCode(selectedPickupProvinceCode)
+      .then(setWardsList)
+      .finally(() => setIsLoadingPickupWards(false));
+  }, [selectedPickupProvinceCode]);
+
+  useEffect(() => {
+    if (!settingsForm.pickupProvince || provincesList.length === 0) return;
+    const matched = provincesList.find((p) => p.name === settingsForm.pickupProvince);
+    if (matched && matched.code !== selectedPickupProvinceCode) {
+      setSelectedPickupProvinceCode(matched.code);
+    }
+  }, [settingsForm.pickupProvince, provincesList, selectedPickupProvinceCode]);
+
+  const pickupProvinceOptions: ComboboxOption[] = provincesList.map((p) => ({
+    value: p.name,
+    label: p.name,
+    code: p.code,
+  }));
+
+  const pickupWardOptions: ComboboxOption[] = wardsList.map((w) => ({
+    value: w.name,
+    label: w.name,
+    code: w.code,
+  }));
 
   // Tải thông tin Shop khi component được mount hoặc user thay đổi
   useEffect(() => {
@@ -465,13 +517,17 @@ const VendorDashboard = () => {
           setIsRegistered(true);
           // Gán giá trị form cấu hình shop
           setSettingsForm({
-            name: res.data.name || "",
+            name: res.data.name || res.data.shop_name || "",
             phone: res.data.phone || "",
             address: res.data.address || "",
-            industry: res.data.industry || "",
+            industry: res.data.industry || "Đa sản phẩm",
             description: res.data.description || "",
-            avatar_url: res.data.avatar_url || "",
+            avatar_url: res.data.avatar_url || res.data.shop_logo || "",
             cover_url: res.data.cover_url || "",
+            pickupProvince: res.data.pickupProvince || "",
+            pickupDistrict: res.data.pickupDistrict || "",
+            pickupWard: res.data.pickupWard || "",
+            pickupStreet: res.data.pickupStreet || "",
           });
         }
       } catch (err) {
@@ -2941,9 +2997,9 @@ const VendorDashboard = () => {
                             </div>
 
                             {/* Dòng 1: Tạo tổ hợp biến thể */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white border-2 border-black rounded-2xl p-6 shadow-sm">
-                              <div className="space-y-2">
-                                <label className="text-xs font-bold uppercase tracking-wider text-gray-600">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white border-2 border-black rounded-2xl p-6 shadow-sm items-end">
+                              <div className="flex flex-col gap-2 h-full justify-between">
+                                <label className="text-xs font-bold uppercase tracking-wider text-gray-600 leading-snug">
                                   Phân loại 1: Kích cỡ / Dung lượng / Khối lượng (cách nhau dấu phẩy)
                                 </label>
                                 <input
@@ -2954,8 +3010,8 @@ const VendorDashboard = () => {
                                   onChange={(e) => setBulkSizes(e.target.value)}
                                 />
                               </div>
-                              <div className="space-y-2">
-                                <label className="text-xs font-bold uppercase tracking-wider text-gray-600">
+                              <div className="flex flex-col gap-2 h-full justify-between">
+                                <label className="text-xs font-bold uppercase tracking-wider text-gray-600 leading-snug">
                                   Phân loại 2: Màu sắc / Mẫu mã / Hương vị (cách nhau dấu phẩy)
                                 </label>
                                 <input
@@ -4720,22 +4776,92 @@ const VendorDashboard = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">
-                      Địa chỉ lấy hàng
-                    </label>
-                    <textarea
-                      rows={3}
-                      className="w-full bg-gray-50 border-2 border-black rounded-xl px-5 py-3.5 font-bold focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all resize-none"
-                      value={settingsForm.address}
-                      onChange={(e) =>
-                        setSettingsForm({
-                          ...settingsForm,
-                          address: e.target.value,
-                        })
-                      }
-                      required
-                    ></textarea>
+                  <div className="space-y-4 p-4 rounded-2xl border-2 border-black bg-gray-50/70">
+                    <div className="flex items-center justify-between gap-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-600 ml-1">
+                        Địa chỉ lấy hàng (Bắt buộc khi bàn giao UTE Express)
+                      </label>
+                      {settingsForm.pickupProvince && settingsForm.pickupWard && settingsForm.pickupStreet ? (
+                        <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">
+                          Đã đủ thông tin định tuyến
+                        </span>
+                      ) : (
+                        <span className="text-[11px] font-bold text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-full">
+                          Chọn Tỉnh/Thành, Phường/Xã & Số nhà
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <AddressCombobox
+                        label="Tỉnh / Thành phố"
+                        required
+                        placeholder="Gõ hoặc chọn Tỉnh / Thành phố..."
+                        value={settingsForm.pickupProvince}
+                        options={pickupProvinceOptions}
+                        onChange={(val, opt) => {
+                          setSelectedPickupProvinceCode(opt?.code || null);
+                          setSettingsForm((prev) => ({
+                            ...prev,
+                            pickupProvince: val,
+                            pickupDistrict: "",
+                            pickupWard: "",
+                            address: [prev.pickupStreet, val].filter(Boolean).join(", "),
+                          }));
+                        }}
+                      />
+                      <AddressCombobox
+                        label="Phường / Xã / Đặc khu"
+                        required
+                        placeholder={
+                          settingsForm.pickupProvince
+                            ? "Gõ để lọc Phường / Xã..."
+                            : "Chọn Tỉnh/TP trước..."
+                        }
+                        value={settingsForm.pickupWard}
+                        options={pickupWardOptions}
+                        disabled={!settingsForm.pickupProvince}
+                        loading={isLoadingPickupWards}
+                        onChange={(val) => {
+                          setSettingsForm((prev) => ({
+                            ...prev,
+                            pickupWard: val,
+                            address: [prev.pickupStreet, val, prev.pickupProvince]
+                              .filter(Boolean)
+                              .join(", "),
+                          }));
+                        }}
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-gray-700">
+                        Địa chỉ cụ thể (Số nhà, tên đường, kho lấy hàng...) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ví dụ: Số 1, Đường Lê Lợi"
+                        className="w-full bg-white border-2 border-black rounded-xl px-4 py-3 font-bold focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all"
+                        value={settingsForm.pickupStreet}
+                        onChange={(e) => {
+                          const street = e.target.value;
+                          setSettingsForm((prev) => ({
+                            ...prev,
+                            pickupStreet: street,
+                            address: [street, prev.pickupWard, prev.pickupProvince]
+                              .filter(Boolean)
+                              .join(", "),
+                          }));
+                        }}
+                        required
+                      />
+                    </div>
+
+                    <AddressMapPicker
+                      province={settingsForm.pickupProvince}
+                      ward={settingsForm.pickupWard}
+                      street={settingsForm.pickupStreet}
+                    />
                   </div>
 
                   <div className="space-y-2">

@@ -24,6 +24,7 @@ import { useCalculateCheckout, useCreateOrder } from "@/hooks/useOrders";
 import { useSystemSettings } from "@/hooks/useSystemSettings";
 import { useProfile } from "@/hooks/useUser";
 import { useMySavedCoupons } from "@/hooks/useCoupons";
+import { submitSepayCheckoutForm } from "@/shared/utils/paymentRedirect";
 import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import * as yup from "yup";
@@ -90,7 +91,7 @@ const CheckoutPage = () => {
   const { data: systemSettings } = useSystemSettings() as any;
 
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<"COD" | "VNPAY">("COD");
+  const [paymentMethod, setPaymentMethod] = useState<"COD" | "SEPAY">("COD");
   const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState<number | null>(null);
   const [openShopCouponDropdownId, setOpenShopCouponDropdownId] = useState<number | null>(null);
@@ -106,6 +107,7 @@ const CheckoutPage = () => {
 
   const platformCoupons = validCoupons?.filter((c: any) => !c.shop_id) || [];
   const availableShopCoupons = validCoupons?.filter((c: any) => c.shop_id) || [];
+  const hasAutoAppliedVouchersRef = useRef(false);
 
   const {
     register,
@@ -375,6 +377,53 @@ const CheckoutPage = () => {
         ? (cart?.items || []).filter((item: any) => selectedItemIds.includes(Number(item.id)))
         : cart?.items || [];
 
+  // Tự động áp dụng voucher nếu khách đã bấm "Dùng ngay" từ Ví Voucher
+  useEffect(() => {
+    if (hasAutoAppliedVouchersRef.current || cartItems.length === 0) return;
+
+    const pendingPlatform = localStorage.getItem("pending_platform_voucher");
+    if (pendingPlatform) {
+      setCouponCode(pendingPlatform);
+      setInputCoupon(pendingPlatform);
+      localStorage.removeItem("pending_platform_voucher");
+    }
+
+    try {
+      const rawShopMap = localStorage.getItem("pending_shop_vouchers");
+      if (rawShopMap) {
+        const parsedMap = JSON.parse(rawShopMap) as Record<string, string>;
+        const cartShopIds = new Set(
+          cartItems
+            .map((item: any) =>
+              String(item.shop?.id || item.variant?.product?.shop?.id || item.product?.shop_id || "")
+            )
+            .filter(Boolean)
+        );
+        const matched: Record<string, string> = {};
+        let changed = false;
+        Object.entries(parsedMap).forEach(([shopId, code]) => {
+          if (cartShopIds.has(shopId) && code) {
+            matched[shopId] = code;
+            delete parsedMap[shopId];
+            changed = true;
+          }
+        });
+        if (changed) {
+          setShopCoupons((prev) => ({ ...prev, ...matched }));
+          if (Object.keys(parsedMap).length > 0) {
+            localStorage.setItem("pending_shop_vouchers", JSON.stringify(parsedMap));
+          } else {
+            localStorage.removeItem("pending_shop_vouchers");
+          }
+        }
+      }
+    } catch {
+      localStorage.removeItem("pending_shop_vouchers");
+    }
+
+    hasAutoAppliedVouchersRef.current = true;
+  }, [cartItems]);
+
   const onSubmit = async (data: any) => {
     const checkoutItems = cartItems;
 
@@ -408,7 +457,9 @@ const CheckoutPage = () => {
     createOrderMutation.mutate(payload, {
       onSuccess: (resData: any) => {
         localStorage.removeItem("checkout_items");
-        if (resData && resData.paymentUrl) {
+        if (resData?.sepayCheckout) {
+          submitSepayCheckoutForm(resData.sepayCheckout);
+        } else if (resData && resData.paymentUrl) {
           window.location.href = resData.paymentUrl;
         } else {
           setCurrentStep(3);
@@ -477,7 +528,7 @@ const CheckoutPage = () => {
 
   useEffect(() => {
     if (isCodBlocked && paymentMethod === "COD") {
-      setPaymentMethod("VNPAY");
+      setPaymentMethod("SEPAY");
     }
   }, [isCodBlocked, paymentMethod]);
 
@@ -753,18 +804,21 @@ const CheckoutPage = () => {
 
                       <button
                         type="button"
-                        onClick={() => setPaymentMethod("VNPAY")}
-                        className={`w-full flex items-center justify-between p-3.5 border rounded-xs transition-colors text-left cursor-pointer ${paymentMethod === 'VNPAY'
+                        onClick={() => setPaymentMethod("SEPAY")}
+                        className={`w-full flex items-center justify-between p-3.5 border rounded-xs transition-colors text-left cursor-pointer ${paymentMethod === 'SEPAY'
                             ? 'bg-[#fef0ed]/40 dark:bg-slate-700/60 border-[#ee4d2d]'
                             : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:border-gray-300'
                           }`}
                       >
                         <div className="flex items-center gap-3">
-                          <Landmark size={20} className={paymentMethod === 'VNPAY' ? 'text-[#ee4d2d]' : 'text-gray-400'} />
-                          <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-slate-100">Thanh toán qua VNPAY / Ví điện tử</p>
+                          <Landmark size={20} className={paymentMethod === 'SEPAY' ? 'text-[#ee4d2d]' : 'text-gray-400'} />
+                          <div>
+                            <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-slate-100">Thanh toán qua SePay (VietQR / Ngân hàng)</p>
+                            <p className="text-[11px] text-gray-500 dark:text-slate-400">Quét mã VietQR hoặc chuyển khoản nhanh 24/7</p>
+                          </div>
                         </div>
-                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center bg-white ${paymentMethod === 'VNPAY' ? 'border-[#ee4d2d]' : 'border-gray-300'}`}>
-                          {paymentMethod === 'VNPAY' && <div className="w-2 h-2 rounded-full bg-[#ee4d2d]" />}
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center bg-white ${paymentMethod === 'SEPAY' ? 'border-[#ee4d2d]' : 'border-gray-300'}`}>
+                          {paymentMethod === 'SEPAY' && <div className="w-2 h-2 rounded-full bg-[#ee4d2d]" />}
                         </div>
                       </button>
                     </div>
@@ -803,7 +857,7 @@ const CheckoutPage = () => {
                         )}
                       </div>
 
-                      {platformCoupons.length > 0 && (
+                      {platformCoupons.length > 0 ? (
                         <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
                           {platformCoupons.map((coupon: any) => (
                             <button
@@ -822,7 +876,98 @@ const CheckoutPage = () => {
                             </button>
                           ))}
                         </div>
+                      ) : (
+                        <p className="text-[11px] text-gray-500 dark:text-slate-400">
+                          Chưa có mã giảm giá sàn trong ví.{" "}
+                          <Link to="/vouchers" className="text-[#ee4d2d] font-semibold hover:underline">
+                            Săn thêm tại Trung tâm Voucher →
+                          </Link>
+                        </p>
                       )}
+
+                      {/* Chọn nhanh Mã giảm giá của Shop ngay tại Bước 2 */}
+                      {(() => {
+                        const shopsInCheckout = Array.from(
+                          new Map(
+                            cartItems
+                              .map((item: any) => {
+                                const shop = item.shop || item.variant?.product?.shop;
+                                const sid = shop?.id || item.product?.shop_id;
+                                return sid ? [String(sid), { id: sid, name: shop?.shop_name || shop?.name || `Shop #${sid}` }] : null;
+                              })
+                              .filter(Boolean) as [string, { id: number; name: string }][]
+                          ).values()
+                        );
+                        if (shopsInCheckout.length === 0) return null;
+
+                        return (
+                          <div className="border-t border-gray-100 dark:border-slate-700/60 pt-3 space-y-2.5">
+                            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block">
+                              Mã giảm giá của Shop
+                            </label>
+                            {shopsInCheckout.map((shopItem) => {
+                              const shopVoucherList = availableShopCoupons.filter(
+                                (c: any) => String(c.shop_id) === String(shopItem.id)
+                              );
+                              const activeShopCode = shopCoupons[String(shopItem.id)] || "";
+                              return (
+                                <div key={shopItem.id} className="space-y-1.5">
+                                  <div className="flex items-center justify-between text-xs">
+                                    <span className="font-semibold text-gray-700 dark:text-slate-300">{shopItem.name}</span>
+                                    {activeShopCode && (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setShopCoupons((prev) => ({ ...prev, [String(shopItem.id)]: "" }))
+                                        }
+                                        className="text-red-500 hover:underline font-medium cursor-pointer"
+                                      >
+                                        Bỏ chọn ({activeShopCode})
+                                      </button>
+                                    )}
+                                  </div>
+                                  {shopVoucherList.length > 0 ? (
+                                    <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                                      {shopVoucherList.map((c: any) => {
+                                        const isSelected = activeShopCode === c.code;
+                                        return (
+                                          <button
+                                            key={c.id}
+                                            type="button"
+                                            onClick={() =>
+                                              setShopCoupons((prev) => ({
+                                                ...prev,
+                                                [String(shopItem.id)]: isSelected ? "" : c.code,
+                                              }))
+                                            }
+                                            className={`shrink-0 border rounded-xs p-2.5 text-left transition-colors cursor-pointer ${
+                                              isSelected
+                                                ? "border-[#ee4d2d] bg-[#fef0ed]/50 text-[#ee4d2d]"
+                                                : "border-gray-200 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-900 hover:border-gray-300"
+                                            }`}
+                                          >
+                                            <p className="font-bold text-xs uppercase">{c.code}</p>
+                                            <p className="text-[10px] text-gray-500 dark:text-slate-400 mt-0.5">
+                                              Giảm {c.discount_type === "PERCENT" ? `${c.discount_value}%` : `${Number(c.discount_value).toLocaleString()}₫`}
+                                              {Number(c.min_order_amount) > 0
+                                                ? ` · Đơn từ ${Number(c.min_order_amount).toLocaleString()}₫`
+                                                : ""}
+                                            </p>
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  ) : (
+                                    <p className="text-[11px] text-gray-400">
+                                      Chưa có mã giảm giá nào cho shop này trong ví.
+                                    </p>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
 
                       <div className="border-t border-gray-100 dark:border-slate-700/60 pt-3">
                         {(() => {

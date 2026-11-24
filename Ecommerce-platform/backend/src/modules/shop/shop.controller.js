@@ -16,7 +16,7 @@ const registerShop = async (req, res) => {
 const getShopProfile = async (req, res) => {
   try {
     const { id } = req.params;
-    const shop = await shopService.getShopProfile(id);
+    const shop = await shopService.getShopProfile(id, req.user?.id || null);
     if (!shop) {
       return res.status(404).json({ message: "Shop not found" });
     }
@@ -24,6 +24,22 @@ const getShopProfile = async (req, res) => {
   } catch (error) {
     console.error("Error getting shop profile:", error);
     return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+const toggleFollowShop = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const result = await shopService.toggleFollowShop(userId, id);
+    return res.status(200).json({
+      message: result.isFollowed ? "Followed shop successfully" : "Unfollowed shop successfully",
+      data: result,
+    });
+  } catch (error) {
+    console.error("Error toggling shop follow:", error);
+    const status = error.message === "Shop not found" ? 404 : 500;
+    return res.status(status).json({ error: error.message || "Internal server error" });
   }
 };
 
@@ -376,6 +392,7 @@ const getWithdrawals = async (req, res) => {
 export default {
   registerShop,
   getShopProfile,
+  toggleFollowShop,
   getMyShop,
   updateMyShop,
   getShopStatistics,

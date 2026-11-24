@@ -25,6 +25,7 @@ import { chatService, ChatMessage, ConversationInfo } from "@/services/chatServi
 import { useNavigate } from "react-router-dom";
 import EmojiPicker from "./EmojiPicker";
 import { getCurrentLocale } from "@/shared/utils/format";
+import { useLanguage } from "@/shared/context/LanguageContext";
 
 const DEFAULT_SHOP_LOGO = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='128' height='128'><rect width='100' height='100' fill='%23FFE4D6' stroke='black' stroke-width='4'/><path d='M20 40 L50 15 L80 40 L80 85 L20 85 Z' fill='white' stroke='black' stroke-width='4'/><rect x='40' y='55' width='20' height='30' fill='%23D97736' stroke='black' stroke-width='4'/><path d='M15 40 L85 40' stroke='black' stroke-width='4'/></svg>";
 
@@ -37,7 +38,47 @@ interface ActiveShop {
 
 const ChatWidget = () => {
   const { isAuthenticated, user } = useAuth();
+  const { language } = useLanguage();
+  const isEn = language === "en";
   const navigate = useNavigate();
+
+  const buildInitialAiMessage = (en: boolean) => ({
+    id: "ai-initial",
+    sender_id: 0,
+    body: en
+      ? `Hello! I'm **MeeMart's Smart AI Assistant** 🤖.
+I can help you with:
+• 📦 Order tracking & UTE Express shipment status
+• 🎟️ Finding today's hot discount vouchers
+• 🔍 Product suggestions & price comparisons
+• 🚚 Shipping policy (Freeship > 500k), 7-day returns & payments
+
+Tap a quick suggestion below or type your message!`
+      : `Dạ xin chào! Em là **Trợ lý AI Thông Minh của MeeMart** 🤖.
+Em có thể hỗ trợ anh/chị:
+• 📦 Tra cứu tiến trình đơn hàng & vận đơn UTE Express
+• 🎟️ Săn mã giảm giá hot hôm nay
+• 🔍 Gợi ý sản phẩm đa ngành hàng & so sánh giá
+• 🚚 Chính sách giao hàng (Freeship > 500k), đổi trả 7 ngày & thanh toán
+
+Anh/chị có thể bấm nhanh các gợi ý bên dưới hoặc nhắn trực tiếp cho em nha!`,
+    suggestions: en
+      ? [
+          "📦 Track my order",
+          "🎟️ Hot vouchers today",
+          "🚚 Shipping fees & delivery time",
+          "🔄 Return & warranty policy",
+          "💬 Chat with Seller",
+        ]
+      : [
+          "📦 Tra cứu đơn hàng của tôi",
+          "🎟️ Săn mã giảm giá hot",
+          "🚚 Phí ship & thời gian giao",
+          "🔄 Chính sách đổi trả & bảo hành",
+          "💬 Chat với chủ Shop",
+        ],
+    sent_at: new Date().toISOString(),
+  });
 
   // Hàm tự động phân tích cú pháp link Markdown [tên](url) để hiển thị thành liên kết bấm được
   const renderMessageBody = (body: string) => {
@@ -98,29 +139,19 @@ const ChatWidget = () => {
   const [conversations, setConversations] = useState<ConversationInfo[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [copiedVoucher, setCopiedVoucher] = useState<string | null>(null);
-  const [aiMessages, setAiMessages] = useState<any[]>([
-    {
-      id: "ai-initial",
-      sender_id: 0,
-      body: `Dạ xin chào! Em là **Trợ lý AI Thông Minh của MeeMart** 🤖.
-Em có thể hỗ trợ anh/chị:
-• 📦 Tra cứu tiến trình đơn hàng & vận đơn UTE Express
-• 🎟️ Săn mã giảm giá hot hôm nay
-• 🔍 Gợi ý sản phẩm đa ngành hàng & so sánh giá
-• 🚚 Chính sách giao hàng (Freeship > 500k), đổi trả 7 ngày & thanh toán
-
-Anh/chị có thể bấm nhanh các gợi ý bên dưới hoặc nhắn trực tiếp cho em nha!`,
-      suggestions: [
-        "📦 Tra cứu đơn hàng của tôi",
-        "🎟️ Săn mã giảm giá hot",
-        "🚚 Phí ship & thời gian giao",
-        "🔄 Chính sách đổi trả & bảo hành",
-        "💬 Chat với chủ Shop",
-      ],
-      sent_at: new Date().toISOString(),
-    },
-  ]);
+  const [aiMessages, setAiMessages] = useState<any[]>(() => [buildInitialAiMessage(isEn)]);
   const [isAiTyping, setIsAiTyping] = useState(false);
+
+  useEffect(() => {
+    setAiMessages((prev) =>
+      prev.map((m) => (m.id === "ai-initial" ? { ...buildInitialAiMessage(isEn), sent_at: m.sent_at } : m))
+    );
+    setActiveShop((prev) =>
+      prev && prev.id === 0
+        ? { ...prev, name: isEn ? "MeeMart AI Assistant" : "Trợ Lý AI MeeMart" }
+        : prev
+    );
+  }, [isEn]);
   const [activeShop, setActiveShop] = useState<ActiveShop | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [attachedFile, setAttachedFile] = useState<{ url: string; name: string; type: string } | null>(null);
@@ -336,7 +367,7 @@ Anh/chị có thể bấm nhanh các gợi ý bên dưới hoặc nhắn trực 
     setIsAiTyping(true);
 
     try {
-      const res = await chatService.chatWithAI(content);
+      const res = await chatService.chatWithAI(content, language);
       const aiReply = {
         id: `ai-${Date.now()}`,
         sender_id: 0,
@@ -352,11 +383,12 @@ Anh/chị có thể bấm nhanh các gợi ý bên dưới hoặc nhắn trực 
       const errorReply = {
         id: `ai-err-${Date.now()}`,
         sender_id: 0,
-        body: "Xin lỗi, tôi gặp lỗi kết nối với máy chủ AI. Vui lòng thử lại sau hoặc chọn các gợi ý bên dưới.",
-        suggestions: [
-          "🚚 Phí ship & thời gian giao",
-          "🔄 Chính sách đổi trả & bảo hành",
-        ],
+        body: isEn
+          ? "Sorry, I had trouble connecting to the AI server. Please try again later or pick a suggestion below."
+          : "Xin lỗi, tôi gặp lỗi kết nối với máy chủ AI. Vui lòng thử lại sau hoặc chọn các gợi ý bên dưới.",
+        suggestions: isEn
+          ? ["🚚 Shipping fees & delivery time", "🔄 Return & warranty policy"]
+          : ["🚚 Phí ship & thời gian giao", "🔄 Chính sách đổi trả & bảo hành"],
         sent_at: new Date().toISOString(),
       };
       setAiMessages((prev) => [...prev, errorReply]);
@@ -366,7 +398,7 @@ Anh/chị có thể bấm nhanh các gợi ý bên dưới hoặc nhắn trực 
   };
 
   const handleQuickSuggestion = (suggestion: string) => {
-    if (suggestion === "💬 Chat với chủ Shop") {
+    if (suggestion === "💬 Chat với chủ Shop" || suggestion === "💬 Chat with Seller") {
       setView("list");
       return;
     }
@@ -438,11 +470,11 @@ Anh/chị có thể bấm nhanh các gợi ý bên dưới hoặc nhắn trực 
   }
 
   return (
-    <div className={`fixed bottom-6 right-6 w-[420px] max-w-[calc(100vw-2rem)] bg-white/95 backdrop-blur-xl border border-gray-100 rounded-3xl shadow-premium z-50 overflow-hidden transition-all duration-300 flex flex-col ${isMinimized ? 'h-20' : 'h-[600px] max-h-[85vh]'}`}>
+    <div className={`fixed bottom-6 right-6 w-[420px] max-w-[calc(100vw-2rem)] bg-white/95 dark:bg-slate-900/95 text-slate-900 dark:text-slate-100 backdrop-blur-xl border border-gray-100 dark:border-slate-700 rounded-3xl shadow-premium z-50 overflow-hidden transition-all duration-300 flex flex-col ${isMinimized ? 'h-20' : 'h-[600px] max-h-[85vh]'}`}>
       {/* Header */}
       <div 
         onClick={() => isMinimized && setIsMinimized(false)}
-        className={`p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between bg-white/80 relative z-10 select-none ${isMinimized ? 'cursor-pointer hover:bg-gray-50/50' : ''}`}
+        className={`p-4 sm:p-5 border-b border-gray-100 dark:border-slate-700/80 flex items-center justify-between bg-white/90 dark:bg-slate-900/90 relative z-10 select-none ${isMinimized ? 'cursor-pointer hover:bg-gray-50/50 dark:hover:bg-slate-800/60' : ''}`}
       >
         <div className="flex items-center gap-3">
           {view === "detail" && (
@@ -451,7 +483,7 @@ Anh/chị có thể bấm nhanh các gợi ý bên dưới hoặc nhắn trực 
                 e.stopPropagation();
                 setView("list");
               }}
-              className="p-1.5 border border-gray-200 rounded-lg hover:bg-gray-100 transition-all cursor-pointer active:scale-95 animate-in fade-in duration-200"
+              className="p-1.5 border border-gray-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-all cursor-pointer active:scale-95 animate-in fade-in duration-200"
               title="Quay lại danh sách"
             >
               <ArrowLeft size={16} className="stroke-[2.5px]" />
@@ -459,7 +491,7 @@ Anh/chị có thể bấm nhanh các gợi ý bên dưới hoặc nhắn trực 
           )}
           
           <div className="relative">
-            <div className="w-10 h-10 rounded-full border border-gray-100 bg-primary/10 overflow-hidden shrink-0 flex items-center justify-center shadow-sm">
+            <div className="w-10 h-10 rounded-full border border-gray-100 dark:border-slate-700 bg-primary/10 overflow-hidden shrink-0 flex items-center justify-center shadow-sm">
               {view === "detail" ? (
                 activeShop?.id === 0 ? (
                   <span className="text-lg">🤖</span>
@@ -475,27 +507,45 @@ Anh/chị có thể bấm nhanh các gợi ý bên dưới hoặc nhắn trực 
               )}
             </div>
             {view === "detail" && (
-              <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 border-2 border-white rounded-full ${activeShop?.id === 0 ? "bg-purple-500" : "bg-green-500"}`}></div>
+              <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 border-2 border-white dark:border-slate-900 rounded-full ${activeShop?.id === 0 ? "bg-purple-500" : "bg-green-500"}`}></div>
             )}
           </div>
           
           <div>
             <div className="flex items-center gap-1.5 mb-0.5">
-              <h4 className="text-sm font-bold tracking-tight truncate max-w-[180px]">
-                {view === "detail" ? (activeShop?.name || "Cửa hàng") : "Hộp thư hỗ trợ"}
+              <h4 className="text-sm font-bold tracking-tight truncate max-w-[180px] text-slate-900 dark:text-slate-100">
+                {view === "detail"
+                  ? activeShop?.name || (isEn ? "Shop" : "Cửa hàng")
+                  : isEn
+                    ? "Support Inbox"
+                    : "Hộp thư hỗ trợ"}
               </h4>
               {view === "detail" && activeShop?.id === 0 && (
-                <span className="bg-purple-600 text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shadow-sm shrink-0">Trợ lý AI</span>
+                <span className="bg-purple-600 text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shadow-sm shrink-0">
+                  {isEn ? "AI Assistant" : "Trợ lý AI"}
+                </span>
               )}
               {view === "detail" && activeShop?.role?.toUpperCase() === 'MANAGER' && (
-                <span className="bg-blue-500 text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shadow-sm shrink-0">Quản lý</span>
+                <span className="bg-blue-500 text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shadow-sm shrink-0">
+                  {isEn ? "Manager" : "Quản lý"}
+                </span>
               )}
               {view === "detail" && activeShop?.role?.toUpperCase() === 'ADMIN' && (
                 <span className="bg-red-500 text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shadow-sm shrink-0">Admin</span>
               )}
             </div>
-            <p className={`text-[11px] font-semibold flex items-center gap-1 ${activeShop?.id === 0 ? "text-purple-600" : "text-green-600"}`}>
-              {view === "detail" ? (activeShop?.id === 0 ? "Sẵn sàng trả lời" : "Đang hoạt động") : "Hỗ trợ trực tuyến"}
+            <p className={`text-[11px] font-semibold flex items-center gap-1 ${activeShop?.id === 0 ? "text-purple-600 dark:text-purple-400" : "text-green-600 dark:text-emerald-400"}`}>
+              {view === "detail"
+                ? activeShop?.id === 0
+                  ? isEn
+                    ? "Ready to reply"
+                    : "Sẵn sàng trả lời"
+                  : isEn
+                    ? "Active now"
+                    : "Đang hoạt động"
+                : isEn
+                  ? "Online Support"
+                  : "Hỗ trợ trực tuyến"}
             </p>
           </div>
         </div>
@@ -506,7 +556,7 @@ Anh/chị có thể bấm nhanh các gợi ý bên dưới hoặc nhắn trực 
               e.stopPropagation();
               setIsMinimized(!isMinimized);
             }}
-            className="p-2 text-gray-400 hover:text-black hover:bg-gray-50 rounded-lg transition-all cursor-pointer active:scale-95"
+            className="p-2 text-gray-500 dark:text-slate-400 hover:text-black dark:hover:text-white hover:bg-gray-50 dark:hover:bg-slate-800 rounded-lg transition-all cursor-pointer active:scale-95"
             title={isMinimized ? "Mở rộng" : "Thu nhỏ"}
           >
             {isMinimized ? (
@@ -520,7 +570,7 @@ Anh/chị có thể bấm nhanh các gợi ý bên dưới hoặc nhắn trực 
               e.stopPropagation();
               setIsOpen(false);
             }}
-            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all cursor-pointer active:scale-95"
+            className="p-2 text-gray-500 dark:text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-all cursor-pointer active:scale-95"
             title="Đóng"
           >
             <X size={16} className="stroke-[2px]" />
@@ -532,18 +582,18 @@ Anh/chị có thể bấm nhanh các gợi ý bên dưới hoặc nhắn trực 
         <>
           {/* VIEW 1: Chat List */}
           {view === "list" && (
-            <div className="flex-grow flex flex-col h-full overflow-hidden bg-white">
+            <div className="flex-grow flex flex-col h-full overflow-hidden bg-white dark:bg-slate-900">
               {/* Search Bar */}
-              <div className="p-4 border-b border-gray-100 bg-gray-50/10">
+              <div className="p-4 border-b border-gray-100 dark:border-slate-800 bg-gray-50/40 dark:bg-slate-900">
                 <div className="relative">
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Tìm kiếm cửa hàng đã chat..."
-                    className="w-full bg-white border border-gray-200 rounded-xl pl-9 pr-4 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
+                    placeholder={isEn ? "Search chatted shops..." : "Tìm kiếm cửa hàng đã chat..."}
+                    className="w-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl pl-9 pr-4 py-2 text-xs font-medium text-slate-900 dark:text-slate-100 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
                   />
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-400" size={15} />
                 </div>
               </div>
 
@@ -554,30 +604,30 @@ Anh/chị có thể bấm nhanh các gợi ý bên dưới hoặc nhắn trực 
                     onClick={() => {
                       setActiveShop({
                         id: 0,
-                        name: "Trợ Lý AI MeeMart",
+                        name: isEn ? "MeeMart AI Assistant" : "Trợ Lý AI MeeMart",
                         logo: null,
                         role: "AI",
                       });
                       setView("detail");
                     }}
-                    className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-purple-50/50 transition-all text-left cursor-pointer group active:scale-95 border-2 border-dashed border-purple-200"
+                    className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-purple-50/50 dark:hover:bg-purple-950/30 transition-all text-left cursor-pointer group active:scale-95 border-2 border-dashed border-purple-200 dark:border-purple-800/70"
                   >
                     <div className="relative shrink-0">
-                      <div className="w-10 h-10 rounded-full border border-purple-200 bg-purple-100 overflow-hidden flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+                      <div className="w-10 h-10 rounded-full border border-purple-200 dark:border-purple-800 bg-purple-100 dark:bg-purple-900/50 overflow-hidden flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
                         <span className="text-lg">🤖</span>
                       </div>
                     </div>
                     <div className="flex-grow min-w-0">
                       <div className="flex justify-between items-center mb-0.5">
-                        <span className="text-xs font-extrabold tracking-tight text-purple-700">
-                          Trợ lý AI Thông Minh
+                        <span className="text-xs font-extrabold tracking-tight text-purple-700 dark:text-purple-300">
+                          {isEn ? "Smart AI Assistant" : "Trợ lý AI Thông Minh"}
                         </span>
                         <span className="bg-purple-600 text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shadow-sm shrink-0">
                           AI Bot
                         </span>
                       </div>
-                      <p className="text-xs truncate text-gray-500 font-medium">
-                        Hỏi về sản phẩm, đơn hàng, mã giảm giá...
+                      <p className="text-xs truncate text-gray-500 dark:text-slate-400 font-medium">
+                        {isEn ? "Ask about products, orders, vouchers..." : "Hỏi về sản phẩm, đơn hàng, mã giảm giá..."}
                       </p>
                     </div>
                   </button>
@@ -586,12 +636,14 @@ Anh/chị có thể bấm nhanh các gợi ý bên dưới hoặc nhắn trực 
                 {filteredConversations.length === 0 ? (
                   !searchQuery ? null : (
                     <div className="text-center py-20 flex flex-col items-center justify-center p-6">
-                      <MessageSquare size={36} className="text-gray-300 mb-3" />
-                      <span className="text-xs font-bold uppercase tracking-wider text-gray-500">
-                        Không có cuộc trò chuyện nào
+                      <MessageSquare size={36} className="text-gray-300 dark:text-slate-600 mb-3" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-slate-400">
+                        {isEn ? "No conversations found" : "Không có cuộc trò chuyện nào"}
                       </span>
-                      <p className="text-xs text-gray-400 mt-2 text-center max-w-[260px] leading-relaxed">
-                        Hãy ghé qua gian hàng bất kỳ và bấm nút "Chat ngay" để bắt đầu!
+                      <p className="text-xs text-gray-400 dark:text-slate-500 mt-2 text-center max-w-[260px] leading-relaxed">
+                        {isEn
+                          ? 'Visit any shop and click "Chat now" to start a conversation!'
+                          : 'Hãy ghé qua gian hàng bất kỳ và bấm nút "Chat ngay" để bắt đầu!'}
                       </p>
                     </div>
                   )
@@ -600,10 +652,10 @@ Anh/chị có thể bấm nhanh các gợi ý bên dưới hoặc nhắn trực 
                     <button
                       key={conv.id}
                       onClick={() => handleSelectConversation(conv)}
-                      className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-all text-left cursor-pointer group active:scale-95"
+                      className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-800/80 transition-all text-left cursor-pointer group active:scale-95"
                     >
                       <div className="relative shrink-0">
-                        <div className="w-10 h-10 rounded-full border border-gray-100 bg-primary/10 overflow-hidden flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+                        <div className="w-10 h-10 rounded-full border border-gray-100 dark:border-slate-700 bg-primary/10 overflow-hidden flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
                           <img
                             src={conv.partner.avatar || DEFAULT_SHOP_LOGO}
                             alt="avatar"
@@ -611,14 +663,14 @@ Anh/chị có thể bấm nhanh các gợi ý bên dưới hoặc nhắn trực 
                           />
                         </div>
                         {conv.unreadCount > 0 && (
-                          <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 border border-white rounded-full"></div>
+                          <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 border border-white dark:border-slate-900 rounded-full"></div>
                         )}
                       </div>
                       
                       <div className="flex-grow min-w-0">
                         <div className="flex justify-between items-center mb-0.5">
                           <div className="flex items-center gap-1.5 truncate">
-                            <span className="text-xs font-bold tracking-tight group-hover:text-primary transition-colors truncate">
+                            <span className="text-xs font-bold tracking-tight text-slate-900 dark:text-slate-100 group-hover:text-primary transition-colors truncate">
                               {conv.partner.name}
                             </span>
                             {conv.partner.role?.toUpperCase() === 'MANAGER' && (
@@ -628,14 +680,14 @@ Anh/chị có thể bấm nhanh các gợi ý bên dưới hoặc nhắn trực 
                               <span className="bg-red-500 text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shadow-sm shrink-0">Admin</span>
                             )}
                           </div>
-                          <span className="text-[11px] font-medium text-gray-400 shrink-0 pl-2">
+                          <span className="text-[11px] font-medium text-gray-400 dark:text-slate-400 shrink-0 pl-2">
                             {conv.lastMessage ? new Date(conv.lastMessage.sent_at).toLocaleTimeString(getCurrentLocale(), { hour: '2-digit', minute: '2-digit' }) : ""}
                           </span>
                         </div>
                         
                         <div className="flex justify-between items-center gap-2">
-                          <p className={`text-xs truncate ${conv.unreadCount > 0 ? "text-black font-bold" : "text-gray-500 font-medium"}`}>
-                            {conv.lastMessage ? conv.lastMessage.body : "Chưa có tin nhắn"}
+                          <p className={`text-xs truncate ${conv.unreadCount > 0 ? "text-black dark:text-white font-bold" : "text-gray-500 dark:text-slate-400 font-medium"}`}>
+                            {conv.lastMessage ? conv.lastMessage.body : isEn ? "No messages yet" : "Chưa có tin nhắn"}
                           </p>
                           {conv.unreadCount > 0 && (
                             <span className="bg-red-500 text-white border border-white rounded-full px-1.5 py-0.5 text-[10px] font-bold shrink-0 shadow-sm animate-pulse">
@@ -655,17 +707,17 @@ Anh/chị có thể bấm nhanh các gợi ý bên dưới hoặc nhắn trực 
           {view === "detail" && (
             <>
               {/* Messages Area */}
-              <div className="flex-grow overflow-y-auto p-4 sm:p-5 space-y-4 bg-[#F9F9F7] bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] scrollbar-thin">
+              <div className="flex-grow overflow-y-auto p-4 sm:p-5 space-y-4 bg-[#F9F9F7] dark:bg-slate-950/90 scrollbar-thin">
                 {(() => {
                   const activeMessages = activeShop?.id === 0 ? aiMessages : messages;
                   if (activeMessages.length === 0) {
                     return (
                       <div className="text-center py-12 flex flex-col items-center justify-center">
-                        <span className="bg-white border border-gray-100 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-gray-500 shadow-sm">
-                          Mở đầu hộp thư
+                        <span className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-slate-300 shadow-sm">
+                          {isEn ? "Start of conversation" : "Mở đầu hộp thư"}
                         </span>
-                        <p className="text-xs font-medium text-gray-400 mt-3">
-                          Gửi lời chào đầu tiên đến shop!
+                        <p className="text-xs font-medium text-gray-400 dark:text-slate-400 mt-3">
+                          {isEn ? "Send your first greeting to the shop!" : "Gửi lời chào đầu tiên đến shop!"}
                         </p>
                       </div>
                     );
@@ -683,7 +735,7 @@ Anh/chị có thể bấm nhanh các gợi ý bên dưới hoặc nhắn trực 
                           <React.Fragment key={msg.id}>
                             {showDateSeparator && (
                               <div className="flex justify-center my-3 select-none">
-                                <span className="bg-white border border-gray-100 px-3.5 py-1 rounded-full text-[11px] font-semibold text-gray-500 shadow-sm">
+                                <span className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 px-3.5 py-1 rounded-full text-[11px] font-semibold text-gray-500 dark:text-slate-300 shadow-sm">
                                   {new Date(msg.sent_at).toLocaleDateString(getCurrentLocale(), {
                                     weekday: "long",
                                     day: "numeric",
@@ -721,7 +773,7 @@ Anh/chị có thể bấm nhanh các gợi ý bên dưới hoặc nhắn trực 
                                     <span className="bg-red-500 text-white text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shadow-sm">Admin</span>
                                   )}
                                 </div>
-                                <div className={`p-3.5 rounded-2xl shadow-sm text-left ${isMe ? "bg-primary text-white rounded-tr-none" : "bg-white text-gray-800 rounded-tl-none border border-gray-100"}`}>
+                                <div className={`p-3.5 rounded-2xl shadow-sm text-left ${isMe ? "bg-primary text-white rounded-tr-none" : "bg-white dark:bg-slate-800 text-gray-800 dark:text-slate-100 rounded-tl-none border border-gray-100 dark:border-slate-700"}`}>
                                   {msg.attachment_url && (
                                     <div className="mb-2 max-w-full overflow-hidden rounded-xl">
                                       {msg.attachment_type?.startsWith("image/") ? (
@@ -960,10 +1012,10 @@ Anh/chị có thể bấm nhanh các gợi ý bên dưới hoặc nhắn trực 
                       })}
                       {isAiTyping && (
                         <div className="flex gap-3 max-w-[85%] animate-in fade-in slide-in-from-bottom-1 duration-200">
-                          <div className="w-8 h-8 rounded-full border border-purple-100 bg-purple-100 overflow-hidden shrink-0 flex items-center justify-center shadow-sm">
+                          <div className="w-8 h-8 rounded-full border border-purple-100 dark:border-purple-800 bg-purple-100 dark:bg-purple-900/50 overflow-hidden shrink-0 flex items-center justify-center shadow-sm">
                             <span className="text-sm">🤖</span>
                           </div>
-                          <div className="bg-white border border-gray-100 p-3 rounded-2xl rounded-tl-none shadow-sm flex items-center gap-1">
+                          <div className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 p-3 rounded-2xl rounded-tl-none shadow-sm flex items-center gap-1">
                             <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
                             <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
                             <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
@@ -977,18 +1029,18 @@ Anh/chị có thể bấm nhanh các gợi ý bên dưới hoặc nhắn trực 
               </div>
 
               {/* Input Area */}
-              <form onSubmit={handleSend} className="p-4 border-t border-gray-100 bg-white select-none">
+              <form onSubmit={handleSend} className="p-4 border-t border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 select-none">
                 {/* File Upload Preview */}
                 {(isUploading || attachedFile) && (
-                  <div className="mb-3 p-2.5 bg-gray-50 border border-gray-100 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                  <div className="mb-3 p-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
                     {isUploading ? (
-                      <div className="flex items-center gap-2 text-gray-500 text-xs font-medium py-1">
+                      <div className="flex items-center gap-2 text-gray-500 dark:text-slate-300 text-xs font-medium py-1">
                         <Loader2 className="animate-spin text-primary" size={15} />
-                        <span>Đang tải tệp lên...</span>
+                        <span>{isEn ? "Uploading file..." : "Đang tải tệp lên..."}</span>
                       </div>
                     ) : attachedFile ? (
                       <>
-                        <div className="w-10 h-10 rounded-lg overflow-hidden border border-gray-200 shrink-0 flex items-center justify-center bg-white shadow-sm">
+                        <div className="w-10 h-10 rounded-lg overflow-hidden border border-gray-200 dark:border-slate-700 shrink-0 flex items-center justify-center bg-white dark:bg-slate-900 shadow-sm">
                           {attachedFile.type.startsWith("image/") ? (
                             <img src={attachedFile.url} alt="Attached Preview" className="w-full h-full object-cover" />
                           ) : (
@@ -996,18 +1048,18 @@ Anh/chị có thể bấm nhanh các gợi ý bên dưới hoặc nhắn trực 
                           )}
                         </div>
                         <div className="flex-grow min-w-0">
-                          <p className="text-xs font-semibold text-gray-700 truncate">
+                          <p className="text-xs font-semibold text-gray-700 dark:text-slate-200 truncate">
                             {attachedFile.name}
                           </p>
-                          <span className="text-[11px] text-gray-400 font-medium">
-                            {attachedFile.type.startsWith("image/") ? "Hình ảnh" : "Tài liệu"}
+                          <span className="text-[11px] text-gray-400 dark:text-slate-400 font-medium">
+                            {attachedFile.type.startsWith("image/") ? (isEn ? "Image" : "Hình ảnh") : (isEn ? "Document" : "Tài liệu")}
                           </span>
                         </div>
                         <button
                           type="button"
                           onClick={handleRemoveAttachedFile}
-                          className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all shrink-0 cursor-pointer active:scale-95"
-                          title="Hủy đính kèm"
+                          className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-all shrink-0 cursor-pointer active:scale-95"
+                          title={isEn ? "Cancel attachment" : "Hủy đính kèm"}
                         >
                           <X size={15} />
                         </button>
@@ -1016,7 +1068,7 @@ Anh/chị có thể bấm nhanh các gợi ý bên dưới hoặc nhắn trực 
                   </div>
                 )}
 
-                <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl p-1.5 pl-3 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
+                <div className="flex items-center gap-2 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-1.5 pl-3 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
                   <EmojiPicker
                     onSelectEmoji={(emoji) => setMessage((prev) => prev + emoji)}
                     theme="modern"
@@ -1025,8 +1077,8 @@ Anh/chị có thể bấm nhanh các gợi ý bên dưới hoặc nhắn trực 
                     type="button"
                     onClick={handleTriggerFileInput}
                     disabled={isUploading}
-                    className="text-gray-400 hover:text-black transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center p-2 rounded-xl hover:bg-gray-100 shrink-0"
-                    title="Đính kèm tệp"
+                    className="text-gray-400 dark:text-slate-400 hover:text-black dark:hover:text-white transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-700 shrink-0"
+                    title={isEn ? "Attach file" : "Đính kèm tệp"}
                   >
                     <Paperclip size={18} />
                   </button>
@@ -1035,8 +1087,8 @@ Anh/chị có thể bấm nhanh các gợi ý bên dưới hoặc nhắn trực 
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     onKeyDown={handleKeyPress}
-                    placeholder="Nhập tin nhắn..."
-                    className="flex-grow bg-transparent border-none focus:outline-none text-[13px] font-medium py-1.5"
+                    placeholder={isEn ? "Type a message..." : "Nhập tin nhắn..."}
+                    className="flex-grow bg-transparent border-none focus:outline-none text-[13px] font-medium text-slate-900 dark:text-slate-100 placeholder:text-gray-400 dark:placeholder:text-slate-400 py-1.5"
                     disabled={!activeShop || isUploading}
                   />
                   <input 
@@ -1048,14 +1100,16 @@ Anh/chị có thể bấm nhanh các gợi ý bên dưới hoặc nhắn trực 
                   />
                   <button
                     type="submit"
-                    className={`p-2 rounded-xl transition-all ${(message.trim() || attachedFile) && !isUploading ? "bg-primary text-white shadow-soft hover:bg-primary-dark cursor-pointer active:scale-95" : "text-gray-300 cursor-not-allowed"}`}
+                    className={`p-2 rounded-xl transition-all ${(message.trim() || attachedFile) && !isUploading ? "bg-primary text-white shadow-soft hover:bg-primary-dark cursor-pointer active:scale-95" : "text-gray-300 dark:text-slate-600 cursor-not-allowed"}`}
                     disabled={(!message.trim() && !attachedFile) || !activeShop || isUploading}
                   >
                     <Send size={18} />
                   </button>
                 </div>
                 <div className="flex justify-end mt-1.5 px-1">
-                  <span className="text-[11px] font-medium text-gray-400">Nhấn Enter để gửi</span>
+                  <span className="text-[11px] font-medium text-gray-400 dark:text-slate-400">
+                    {isEn ? "Press Enter to send" : "Nhấn Enter để gửi"}
+                  </span>
                 </div>
               </form>
             </>

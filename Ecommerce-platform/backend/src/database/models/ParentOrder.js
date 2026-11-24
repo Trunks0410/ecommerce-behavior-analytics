@@ -16,7 +16,7 @@ export default (sequelize, DataTypes) => {
       address_id: { type: DataTypes.BIGINT, allowNull: true },
       checkout_code: { type: DataTypes.STRING(50), allowNull: false, unique: true },
       total_amount: { type: DataTypes.DECIMAL(15, 2), allowNull: false },
-      payment_method: { type: DataTypes.ENUM("COD", "VNPAY", "MOMO", "CREDIT_CARD"), allowNull: false },
+      payment_method: { type: DataTypes.ENUM("COD", "VNPAY", "SEPAY", "MOMO", "CREDIT_CARD"), allowNull: false },
       payment_status: { type: DataTypes.ENUM("UNPAID", "PAID", "REFUNDED"), allowNull: false, defaultValue: "UNPAID" },
       shipping_address: { type: DataTypes.TEXT, allowNull: false },
       platform_coupon_id: { type: DataTypes.BIGINT, allowNull: true },

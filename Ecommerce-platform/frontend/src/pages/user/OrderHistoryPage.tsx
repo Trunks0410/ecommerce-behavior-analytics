@@ -14,6 +14,7 @@ import {
   MapPin,
 } from "lucide-react";
 import PaymentCountdownButton from "@/shared/components/ui/PaymentCountdownButton";
+import { submitSepayCheckoutForm } from "@/shared/utils/paymentRedirect";
 import { useState, useMemo } from "react";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -160,7 +161,9 @@ const OrderHistoryPage = () => {
   const handleRetryPayment = (parentOrderId: number) => {
     retryPaymentMutation.mutate(parentOrderId, {
       onSuccess: (data) => {
-        if (data.paymentUrl) {
+        if (data.sepayCheckout) {
+          submitSepayCheckoutForm(data.sepayCheckout);
+        } else if (data.paymentUrl) {
           window.location.href = data.paymentUrl;
         }
       },
@@ -626,7 +629,7 @@ const OrderHistoryPage = () => {
                   <div className="flex flex-wrap items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800 md:p-5">
                     {(() => {
                       const isUnpaidVNPay =
-                        order.parentOrder?.payment_method === "VNPAY" &&
+                        ["VNPAY", "SEPAY"].includes(order.parentOrder?.payment_method || "") &&
                         order.parentOrder?.payment_status === "UNPAID" &&
                         order.status !== "CANCELLED" &&
                         (new Date().getTime() - new Date(order.created_at).getTime()) / (1000 * 60 * 60) <= 24;
@@ -661,9 +664,15 @@ const OrderHistoryPage = () => {
                     })()}
 
                     {order.status === "DELIVERED" ? (
-                      <div className="flex flex-col gap-2 sm:flex-row">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          onClick={() => navigate(`/orders/${order.id}`)}
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-bold uppercase tracking-wide text-slate-700 transition-all hover:border-slate-900 hover:text-slate-900 cursor-pointer"
+                        >
+                          {t("orders_view_details")}
+                        </button>
                         {order.returnRequests && order.returnRequests.length > 0 ? (
-                          <span className="inline-flex items-center justify-center rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10px] font-black uppercase tracking-[0.14em] text-red-500">
+                          <span className="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-xs font-bold uppercase tracking-wide text-red-600">
                             {order.returnRequests[0].status === "PENDING"
                               ? t("orders_return_requested")
                               : order.returnRequests[0].status === "APPROVED_BY_SHOP"
@@ -678,14 +687,14 @@ const OrderHistoryPage = () => {
                           <>
                             <button
                               onClick={() => handleOpenReturnModal(order)}
-                              className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-5 py-3 text-[10px] font-black uppercase tracking-[0.16em] text-red-500 transition-all hover:bg-red-50"
+                              className="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-red-200 bg-white px-4 py-2 text-xs font-bold uppercase tracking-wide text-red-600 transition-all hover:bg-red-50 cursor-pointer"
                             >
                               {t("orders_return_refund")}
                             </button>
                             <button
                               onClick={() => handleConfirmReceipt(order.id)}
                               disabled={isConfirming !== null}
-                              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 text-[10px] font-black uppercase tracking-[0.16em] text-white transition-all hover:bg-emerald-600 disabled:opacity-50"
+                              className="inline-flex items-center justify-center whitespace-nowrap rounded-lg bg-[#ee4d2d] px-4 py-2 text-xs font-bold uppercase tracking-wide text-white transition-all hover:bg-[#d9461c] disabled:opacity-50 cursor-pointer"
                             >
                               {isConfirming === order.id ? t("orders_processing") : t("orders_received")}
                             </button>
@@ -693,24 +702,62 @@ const OrderHistoryPage = () => {
                         )}
                       </div>
                     ) : order.status === "COMPLETED" ? (
-                      <button
-                        onClick={() => navigate(`/orders/${order.id}`)}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-[10px] font-black uppercase tracking-[0.16em] text-slate-700 transition-all hover:border-slate-900 hover:text-slate-900"
-                      >
-                        {t("orders_view_details")}
-                      </button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          onClick={() => navigate(`/orders/${order.id}`)}
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-bold uppercase tracking-wide text-slate-700 transition-all hover:border-slate-900 hover:text-slate-900 cursor-pointer"
+                        >
+                          {t("orders_view_details")}
+                        </button>
+                        {(() => {
+                          const daysSinceCompleted = (Date.now() - new Date(order.updated_at).getTime()) / (1000 * 3600 * 24);
+                          if (order.returnRequests && order.returnRequests.length > 0) {
+                            return (
+                              <span className="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-xs font-bold uppercase tracking-wide text-red-600">
+                                {t("orders_return_requested")}
+                              </span>
+                            );
+                          }
+                          if (daysSinceCompleted <= 15) {
+                            return (
+                              <button
+                                onClick={() => handleOpenReturnModal(order)}
+                                className="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-red-200 bg-white px-4 py-2 text-xs font-bold uppercase tracking-wide text-red-600 transition-all hover:bg-red-50 cursor-pointer"
+                              >
+                                {t("orders_return_refund")}
+                              </button>
+                            );
+                          }
+                          return null;
+                        })()}
+                        <button
+                          onClick={() => navigate(`/orders/${order.id}?action=review`)}
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-xs font-bold uppercase tracking-wide text-amber-700 transition-all hover:bg-amber-100 cursor-pointer"
+                        >
+                          {order.reviews && order.reviews.length >= (order.items?.length || 1)
+                            ? t("order_detail_review_again")
+                            : t("order_detail_review")}
+                        </button>
+                        <button
+                          onClick={() => handleRepurchase(order.items || [])}
+                          disabled={addToCartMutation.isPending}
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-lg bg-[#ee4d2d] px-4 py-2 text-xs font-bold uppercase tracking-wide text-white transition-all hover:bg-[#d9461c] disabled:opacity-50 cursor-pointer"
+                        >
+                          {t("orders_repurchase")}
+                        </button>
+                      </div>
                     ) : order.status === "CANCELLED" || order.status === "CANCEL_REQUESTED" ? (
                       <>
                         <button
                           onClick={() => navigate(`/orders/${order.id}`)}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-[10px] font-black uppercase tracking-[0.16em] text-slate-700 transition-all hover:border-slate-900 hover:text-slate-900"
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-bold uppercase tracking-wide text-slate-700 transition-all hover:border-slate-900 hover:text-slate-900 cursor-pointer"
                         >
                           {t("orders_view_details")}
                         </button>
                         <button
                           onClick={() => handleRepurchase(order.items || [])}
                           disabled={addToCartMutation.isPending}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#ee4d2d] px-5 py-3 text-[10px] font-black uppercase tracking-[0.16em] text-white transition-all hover:bg-[#d9461c] disabled:opacity-50"
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-lg bg-[#ee4d2d] px-4 py-2 text-xs font-bold uppercase tracking-wide text-white transition-all hover:bg-[#d9461c] disabled:opacity-50 cursor-pointer"
                         >
                           {t("orders_repurchase")}
                         </button>

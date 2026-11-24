@@ -17,7 +17,7 @@ export type OrderStatus =
   | "RETURNED"
   | "COMPLETED";
 
-export type PaymentMethod = "COD" | "VNPAY" | "MOMO";
+export type PaymentMethod = "COD" | "VNPAY" | "SEPAY" | "MOMO";
 export type PaymentStatus = "UNPAID" | "PAID" | "REFUNDED";
 
 export interface OrderItem {

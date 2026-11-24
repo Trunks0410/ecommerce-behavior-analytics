@@ -333,6 +333,7 @@ const createOrder = async (userId, data) => {
     const totalOriginalFinalAmount = calcResult.shops.reduce((sum, s) => sum + s.final_amount, 0);
 
     // 2. Create Shop Orders
+    const createdShopOrderIds = [];
     for (let i = 0; i < calcResult.shops.length; i++) {
       const shop = calcResult.shops[i];
       // Get commission rate
@@ -400,6 +401,7 @@ const createOrder = async (userId, data) => {
       });
 
       // Create Order Items
+      createdShopOrderIds.push(shopOrder.id);
       const orderItems = shop.items.map(item => ({
         shop_order_id: shopOrder.id,
         variant_id: item.variant_id,
@@ -503,7 +505,12 @@ const createOrder = async (userId, data) => {
         "Đặt hàng thành công",
         `Bạn đã đặt thành công đơn hàng checkout ${parentOrder.checkout_code} trị giá ${Number(parentOrder.total_amount).toLocaleString()}₫. Vui lòng chờ shop xác nhận.`,
         "NEW_ORDER",
-        { actionUrl: `/orders/${parentOrder.id}` }
+        {
+          actionUrl:
+            createdShopOrderIds.length === 1
+              ? `/orders/${createdShopOrderIds[0]}`
+              : "/orders",
+        }
       );
     } catch (notifErr) {
       console.error("Failed to create user order notification:", notifErr);
@@ -563,7 +570,9 @@ const createOrder = async (userId, data) => {
         ]
       },
       { model: db.Shop, as: "shop", paranoid: false },
-      { model: db.ParentOrder, as: "parentOrder", paranoid: false }
+      { model: db.ParentOrder, as: "parentOrder", paranoid: false },
+      { model: db.ProductReview, as: "reviews" },
+      { model: db.ReturnRequest, as: "returnRequests" },
     ],
     order: [["created_at", "DESC"]],
     limit: parseInt(limit),
@@ -573,7 +582,7 @@ const createOrder = async (userId, data) => {
 
   for (let shopOrder of rows) {
     if (
-      shopOrder.parentOrder?.payment_method === "VNPAY" &&
+      ["VNPAY", "SEPAY"].includes(shopOrder.parentOrder?.payment_method) &&
       shopOrder.parentOrder?.payment_status === "UNPAID" &&
       shopOrder.status !== "CANCELLED"
     ) {
@@ -615,7 +624,7 @@ const getUserOrderCounts = async (userId) => {
       as: "parentOrder",
       where: { user_id: userId },
       attributes: [],
-      paranoid: false,
+      required: true,
     }],
     group: ['status'],
     raw: true,
@@ -783,8 +792,8 @@ const updateOrderStatus = async (shopOrderId, userId, newStatus, role, note = nu
     if (!userShop || userShop.id !== shopOrder.shop_id) {
       throw new Error("Không có quyền cập nhật đơn hàng này");
     }
-    if (newStatus === "PREPARING" && shopOrder.parentOrder?.payment_method === "VNPAY" && shopOrder.parentOrder?.payment_status === "UNPAID") {
-      throw new Error("Đơn hàng chưa thanh toán VNPay không thể chuyển sang Đang chuẩn bị");
+    if (newStatus === "PREPARING" && ["VNPAY", "SEPAY"].includes(shopOrder.parentOrder?.payment_method) && shopOrder.parentOrder?.payment_status === "UNPAID") {
+      throw new Error("Đơn hàng thanh toán trực tuyến chưa hoàn tất thanh toán, không thể chuyển sang Đang chuẩn bị");
     }
   } else if (role === "user") {
     if (shopOrder.parentOrder.user_id !== userId) {
@@ -828,12 +837,12 @@ const updateOrderStatus = async (shopOrderId, userId, newStatus, role, note = nu
 
     await createUteExpressShipment({
       orderReference: shopOrder.shop_order_code,
-      pickupName: pickupAddress.receiver_name,
-      pickupPhone: pickupAddress.phone,
+      pickupName: pickupAddress.receiver_name || shop.shop_name,
+      pickupPhone: pickupAddress.phone || "0900000000",
       pickupAddress: [pickupAddress.street, pickupAddress.ward, pickupAddress.district, pickupAddress.province]
         .filter(Boolean)
         .join(", "),
-      pickupArea: pickupAddress.district,
+      pickupArea: pickupAddress.district || pickupAddress.ward || pickupAddress.province || "TP. Hồ Chí Minh",
       recipientName,
       recipientPhone,
       recipientAddress: recipientAddressText,
@@ -1037,9 +1046,26 @@ const updateOrderStatus = async (shopOrderId, userId, newStatus, role, note = nu
     const vendorId = shopObj?.vendor_id;
     const customerId = shopOrder.parentOrder?.user_id;
 
+    const ORDER_STATUS_LABELS_VI = {
+      PENDING: "Chờ xác nhận",
+      CONFIRMED: "Đã xác nhận",
+      PREPARING: "Đang chuẩn bị hàng",
+      SHIPPING: "Đang giao hàng",
+      PICKED_UP: "Shipper đã lấy hàng",
+      IN_TRANSIT: "Đang luân chuyển",
+      DELIVERING: "Đang giao hàng",
+      DELIVERED: "Đã giao hàng",
+      COMPLETED: "Hoàn thành",
+      CANCELLED: "Đã hủy",
+      FAILED: "Giao thất bại",
+      RETURN_PENDING: "Đang chuyển hoàn",
+      RETURNED: "Đã hoàn trả",
+    };
+    const statusLabelVi = ORDER_STATUS_LABELS_VI[newStatus] || newStatus;
+
     // 1. Thông báo cho người thực hiện (userId)
     let actorTitle = "Cập nhật đơn hàng";
-    let actorContent = `Bạn đã cập nhật đơn hàng ${shopOrder.shop_order_code} sang trạng thái ${newStatus}.`;
+    let actorContent = `Bạn đã cập nhật đơn hàng ${shopOrder.shop_order_code} sang trạng thái ${statusLabelVi}.`;
     if (userId === vendorId) {
       if (newStatus === "CONFIRMED") {
         actorTitle = "Xác nhận đơn hàng";
@@ -1052,9 +1078,9 @@ const updateOrderStatus = async (shopOrderId, userId, newStatus, role, note = nu
         actorContent = `Bạn đã xác nhận nhận lại hàng hoàn cho đơn hàng ${shopOrder.shop_order_code}.`;
       }
     } else if (userId === customerId) {
-      if (newStatus === "DELIVERED") {
-        actorTitle = "Xác nhận nhận hàng";
-        actorContent = `Bạn đã xác nhận đã nhận được đơn hàng ${shopOrder.shop_order_code}.`;
+      if (newStatus === "DELIVERED" || newStatus === "COMPLETED") {
+        actorTitle = "Xác nhận đã nhận hàng";
+        actorContent = `Bạn đã xác nhận nhận hàng thành công cho đơn hàng ${shopOrder.shop_order_code}.`;
       } else if (newStatus === "CANCELLED") {
         actorTitle = "Hủy đơn hàng";
         actorContent = `Bạn đã hủy đơn hàng ${shopOrder.shop_order_code}.`;
@@ -1078,14 +1104,14 @@ const updateOrderStatus = async (shopOrderId, userId, newStatus, role, note = nu
       userId === vendorId
         ? "/vendor?tab=orders"
         : userId === customerId
-          ? `/orders/${shopOrder.parent_order_id}`
+          ? `/orders/${shopOrder.id}`
           : null;
     await notificationService.createNotification(userId, actorTitle, actorContent, "ORDER_UPDATE", { actionUrl: actorActionUrl });
 
     // 2. Thông báo cho các bên liên quan (nếu người thực hiện không phải là họ)
     if (vendorId && userId !== vendorId) {
       let vendorTitle = "Cập nhật đơn hàng";
-      let vendorContent = `Đơn hàng ${shopOrder.shop_order_code} của shop đã được cập nhật sang trạng thái ${newStatus}.`;
+      let vendorContent = `Đơn hàng ${shopOrder.shop_order_code} của shop đã được cập nhật sang trạng thái ${statusLabelVi}.`;
       if (newStatus === "SHIPPING") {
         vendorTitle = "Đơn hàng đang giao";
         vendorContent = `Shipper đang giao đơn hàng ${shopOrder.shop_order_code}.`;
@@ -1097,7 +1123,10 @@ const updateOrderStatus = async (shopOrderId, userId, newStatus, role, note = nu
         vendorContent = `Đơn hàng ${shopOrder.shop_order_code} đang được luân chuyển.`;
       } else if (newStatus === "DELIVERED") {
         vendorTitle = "Đơn hàng đã giao thành công";
-        vendorContent = `Khách hàng/Shipper đã xác nhận giao thành công đơn hàng ${shopOrder.shop_order_code}.`;
+        vendorContent = `Shipper đã giao thành công đơn hàng ${shopOrder.shop_order_code}.`;
+      } else if (newStatus === "COMPLETED") {
+        vendorTitle = "Đơn hàng đã hoàn thành";
+        vendorContent = `Khách hàng đã xác nhận nhận hàng thành công cho đơn hàng ${shopOrder.shop_order_code}.`;
       } else if (newStatus === "FAILED") {
         vendorTitle = "Giao hàng thất bại";
         vendorContent = `Shipper xác nhận giao đơn hàng ${shopOrder.shop_order_code} thất bại. Lý do: ${note || "Không có lý do"}.`;
@@ -1115,7 +1144,7 @@ const updateOrderStatus = async (shopOrderId, userId, newStatus, role, note = nu
 
     if (customerId && userId !== customerId) {
       let customerTitle = "Trạng thái đơn hàng";
-      let customerContent = `Đơn hàng ${shopOrder.shop_order_code} của bạn đã được cập nhật sang trạng thái ${newStatus}.`;
+      let customerContent = `Đơn hàng ${shopOrder.shop_order_code} của bạn đã được cập nhật sang trạng thái ${statusLabelVi}.`;
       if (newStatus === "CONFIRMED") {
         customerTitle = "Đơn hàng được xác nhận";
         customerContent = `Đơn hàng ${shopOrder.shop_order_code} đã được người bán xác nhận.`;
@@ -1148,7 +1177,7 @@ const updateOrderStatus = async (shopOrderId, userId, newStatus, role, note = nu
         customerContent = `Đơn hàng ${shopOrder.shop_order_code} đã hoàn trả thành công về người bán.`;
       }
       await notificationService.createNotification(customerId, customerTitle, customerContent, "ORDER_UPDATE", {
-        actionUrl: `/orders/${shopOrder.parent_order_id}`,
+        actionUrl: `/orders/${shopOrder.id}`,
       });
     }
 
@@ -1246,40 +1275,64 @@ const getShipperOrders = async (userId, { page = 1, limit = 10, status }) => {
 };
 
 const getOrderDetail = async (shopOrderId, userId) => {
-  const shopOrder = await db.ShopOrder.findOne({
+  const detailIncludes = [
+    {
+      model: db.OrderItem,
+      as: "items",
+      include: [
+        {
+          model: db.ProductVariant,
+          as: "variant",
+          paranoid: false,
+          include: [
+            {
+              model: db.Product,
+              as: "product",
+              paranoid: false,
+              include: [{ model: db.ProductImage, as: "images" }],
+            },
+          ],
+        },
+      ],
+    },
+    { model: db.Shop, as: "shop", paranoid: false },
+    {
+      model: db.ParentOrder,
+      as: "parentOrder",
+      attributes: ["id", "shipping_address", "payment_method", "payment_status", "user_id", "note"],
+    },
+    { model: db.ProductReview, as: "reviews" },
+    { model: db.ReturnRequest, as: "returnRequests" },
+  ];
+
+  let shopOrder = await db.ShopOrder.findOne({
     where: { id: shopOrderId },
-    include: [
-      {
-        model: db.OrderItem,
-        as: "items",
-        include: [
-          {
-            model: db.ProductVariant,
-            as: "variant",
-            paranoid: false,
-            include: [
-              {
-                model: db.Product,
-                as: "product",
-                paranoid: false,
-                include: [{ model: db.ProductImage, as: "images" }]
-              }
-            ]
-          }
-        ]
-      },
-      { model: db.Shop, as: "shop", paranoid: false },
-      { model: db.ParentOrder, as: "parentOrder", attributes: ['id', 'shipping_address', 'payment_method', 'payment_status', 'user_id', 'note'] },
-      { model: db.ProductReview, as: "reviews" },
-      { model: db.ReturnRequest, as: "returnRequests" }
-    ]
+    include: detailIncludes,
   });
+
+  // Fallback: hỗ trợ các thông báo cũ từng trỏ theo parent_order_id
+  if (!shopOrder) {
+    shopOrder = await db.ShopOrder.findOne({
+      where: { parent_order_id: shopOrderId },
+      include: [
+        ...detailIncludes.filter((inc) => inc.as !== "parentOrder"),
+        {
+          model: db.ParentOrder,
+          as: "parentOrder",
+          where: { user_id: userId },
+          required: true,
+          attributes: ["id", "shipping_address", "payment_method", "payment_status", "user_id", "note"],
+        },
+      ],
+      order: [["id", "ASC"]],
+    });
+  }
 
   if (!shopOrder) throw new Error("Không tìm thấy đơn hàng");
   if (shopOrder.parentOrder.user_id !== userId) throw new Error("Không có quyền xem đơn hàng này");
 
   if (
-    shopOrder.parentOrder.payment_method === "VNPAY" &&
+    ["VNPAY", "SEPAY"].includes(shopOrder.parentOrder.payment_method) &&
     shopOrder.parentOrder.payment_status === "UNPAID" &&
     shopOrder.status !== "CANCELLED"
   ) {
@@ -1365,7 +1418,7 @@ const cancelOrder = async (shopOrderId, userId, reason) => {
         ? `Bạn đã gửi yêu cầu hủy đơn hàng ${shopOrder.shop_order_code}. Vui lòng chờ shop xác nhận.`
         : `Bạn đã hủy đơn hàng ${shopOrder.shop_order_code} thành công.`,
       "ORDER_UPDATE",
-      { actionUrl: `/orders/${shopOrder.parent_order_id}` }
+      { actionUrl: `/orders/${shopOrder.id}` }
     );
 
     // 2. Cho Vendor

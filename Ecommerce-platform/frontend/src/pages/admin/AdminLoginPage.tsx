@@ -18,6 +18,8 @@ import {
 import { loginThunk, logout } from '@/app/stores/slices/authSlice';
 import type { AppDispatch } from '@/app/stores/store';
 import { store } from '@/app/stores/store';
+import { axiosClient } from '@/shared/api/axiosClient';
+import { sanitizeRedirectUrl } from '@/shared/utils/redirectUtils';
 
 export const AdminLoginPage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -102,13 +104,27 @@ export const AdminLoginPage: React.FC = () => {
 
   const handleGoToEcommerceAdmin = () => {
     const params = new URLSearchParams(location.search);
-    const redirectUrl = params.get('redirect') || '/admin';
+    const redirectUrl = sanitizeRedirectUrl(params.get('redirect'), '/admin');
     navigate(redirectUrl, { replace: true });
   };
 
-  const handleGoToAnalyticsDashboard = () => {
-    const targetUrl = `http://localhost:5175${savedToken ? `?token=${encodeURIComponent(savedToken)}` : ''}`;
-    window.location.href = targetUrl;
+  const handleGoToAnalyticsDashboard = async () => {
+    const analyticsUrl = import.meta.env.VITE_ANALYTICS_URL || 'http://localhost:5175';
+    try {
+      const res = await axiosClient.post(
+        '/auth/sso-code',
+        {},
+        savedToken ? { headers: { Authorization: `Bearer ${savedToken}` } } : undefined
+      );
+      const code = res.data?.data?.code;
+      if (code) {
+        window.location.href = `${analyticsUrl}?sso_code=${encodeURIComponent(code)}`;
+        return;
+      }
+    } catch (err) {
+      console.error('Failed to issue SSO code:', err);
+    }
+    window.location.href = analyticsUrl;
   };
 
   return (

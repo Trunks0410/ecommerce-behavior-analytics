@@ -37,8 +37,11 @@ const orderService = {
   },
 
   retryPayment: async (orderId: number) => {
-    const response = await axiosClient.post("/payment/vnpay_retry", { orderId });
-    return response.data.data as { paymentUrl: string };
+    const response = await axiosClient.post("/payment/sepay_retry", { orderId });
+    return response.data.data as {
+      paymentUrl?: string;
+      sepayCheckout?: { checkoutUrl: string; fields: Record<string, string | number> };
+    };
   },
 
   // Shipper COD Reconciliation

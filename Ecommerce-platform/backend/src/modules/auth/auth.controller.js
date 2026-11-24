@@ -106,10 +106,45 @@ const refresh = async (req, res) => {
 // LOGOUT
 const logout = async (req, res) => {
   try {
-    res.clearCookie("refreshToken");
+    const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
+    if (refreshToken) {
+      await authService.revokeRefreshToken(refreshToken);
+    }
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    });
     return res.status(200).json({ message: "Logged out successfully" });
   } catch (error) {
     console.error("Logout Error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// ONE-TIME SSO CODE FOR ANALYTICS PORTAL
+const createSsoCode = async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization || "";
+    const accessToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
+    if (!accessToken) {
+      return res.status(401).json({ message: "Missing access token" });
+    }
+    const result = authService.issueSsoCode(req.user, accessToken);
+    return res.status(result.status).json(result);
+  } catch (error) {
+    console.error("Create SSO Code Error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+const exchangeSsoCode = async (req, res) => {
+  try {
+    const { code } = req.body || {};
+    const result = authService.exchangeSsoCode(code);
+    return res.status(result.status).json(result);
+  } catch (error) {
+    console.error("Exchange SSO Code Error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -165,6 +200,8 @@ export default {
   login,
   refresh,
   logout,
+  createSsoCode,
+  exchangeSsoCode,
   googleLogin,
   verifyOTP,
 };

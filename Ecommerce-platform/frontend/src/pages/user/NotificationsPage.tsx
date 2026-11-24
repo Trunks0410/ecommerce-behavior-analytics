@@ -29,6 +29,7 @@ import {
   getNotificationCategory,
   getNotificationCategoryLabel,
   resolveNotificationTarget,
+  formatNotificationText,
   type NotificationCategory,
 } from "@/shared/utils/notificationUtils";
 
@@ -408,7 +409,7 @@ export const NotificationsPage = () => {
                       {notif.title}
                     </h3>
                     <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-300 mt-1 leading-relaxed">
-                      {notif.content}
+                      {formatNotificationText(notif.content)}
                     </p>
                   </div>
                 </div>
@@ -519,7 +520,7 @@ export const NotificationsPage = () => {
             </div>
             <div className="border-t border-gray-100 dark:border-slate-700 py-4">
               <p className="text-sm text-gray-700 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
-                {selectedNotif.content}
+                {formatNotificationText(selectedNotif.content)}
               </p>
             </div>
             <div className="border-t border-gray-100 dark:border-slate-700 pt-3 flex justify-between items-center text-xs text-gray-400">

@@ -148,8 +148,8 @@ export const chatService = {
   },
 
   // Trò chuyện với trợ lý AI
-  chatWithAI: async (message: string): Promise<AIChatResponse> => {
-    const response = await axiosClient.post<AIChatResponse>("/chat/ai", { message });
+  chatWithAI: async (message: string, language: string = "vi"): Promise<AIChatResponse> => {
+    const response = await axiosClient.post<AIChatResponse>("/chat/ai", { message, language });
     return response.data;
   }
 };

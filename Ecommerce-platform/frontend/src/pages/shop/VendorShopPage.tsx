@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   Store,
   Star,
@@ -13,12 +13,14 @@ import {
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Sparkles,
   Flame,
   Ticket,
+  Award,
 } from "lucide-react";
 import { Link, useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { vendorService } from "@/services/vendorService";
 import { useSaveCoupon } from "@/hooks/useCoupons";
 import { useAppSelector } from "@/app/stores/hooks";
@@ -41,7 +43,8 @@ const VendorShopPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { t, language } = useLanguage();
   const [activeTab, setActiveTab] = useState("home");
-  const [isFollowed, setIsFollowed] = useState(false);
+  const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
+  const categoryMenuRef = useRef<HTMLDivElement>(null);
   const [sortType, setSortType] = useState("newest");
   const [searchVal, setSearchVal] = useState("");
   const [searchKeyword, setSearchKeyword] = useState("");
@@ -50,17 +53,68 @@ const VendorShopPage: React.FC = () => {
   const [swiperBestSellerRef, setSwiperBestSellerRef] = useState<any>(null);
   const [swiperFeaturedRef, setSwiperFeaturedRef] = useState<any>(null);
 
+  const queryClient = useQueryClient();
   const { mutate: saveCoupon } = useSaveCoupon();
   const isAuthenticated = useAppSelector((state) => !!state.auth.accessToken);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (categoryMenuRef.current && !categoryMenuRef.current.contains(event.target as Node)) {
+        setIsCategoryMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   // 1. Lấy thông tin chi tiết Shop
   const { data: shopProfileRes, isLoading: isLoadingProfile, error: profileError } = useQuery({
-    queryKey: ["shop-profile", id],
+    queryKey: ["shop-profile", id, isAuthenticated],
     queryFn: () => vendorService.getShopProfile(id!),
     enabled: !!id,
   });
   const shop = shopProfileRes?.data;
+
+  const isFollowed = Boolean(shop?.is_followed ?? shop?.isFollowed);
+  const followersCount = Number(shop?.followers_count ?? shop?.followersCount ?? 0);
+
+  const { mutate: toggleFollow, isPending: isTogglingFollow } = useMutation({
+    mutationFn: () => vendorService.toggleFollowShop(id!),
+    onSuccess: (res) => {
+      const nextFollowed = Boolean(res?.data?.isFollowed ?? res?.data?.is_followed);
+      const nextCount = Number(res?.data?.followersCount ?? res?.data?.followers_count ?? 0);
+      queryClient.setQueryData(["shop-profile", id, isAuthenticated], (old: any) => {
+        if (!old?.data) return old;
+        return {
+          ...old,
+          data: {
+            ...old.data,
+            is_followed: nextFollowed,
+            isFollowed: nextFollowed,
+            followers_count: nextCount,
+            followersCount: nextCount,
+          },
+        };
+      });
+      toast.success(
+        nextFollowed
+          ? "Đã theo dõi gian hàng!"
+          : "Đã bỏ theo dõi gian hàng."
+      );
+    },
+    onError: () => {
+      toast.error("Không thể cập nhật trạng thái theo dõi. Vui lòng thử lại.");
+    },
+  });
+
+  const handleFollowClick = () => {
+    if (!isAuthenticated) {
+      navigate("/auth/login?redirect=" + window.location.pathname);
+      return;
+    }
+    toggleFollow();
+  };
 
   // 2. Lấy danh sách mã giảm giá của Shop
   const { data: shopVouchersRes } = useQuery({
@@ -214,10 +268,11 @@ const VendorShopPage: React.FC = () => {
               <div className="flex items-center gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setIsFollowed(!isFollowed)}
-                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  disabled={isTogglingFollow}
+                  onClick={handleFollowClick}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-60 ${
                     isFollowed
-                      ? "bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200"
+                      ? "bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 border border-gray-200 dark:border-slate-600"
                       : "bg-[#ee4d2d] hover:bg-[#d03e1e] text-white shadow-xs"
                   }`}
                 >
@@ -267,11 +322,17 @@ const VendorShopPage: React.FC = () => {
           </div>
 
           {/* Right: Stats Columns */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 w-full md:w-auto pt-4 md:pt-0 border-t md:border-t-0 md:border-l border-gray-100 dark:border-slate-700 md:pl-6 text-center sm:text-left">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 sm:gap-6 w-full md:w-auto pt-4 md:pt-0 border-t md:border-t-0 md:border-l border-gray-100 dark:border-slate-700 md:pl-6 text-center sm:text-left">
             <div>
               <span className="text-[11px] text-gray-400 block">{t("rating")}</span>
               <span className="text-sm font-bold text-[#ee4d2d]">
                 {shop.rating ? `${Number(shop.rating).toFixed(1)}/5` : "4.9/5"}
+              </span>
+            </div>
+            <div>
+              <span className="text-[11px] text-gray-400 block">{t("followers_count")}</span>
+              <span className="text-sm font-bold text-gray-900 dark:text-slate-100">
+                {followersCount.toLocaleString("vi-VN")}
               </span>
             </div>
             <div>
@@ -347,44 +408,110 @@ const VendorShopPage: React.FC = () => {
 
       {/* 3. THANH ĐIỀU HƯỚNG TABS SHOP */}
       <section className="sticky top-16 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-gray-200 dark:border-slate-800 shadow-2xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between gap-4">
-          <div className="flex gap-2 overflow-x-auto no-scrollbar">
-            {[
-              { id: "home", label: t("shop_home") },
-              { id: "all", label: t("all_products") },
-              ...shopCategories.map((cat) => ({ id: cat.slug, label: cat.name })),
-            ].map((tab) => {
-              const isActive = activeTab === tab.id;
-              return (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 py-1 sm:py-0">
+          <div className="flex items-center gap-1 sm:gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab("home");
+                setSearchKeyword("");
+                setSearchVal("");
+                setIsCategoryMenuOpen(false);
+              }}
+              className={`px-3.5 sm:px-4 py-3 text-xs sm:text-[13px] font-bold uppercase tracking-wide transition-colors whitespace-nowrap cursor-pointer border-b-2 ${
+                activeTab === "home"
+                  ? "border-[#ee4d2d] text-[#ee4d2d]"
+                  : "border-transparent text-gray-600 dark:text-slate-400 hover:text-[#ee4d2d]"
+              }`}
+            >
+              {t("shop_home")}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab("all");
+                setSearchKeyword("");
+                setSearchVal("");
+                setIsCategoryMenuOpen(false);
+              }}
+              className={`px-3.5 sm:px-4 py-3 text-xs sm:text-[13px] font-bold uppercase tracking-wide transition-colors whitespace-nowrap cursor-pointer border-b-2 ${
+                activeTab === "all"
+                  ? "border-[#ee4d2d] text-[#ee4d2d]"
+                  : "border-transparent text-gray-600 dark:text-slate-400 hover:text-[#ee4d2d]"
+              }`}
+            >
+              {t("all_products")}
+            </button>
+
+            {shopCategories.length > 0 && (
+              <div className="relative" ref={categoryMenuRef}>
                 <button
-                  key={tab.id}
                   type="button"
-                  onClick={() => {
-                    setActiveTab(tab.id);
-                    setSearchKeyword("");
-                    setSearchVal("");
-                  }}
-                  className={`px-4 py-3 text-xs font-bold uppercase tracking-wider transition-colors whitespace-nowrap cursor-pointer border-b-2 ${
-                    isActive
+                  onClick={() => setIsCategoryMenuOpen((prev) => !prev)}
+                  className={`px-3.5 sm:px-4 py-3 text-xs sm:text-[13px] font-bold uppercase tracking-wide transition-colors whitespace-nowrap cursor-pointer border-b-2 flex items-center gap-1.5 ${
+                    activeTab !== "home" && activeTab !== "all"
                       ? "border-[#ee4d2d] text-[#ee4d2d]"
                       : "border-transparent text-gray-600 dark:text-slate-400 hover:text-[#ee4d2d]"
                   }`}
                 >
-                  {tab.label}
+                  <span>
+                    {activeTab !== "home" && activeTab !== "all"
+                      ? shopCategories.find((c) => c.slug === activeTab)?.name || t("shop_categories_tab")
+                      : t("shop_categories_tab")}
+                  </span>
+                  <ChevronDown
+                    size={15}
+                    className={`transition-transform duration-200 ${isCategoryMenuOpen ? "rotate-180" : ""}`}
+                  />
                 </button>
-              );
-            })}
+
+                {isCategoryMenuOpen && (
+                  <div className="absolute left-0 top-full mt-1 w-64 max-h-80 overflow-y-auto bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl shadow-lg py-1.5 z-50">
+                    {shopCategories.map((cat) => {
+                      const isSelected = activeTab === cat.slug;
+                      return (
+                        <button
+                          key={cat.slug}
+                          type="button"
+                          onClick={() => {
+                            setActiveTab(cat.slug);
+                            setSearchKeyword("");
+                            setSearchVal("");
+                            setIsCategoryMenuOpen(false);
+                          }}
+                          className={`w-full text-left px-4 py-2.5 text-xs sm:text-[13px] font-medium transition-colors flex items-center justify-between cursor-pointer ${
+                            isSelected
+                              ? "bg-[#fef0ed] dark:bg-[#ee4d2d]/15 text-[#ee4d2d] font-bold"
+                              : "text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700/60"
+                          }`}
+                        >
+                          <span className="truncate">{cat.name}</span>
+                          {isSelected && <Check size={14} className="shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          <form onSubmit={handleSearchSubmit} className="relative w-48 sm:w-64 py-1.5 hidden sm:block">
+          <form onSubmit={handleSearchSubmit} className="relative w-full sm:w-72 md:w-80 lg:w-96 pb-2 sm:py-2 shrink-0">
             <input
               type="text"
               value={searchVal}
               onChange={(e) => setSearchVal(e.target.value)}
               placeholder={t("shop_search_placeholder")}
-              className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-gray-800 dark:text-slate-100 placeholder-gray-400 focus:outline-none focus:border-[#ee4d2d]"
+              className="w-full bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl pl-4 pr-12 py-2 text-xs sm:text-sm text-gray-800 dark:text-slate-100 placeholder-gray-400 focus:outline-none focus:border-[#ee4d2d] focus:ring-1 focus:ring-[#ee4d2d]/30 transition-all"
             />
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={13} />
+            <button
+              type="submit"
+              aria-label="Tìm kiếm trong gian hàng"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-7 flex items-center justify-center bg-[#ee4d2d] hover:bg-[#d03e1e] text-white rounded-lg transition-colors cursor-pointer shadow-2xs"
+            >
+              <Search size={15} />
+            </button>
           </form>
         </div>
       </section>
@@ -394,17 +521,17 @@ const VendorShopPage: React.FC = () => {
         {activeTab === "home" ? (
           <>
             {/* Banner nổi bật + Top bán chạy */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:items-stretch">
               {/* Banner Lookbook (8/12) */}
-              <div className="lg:col-span-8 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700/60 rounded-2xl overflow-hidden relative group shadow-xs min-h-[300px] flex items-end">
+              <div className="lg:col-span-8 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700/60 rounded-2xl overflow-hidden relative group shadow-xs min-h-[280px] lg:h-[340px] flex items-end">
                 <img
                   src={shop.cover_url || "https://images.unsplash.com/photo-1469334031218-e382a71b716b?q=80&w=1200"}
                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   alt="Shop Lookbook"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-                <div className="relative z-10 p-6 sm:p-8 text-white space-y-2">
-                  <span className="bg-[#ee4d2d] text-white px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider inline-block">
+                <div className="relative z-10 p-6 sm:p-8 text-white space-y-2.5">
+                  <span className="bg-[#ee4d2d] text-white px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider inline-block">
                     {t("new_arrivals_label")}
                   </span>
                   <h2 className="text-2xl sm:text-3xl font-extrabold text-white leading-tight">
@@ -413,7 +540,7 @@ const VendorShopPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setActiveTab("all")}
-                    className="px-5 py-2 bg-white text-gray-900 rounded-lg font-bold text-xs hover:bg-[#ee4d2d] hover:text-white transition-colors shadow-sm cursor-pointer mt-2"
+                    className="px-5 py-2.5 bg-white text-gray-900 rounded-lg font-bold text-xs sm:text-sm hover:bg-[#ee4d2d] hover:text-white transition-colors shadow-sm cursor-pointer mt-2"
                   >
                     {t("explore_all_products")}
                   </button>
@@ -421,29 +548,43 @@ const VendorShopPage: React.FC = () => {
               </div>
 
               {/* Hot Products Column (4/12) */}
-              <div className="lg:col-span-4 flex flex-col gap-4">
+              <div className="lg:col-span-4 flex flex-col justify-between gap-4 lg:h-[340px]">
                 {bestSellers.map((p: any, i: number) => (
                   <div
                     key={p.id}
                     onClick={() => navigate(`/products/${p.slug}`)}
-                    className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700/60 rounded-xl p-3.5 shadow-xs flex items-center gap-3.5 cursor-pointer hover:border-[#ee4d2d]/60 transition-colors group"
+                    className="flex-1 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700/60 rounded-2xl p-4 shadow-xs flex items-center gap-4 cursor-pointer hover:border-[#ee4d2d]/60 hover:shadow-md transition-all group"
                   >
-                    <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-50 dark:bg-slate-900 shrink-0 border border-gray-100 dark:border-slate-700">
+                    <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden bg-gray-50 dark:bg-slate-900 shrink-0 border border-gray-100 dark:border-slate-700">
                       <img
                         src={p.images?.[0]?.image_url || "/placeholder.jpg"}
                         alt={p.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     </div>
-                    <div className="space-y-1 min-w-0">
-                      <span className="bg-[#fef0ed] dark:bg-[#ee4d2d]/20 text-[#ee4d2d] text-[10px] font-bold px-1.5 py-0.5 rounded">
-                        TOP {i + 1}
-                      </span>
-                      <h4 className="text-xs font-semibold text-gray-900 dark:text-slate-100 truncate group-hover:text-[#ee4d2d]">
+                    <div className="space-y-1.5 min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="bg-[#fef0ed] dark:bg-[#ee4d2d]/20 text-[#ee4d2d] text-[11px] font-extrabold px-2 py-0.5 rounded">
+                          TOP {i + 1}
+                        </span>
+                        {p.sold_count > 0 && (
+                          <span className="text-[11px] text-gray-400 dark:text-slate-400">
+                            Đã bán {p.sold_count}
+                          </span>
+                        )}
+                      </div>
+                      <h4 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-slate-100 line-clamp-2 group-hover:text-[#ee4d2d] transition-colors">
                         {p.name}
                       </h4>
-                      <div className="text-xs font-bold text-[#ee4d2d]">
-                        {formatPrice(p.sale_price || p.price)}
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-sm sm:text-base font-extrabold text-[#ee4d2d]">
+                          {formatPrice(p.sale_price || p.price)}
+                        </span>
+                        {p.sale_price && Number(p.sale_price) < Number(p.price) && (
+                          <span className="text-xs text-gray-400 line-through">
+                            {formatPrice(p.price)}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -482,12 +623,20 @@ const VendorShopPage: React.FC = () => {
                   modules={[Pagination, Autoplay]}
                   spaceBetween={14}
                   slidesPerView={2}
+                  rewind={true}
+                  speed={700}
+                  autoplay={{
+                    delay: 2800,
+                    disableOnInteraction: false,
+                    pauseOnMouseEnter: true,
+                  }}
+                  pagination={{ clickable: true, dynamicBullets: true }}
                   breakpoints={{
                     640: { slidesPerView: 3, spaceBetween: 14 },
                     768: { slidesPerView: 4, spaceBetween: 16 },
                     1024: { slidesPerView: 5, spaceBetween: 16 },
                   }}
-                  className="pb-6"
+                  className="pb-8"
                 >
                   {promoShopProducts.map((p: any) => (
                     <SwiperSlide key={p.id}>
@@ -539,12 +688,20 @@ const VendorShopPage: React.FC = () => {
                   modules={[Pagination, Autoplay]}
                   spaceBetween={14}
                   slidesPerView={2}
+                  rewind={true}
+                  speed={700}
+                  autoplay={{
+                    delay: 3200,
+                    disableOnInteraction: false,
+                    pauseOnMouseEnter: true,
+                  }}
+                  pagination={{ clickable: true, dynamicBullets: true }}
                   breakpoints={{
                     640: { slidesPerView: 3, spaceBetween: 14 },
                     768: { slidesPerView: 4, spaceBetween: 16 },
                     1024: { slidesPerView: 5, spaceBetween: 16 },
                   }}
-                  className="pb-6"
+                  className="pb-8"
                 >
                   {bestSellerShopProducts.map((p: any) => (
                     <SwiperSlide key={p.id}>
@@ -558,6 +715,71 @@ const VendorShopPage: React.FC = () => {
                         rating={p.rating_average || 5}
                         sales={p.sold_count}
                         badge="Hot"
+                        shop={shop}
+                      />
+                    </SwiperSlide>
+                  ))}
+                </Swiper>
+              </div>
+            )}
+
+            {featuredShopProducts.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between border-b border-gray-200 dark:border-slate-700 pb-2">
+                  <h3 className="text-sm sm:text-base font-bold text-gray-900 dark:text-slate-100 uppercase tracking-tight flex items-center gap-1.5">
+                    <Award size={16} className="text-[#ee4d2d]" />
+                    <span>Sản phẩm nổi bật</span>
+                  </h3>
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => swiperFeaturedRef?.slidePrev()}
+                      className="p-1 rounded-md border border-gray-200 dark:border-slate-700 hover:text-[#ee4d2d] transition-colors cursor-pointer"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => swiperFeaturedRef?.slideNext()}
+                      className="p-1 rounded-md border border-gray-200 dark:border-slate-700 hover:text-[#ee4d2d] transition-colors cursor-pointer"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                <Swiper
+                  onSwiper={setSwiperFeaturedRef}
+                  modules={[Pagination, Autoplay]}
+                  spaceBetween={14}
+                  slidesPerView={2}
+                  rewind={true}
+                  speed={700}
+                  autoplay={{
+                    delay: 3600,
+                    disableOnInteraction: false,
+                    pauseOnMouseEnter: true,
+                  }}
+                  pagination={{ clickable: true, dynamicBullets: true }}
+                  breakpoints={{
+                    640: { slidesPerView: 3, spaceBetween: 14 },
+                    768: { slidesPerView: 4, spaceBetween: 16 },
+                    1024: { slidesPerView: 5, spaceBetween: 16 },
+                  }}
+                  className="pb-8"
+                >
+                  {featuredShopProducts.map((p: any) => (
+                    <SwiperSlide key={p.id}>
+                      <ProductCard
+                        id={p.slug}
+                        name={p.name}
+                        price={p.sale_price || p.price}
+                        originalPrice={p.sale_price ? p.price : undefined}
+                        image={p.images?.[0]?.image_url || "/placeholder.jpg"}
+                        category={p.category?.name || "MeeMart"}
+                        rating={p.rating_average || 5}
+                        sales={p.sold_count}
+                        badge="Nổi bật"
                         shop={shop}
                       />
                     </SwiperSlide>

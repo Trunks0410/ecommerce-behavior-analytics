@@ -9,6 +9,8 @@ export const useMyOrders = (status?: string, page = 1, limit = 10) => {
   return useQuery({
     queryKey: ["orders", status, page, limit],
     queryFn: () => orderService.getMyOrders(status, page, limit),
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 };
 
@@ -16,6 +18,8 @@ export const useMyOrderCounts = () => {
   return useQuery({
     queryKey: ["orderCounts"],
     queryFn: () => orderService.getMyOrderCounts(),
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 };
 

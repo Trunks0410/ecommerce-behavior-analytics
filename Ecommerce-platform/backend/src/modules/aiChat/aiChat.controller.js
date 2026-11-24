@@ -2,12 +2,12 @@ import aiChatService from "./aiChat.service.js";
 
 const chatWithAI = async (req, res) => {
   try {
-    const { message } = req.body;
+    const { message, language = "vi" } = req.body;
     if (!message || !message.trim()) {
-      return res.status(400).json({ error: "Tin nhắn không được bỏ trống" });
+      return res.status(400).json({ error: language === "en" ? "Message cannot be empty" : "Tin nhắn không được bỏ trống" });
     }
     const userId = req.user?.id || null;
-    const result = await aiChatService.chatWithAI(message, userId);
+    const result = await aiChatService.chatWithAI(message, userId, language);
     return res.status(200).json({
       reply: result.reply,
       products: result.products || [],

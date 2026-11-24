@@ -549,7 +549,7 @@ CREATE TABLE `parent_orders` (
   `address_id`         BIGINT        DEFAULT NULL COMMENT 'Địa chỉ gốc tham chiếu/thống kê',
   `checkout_code`      VARCHAR(50)   NOT NULL,
   `total_amount`       DECIMAL(15,2) NOT NULL COMMENT 'Bất biến: Tổng tiền tại thời điểm tạo đơn, chặn UPDATE',
-  `payment_method`     ENUM('COD','VNPAY','MOMO','CREDIT_CARD') NOT NULL,
+  `payment_method`     ENUM('COD','VNPAY','SEPAY','MOMO','CREDIT_CARD') NOT NULL,
   `payment_status`     ENUM('UNPAID','PAID','REFUNDED') NOT NULL DEFAULT 'UNPAID',
   `shipping_address`   TEXT          NOT NULL COMMENT 'SNAPSHOT: Bản ghi địa chỉ nhận hàng chính thức tại thời điểm đặt, không đồng bộ ngược',
   `platform_coupon_id` BIGINT        DEFAULT NULL COMMENT 'Mã giảm giá toàn sàn áp dụng cho đơn này',

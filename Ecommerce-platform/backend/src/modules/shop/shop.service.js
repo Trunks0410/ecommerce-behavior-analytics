@@ -68,34 +68,129 @@ const registerShop = async (userId, shopData) => {
   }
 };
 
-const getShopProfile = async (shopId) => {
+let shopFollowersTableEnsured = false;
+const ensureShopFollowersTable = async () => {
+  if (shopFollowersTableEnsured) return;
+  await db.sequelize.query(`
+    CREATE TABLE IF NOT EXISTS shop_followers (
+      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+      user_id BIGINT NOT NULL,
+      shop_id BIGINT NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_shop_followers_user_shop (user_id, shop_id),
+      CONSTRAINT fk_shop_followers_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      CONSTRAINT fk_shop_followers_shop FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  `);
+  shopFollowersTableEnsured = true;
+};
+
+const getShopProfile = async (shopId, currentUserId = null) => {
   const shop = await db.Shop.findByPk(shopId);
   if (!shop) return null;
 
-  const productsCount = await db.Product.count({
-    where: { shop_id: shopId, approval_status: "APPROVED" },
-  });
+  await ensureShopFollowersTable();
 
-  const reviewsCount = await db.ProductReview.count({
-    include: [
-      {
-        model: db.Product,
-        as: "product",
-        where: { shop_id: shopId },
-        required: true,
-      },
-    ],
-  });
+  const [productsCount, reviewsCount, followersCount, followRecord] = await Promise.all([
+    db.Product.count({
+      where: { shop_id: shopId, approval_status: "APPROVED" },
+    }),
+    db.ProductReview.count({
+      include: [
+        {
+          model: db.Product,
+          as: "product",
+          where: { shop_id: shopId },
+          required: true,
+        },
+      ],
+    }),
+    db.ShopFollower.count({
+      where: { shop_id: shopId },
+    }),
+    currentUserId
+      ? db.ShopFollower.findOne({
+          where: { shop_id: shopId, user_id: currentUserId },
+        })
+      : Promise.resolve(null),
+  ]);
 
   return {
     ...shop.toJSON(),
     productsCount,
     reviewsCount,
+    followers_count: followersCount,
+    followersCount,
+    is_followed: Boolean(followRecord),
+    isFollowed: Boolean(followRecord),
   };
 };
 
+const toggleFollowShop = async (userId, shopId) => {
+  const shop = await db.Shop.findByPk(shopId);
+  if (!shop) {
+    throw new Error("Shop not found");
+  }
+
+  await ensureShopFollowersTable();
+
+  const existing = await db.ShopFollower.findOne({
+    where: { user_id: userId, shop_id: shopId },
+  });
+
+  let isFollowed = false;
+  if (existing) {
+    await existing.destroy();
+    isFollowed = false;
+  } else {
+    await db.ShopFollower.create({ user_id: userId, shop_id: shopId });
+    isFollowed = true;
+  }
+
+  const followersCount = await db.ShopFollower.count({
+    where: { shop_id: shopId },
+  });
+
+  return {
+    isFollowed,
+    is_followed: isFollowed,
+    followersCount,
+    followers_count: followersCount,
+  };
+};
+
+const formatFullAddress = (addr) => {
+  if (!addr) return "";
+  return [addr.street, addr.ward, addr.district, addr.province]
+    .filter(Boolean)
+    .join(", ");
+};
+
 const getShopByUserId = async (userId) => {
-  return await db.Shop.findOne({ where: { vendor_id: userId } });
+  const shop = await db.Shop.findOne({ where: { vendor_id: userId } });
+  if (!shop) return null;
+
+  const [pickupAddress, vendor] = await Promise.all([
+    db.UserAddress.findOne({
+      where: { user_id: userId },
+      order: [["is_default", "DESC"], ["id", "ASC"]],
+    }),
+    db.User.findByPk(userId, { attributes: ["id", "phone", "email"] }),
+  ]);
+
+  const shopJson = shop.toJSON();
+  return {
+    ...shopJson,
+    name: shopJson.shop_name,
+    avatar_url: shopJson.shop_logo,
+    phone: pickupAddress?.phone || vendor?.phone || "",
+    address: formatFullAddress(pickupAddress),
+    pickupProvince: pickupAddress?.province || "",
+    pickupDistrict: pickupAddress?.district || "",
+    pickupWard: pickupAddress?.ward || "",
+    pickupStreet: pickupAddress?.street || "",
+    hasPickupAddress: Boolean(pickupAddress),
+  };
 };
 
 const getTopShops = async (limit = 10) => {
@@ -108,9 +203,103 @@ const getTopShops = async (limit = 10) => {
 };
 
 const updateShop = async (userId, shopData) => {
-  const shop = await db.Shop.findOne({ where: { vendor_id: userId } });
-  if (!shop) throw new Error("Shop not found");
-  return await shop.update(shopData);
+  const transaction = await db.sequelize.transaction();
+  try {
+    const shop = await db.Shop.findOne({ where: { vendor_id: userId }, transaction });
+    if (!shop) throw new Error("Shop not found");
+
+    const shopFields = {};
+    const nextName = shopData.name ?? shopData.shop_name;
+    if (nextName !== undefined && String(nextName).trim()) {
+      shopFields.shop_name = String(nextName).trim();
+    }
+    if (shopData.description !== undefined) {
+      shopFields.description = shopData.description;
+    }
+    const nextLogo = shopData.avatar_url ?? shopData.shop_logo;
+    if (nextLogo !== undefined) {
+      shopFields.shop_logo = nextLogo;
+    }
+
+    if (Object.keys(shopFields).length > 0) {
+      await shop.update(shopFields, { transaction });
+    }
+
+    const hasStructuredPickup =
+      Boolean(shopData.pickupProvince?.trim()) &&
+      Boolean(shopData.pickupWard?.trim()) &&
+      Boolean(shopData.pickupStreet?.trim());
+    const hasPlainAddress = Boolean(shopData.address && String(shopData.address).trim());
+
+    if (hasStructuredPickup || hasPlainAddress) {
+      let province = String(shopData.pickupProvince || "").trim();
+      let district = String(shopData.pickupDistrict || "").trim();
+      let ward = String(shopData.pickupWard || "").trim();
+      let street = String(shopData.pickupStreet || "").trim();
+
+      if (!hasStructuredPickup && hasPlainAddress) {
+        const parts = String(shopData.address)
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        if (parts.length >= 3) {
+          street = parts[0];
+          ward = parts[1];
+          province = parts[parts.length - 1];
+          district = parts.length >= 4 ? parts[parts.length - 2] : "";
+        } else {
+          street = String(shopData.address).trim();
+          ward = ward || "Phường Bến Nghé";
+          province = province || "TP. Hồ Chí Minh";
+        }
+      }
+
+      const vendor = await db.User.findByPk(userId, { attributes: ["id", "phone"], transaction });
+      const phone = String(shopData.phone || vendor?.phone || "0900000000").trim();
+      const receiverName = shopFields.shop_name || shop.shop_name;
+
+      const existingAddress = await db.UserAddress.findOne({
+        where: { user_id: userId },
+        order: [["is_default", "DESC"], ["id", "ASC"]],
+        transaction,
+      });
+
+      if (existingAddress) {
+        await existingAddress.update(
+          {
+            receiver_name: receiverName,
+            phone,
+            province,
+            district,
+            ward,
+            street,
+            is_default: true,
+          },
+          { transaction }
+        );
+      } else {
+        await db.UserAddress.create(
+          {
+            user_id: userId,
+            receiver_name: receiverName,
+            phone,
+            province,
+            district,
+            ward,
+            street,
+            is_default: true,
+          },
+          { transaction }
+        );
+      }
+    }
+
+    await transaction.commit();
+    return await getShopByUserId(userId);
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
 };
 
 const getShopStatistics = async (shopId) => {
@@ -895,6 +1084,7 @@ const getAllShops = async (search = "", page = 1, limit = 10) => {
 export default {
   registerShop,
   getShopProfile,
+  toggleFollowShop,
   getShopByUserId,
   updateShop,
   getShopStatistics,

@@ -75,29 +75,47 @@ const HeroSection = () => {
               <img
                 src={banner.image}
                 alt={t(banner.titleKey as any)}
-                className="w-full h-full object-cover"
+                className={`w-full h-full object-cover transition-transform duration-[4500ms] ease-out ${
+                  index === currentSlide ? "scale-100" : "scale-110"
+                }`}
               />
               <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-transparent flex flex-col justify-center p-6 sm:p-10 text-white">
                 {/* Promo Badge */}
-                <span className="inline-block w-fit bg-[#ee4d2d] text-white text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-3 shadow-xs">
+                <span
+                  className={`inline-block w-fit bg-[#ee4d2d] text-white text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-3 shadow-xs transition-all duration-500 ${
+                    index === currentSlide ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"
+                  }`}
+                >
                   {t(banner.tagKey as any)}
                 </span>
 
                 {/* Main Headline */}
-                <h1 className="text-2xl sm:text-4xl font-extrabold mb-2 max-w-md leading-tight text-white drop-shadow-sm">
+                <h1
+                  className={`text-2xl sm:text-4xl font-extrabold mb-2 max-w-md leading-tight text-white drop-shadow-sm transition-all duration-700 delay-75 ${
+                    index === currentSlide ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+                  }`}
+                >
                   {t(banner.titleKey as any)}
                 </h1>
 
                 {/* Subtitle */}
-                <p className="text-xs sm:text-sm text-gray-200 mb-6 max-w-sm line-clamp-2 drop-shadow-xs">
+                <p
+                  className={`text-xs sm:text-sm text-gray-200 mb-6 max-w-sm line-clamp-2 drop-shadow-xs transition-all duration-700 delay-150 ${
+                    index === currentSlide ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+                  }`}
+                >
                   {t(banner.subtitleKey as any)}
                 </p>
 
                 {/* Big Sale & CTA */}
-                <div className="flex items-center gap-4">
+                <div
+                  className={`flex items-center gap-4 transition-all duration-700 delay-200 ${
+                    index === currentSlide ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
+                  }`}
+                >
                   <Link
                     to={banner.link}
-                    className="bg-[#ee4d2d] hover:bg-[#d03e1e] text-white px-6 py-2.5 rounded-md font-bold text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 flex items-center gap-2 cursor-pointer"
+                    className="animate-shimmer bg-[#ee4d2d] hover:bg-[#d03e1e] text-white px-6 py-2.5 rounded-md font-bold text-xs uppercase tracking-wider transition-all shadow-md hover:-translate-y-0.5 active:scale-95 flex items-center gap-2 cursor-pointer"
                   >
                     <span>{t(banner.buttonTextKey as any)}</span>
                     <ArrowRight size={14} />

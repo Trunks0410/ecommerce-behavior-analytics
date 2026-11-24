@@ -46,6 +46,14 @@ export const getShipmentStatusLabel = (
   if (!status) return '';
   if (language === "en") {
     const labels: Record<string, string> = {
+      ORDER_PLACED: "Order placed",
+      PENDING: "Pending confirmation",
+      CONFIRMED: "Seller confirmed order",
+      PREPARING: "Seller preparing package",
+      READY_FOR_PICKUP: "Ready for carrier handover",
+      SHIPPING: "Handed over to UTE Express",
+      COMPLETED: "Order completed",
+      CANCEL_REQUESTED: "Cancellation requested",
       PENDING_ASSIGNMENT: "Awaiting courier assignment",
       ASSIGNED: "Courier assigned",
       ACCEPTED: "Courier accepted",
@@ -63,6 +71,14 @@ export const getShipmentStatusLabel = (
     return labels[status] || status;
   }
   const labels: Record<string, string> = {
+    ORDER_PLACED: "Đặt hàng thành công",
+    PENDING: "Chờ xác nhận",
+    CONFIRMED: "Nhà bán hàng đã xác nhận đơn",
+    PREPARING: "Nhà bán hàng đang chuẩn bị hàng",
+    READY_FOR_PICKUP: "Sẵn sàng bàn giao vận chuyển",
+    SHIPPING: "Đã bàn giao cho UTE Express",
+    COMPLETED: "Đơn hàng hoàn tất",
+    CANCEL_REQUESTED: "Yêu cầu hủy đơn",
     'PENDING_ASSIGNMENT': 'Chờ phân công shipper',
     'ASSIGNED': 'Đã phân công shipper',
     'ACCEPTED': 'Shipper đã nhận đơn',

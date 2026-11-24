@@ -9,6 +9,61 @@ import { sendRegistrationOtp } from "../../core/utils/emailService.js";
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const pendingRegistrations = new Map();
+const ssoExchangeCodes = new Map();
+
+const revokeRefreshToken = async (token) => {
+  if (!token) return false;
+  const [updatedCount] = await db.RefreshToken.update(
+    { is_revoked: true },
+    { where: { token, is_revoked: false } }
+  );
+  return updatedCount > 0;
+};
+
+const issueSsoCode = (user, accessToken) => {
+  const roleName =
+    typeof user?.role === "string"
+      ? user.role.toLowerCase()
+      : user?.role?.role_name?.toLowerCase();
+  if (roleName !== "admin" && user?.role_id !== 1) {
+    return { status: 403, message: "Chỉ Quản trị viên mới được cấp mã SSO Analytics" };
+  }
+  const now = Date.now();
+  for (const [k, v] of ssoExchangeCodes.entries()) {
+    if (v.expiresAt < now) ssoExchangeCodes.delete(k);
+  }
+  const code = crypto.randomBytes(32).toString("hex");
+  ssoExchangeCodes.set(code, {
+    accessToken,
+    user: {
+      id: user.id,
+      email: user.email,
+      fullName: user.profile?.full_name || user.fullName || "Admin",
+      role: "admin",
+    },
+    expiresAt: now + 30 * 1000,
+  });
+  return { status: 200, data: { code } };
+};
+
+const exchangeSsoCode = (code) => {
+  if (!code || typeof code !== "string") {
+    return { status: 400, message: "Thiếu mã SSO" };
+  }
+  const record = ssoExchangeCodes.get(code);
+  ssoExchangeCodes.delete(code); // Dùng 1 lần duy nhất
+  if (!record || record.expiresAt < Date.now()) {
+    return { status: 401, message: "Mã SSO không hợp lệ hoặc đã hết hạn" };
+  }
+  return {
+    status: 200,
+    message: "SSO exchange thành công",
+    data: {
+      accessToken: record.accessToken,
+      user: record.user,
+    },
+  };
+};
 
 const register = (data) => {
   return new Promise(async (resolve, reject) => {
@@ -480,6 +535,9 @@ export default {
   register,
   login,
   refreshToken,
+  revokeRefreshToken,
+  issueSsoCode,
+  exchangeSsoCode,
   googleLogin,
   verifyAccountOtp,
 };

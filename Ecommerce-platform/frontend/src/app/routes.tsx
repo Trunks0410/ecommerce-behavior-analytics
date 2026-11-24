@@ -32,8 +32,10 @@ const VoucherCenterPage = lazy(() => import("@/pages/shop/VoucherCenterPage"));
 const CartPage = lazy(() => import("@/pages/shop/CartPage"));
 const CheckoutPage = lazy(() => import("@/pages/shop/CheckoutPage"));
 const VNPayReturn = lazy(() => import("@/pages/shop/VNPayReturn"));
+const SePayReturn = lazy(() => import("@/pages/shop/SePayReturn"));
 const VendorShopPage = lazy(() => import("@/pages/shop/VendorShopPage"));
 const ShopListPage = lazy(() => import("@/pages/shop/ShopListPage"));
+const DailyDiscoverPage = lazy(() => import("@/pages/shop/DailyDiscoverPage"));
 const OrderHistoryPage = lazy(() => import("@/pages/user/OrderHistoryPage"));
 const OrderDetailPage = lazy(() => import("@/pages/user/OrderDetailPage"));
 const ReviewPage = lazy(() => import("@/pages/user/ReviewPage"));
@@ -62,6 +64,10 @@ export const getRoutes = (role: string = "GUEST"): RouteObject[] => {
         {
           path: "products",
           element: <ProductListPage />,
+        },
+        {
+          path: "daily-discover",
+          element: withSuspense(DailyDiscoverPage),
         },
         {
           path: "products/:id",
@@ -114,6 +120,10 @@ export const getRoutes = (role: string = "GUEST"): RouteObject[] => {
         {
           path: "payment/vnpay-return",
           element: withSuspense(VNPayReturn),
+        },
+        {
+          path: "payment/sepay-return",
+          element: withSuspense(SePayReturn),
         },
         {
           path: "register-shop",

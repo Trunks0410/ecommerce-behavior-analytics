@@ -59,7 +59,7 @@ export default function VoucherWalletPage() {
                   <button
                     type="submit"
                     disabled={isSaving || !couponCode.trim()}
-                    className="absolute right-1 top-1 bottom-1 px-4 bg-black text-white text-xs font-black uppercase tracking-widest rounded-lg hover:bg-primary transition-all disabled:opacity-50"
+                    className="absolute right-1 top-1 bottom-1 px-4 bg-black text-white text-xs font-black uppercase tracking-widest rounded-lg hover:bg-primary transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isSaving ? t("voucher_saving") : t("voucher_save")}
                   </button>
@@ -69,7 +69,8 @@ export default function VoucherWalletPage() {
               {/* Tabs */}
               <div className="mb-6 flex border-b border-gray-200 dark:border-slate-700">
                 <button
-                  className={`pb-4 px-6 text-sm font-black uppercase tracking-widest transition-all border-b-2 ${
+                  type="button"
+                  className={`pb-4 px-6 text-sm font-black uppercase tracking-widest transition-all border-b-2 cursor-pointer ${
                     activeTab === "VALID" 
                       ? "border-primary text-primary" 
                       : "border-transparent text-gray-400 hover:text-gray-700 dark:hover:text-slate-200"
@@ -79,7 +80,8 @@ export default function VoucherWalletPage() {
                   {t("voucher_valid_tab")} ({validCoupons.length})
                 </button>
                 <button
-                  className={`pb-4 px-6 text-sm font-black uppercase tracking-widest transition-all border-b-2 ${
+                  type="button"
+                  className={`pb-4 px-6 text-sm font-black uppercase tracking-widest transition-all border-b-2 cursor-pointer ${
                     activeTab === "HISTORY" 
                       ? "border-black text-black dark:border-white dark:text-white"
                       : "border-transparent text-gray-400 hover:text-gray-700 dark:hover:text-slate-200"
@@ -148,7 +150,7 @@ function CouponCard({ coupon, isValid, navigate }: { coupon: any, isValid: boole
   const isExpiringSoon = isValid && diffDays <= 3 && diffDays > 0;
 
   return (
-    <div className={`relative flex overflow-hidden rounded-2xl border border-dashed ${isValid ? colorClass : 'border-gray-300 bg-gray-100 opacity-60 dark:border-slate-700 dark:bg-slate-800/60'}`}>
+    <div className={`relative flex overflow-hidden rounded-2xl border border-dashed transition-all duration-200 ${isValid ? `${colorClass} hover:shadow-md hover:-translate-y-0.5 hover:border-primary` : 'border-gray-300 bg-gray-100 opacity-60 dark:border-slate-700 dark:bg-slate-800/60'}`}>
       
       {/* Left side: Icon & Type */}
       <div className={`flex w-28 flex-col items-center justify-center border-r border-dashed p-4 ${isValid ? 'border-gray-200 dark:border-slate-700' : 'border-gray-300 dark:border-slate-700'}`}>
@@ -168,13 +170,34 @@ function CouponCard({ coupon, isValid, navigate }: { coupon: any, isValid: boole
           <div className="flex justify-between items-start mb-1">
             <span className="font-black text-lg tracking-wider">{coupon.code}</span>
             {isValid ? (
-              <button 
+              <button
+                type="button"
                 onClick={() => {
-                  if (isPlatform) navigate("/");
-                  else navigate(`/shop/${coupon.shop_id}`);
+                  navigator.clipboard?.writeText(coupon.code).catch(() => {});
+                  if (isPlatform) {
+                    localStorage.setItem("pending_platform_voucher", coupon.code);
+                    toast.success(`Đã chọn mã ${coupon.code} — sẽ tự động áp dụng khi thanh toán!`);
+                    navigate("/");
+                  } else {
+                    try {
+                      const raw = localStorage.getItem("pending_shop_vouchers");
+                      const map = raw ? JSON.parse(raw) : {};
+                      map[String(coupon.shop_id)] = coupon.code;
+                      localStorage.setItem("pending_shop_vouchers", JSON.stringify(map));
+                    } catch {
+                      localStorage.setItem(
+                        "pending_shop_vouchers",
+                        JSON.stringify({ [String(coupon.shop_id)]: coupon.code })
+                      );
+                    }
+                    toast.success(`Đã chọn mã ${coupon.code} — sẽ tự động áp dụng khi bạn thanh toán sản phẩm của shop!`);
+                    navigate(`/shop/${coupon.shop_id}`);
+                  }
                 }}
-                className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
-                  isPlatform ? "bg-primary text-white hover:bg-primary/90" : "bg-black text-white hover:bg-gray-800 dark:bg-slate-700 dark:hover:bg-slate-600"
+                className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer active:scale-95 ${
+                  isPlatform
+                    ? "bg-primary text-white hover:bg-[#d03e1e] hover:shadow-sm"
+                    : "bg-black text-white hover:bg-primary hover:shadow-sm dark:bg-slate-700 dark:hover:bg-primary"
                 }`}
               >
                 {t("voucher_use_now")}

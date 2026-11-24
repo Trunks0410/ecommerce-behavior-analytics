@@ -28,6 +28,7 @@
     "nodemailer": "^8.0.7",
     "qs": "^6.15.2",
     "redis": "^6.3.1",
+    "sepay-pg-node": "^1.0.0",
     "sequelize": "^6.37.8"
   },
   "devDependencies": {

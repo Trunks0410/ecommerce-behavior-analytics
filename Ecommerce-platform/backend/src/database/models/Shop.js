@@ -11,6 +11,7 @@ export default (sequelize, DataTypes) => {
       Shop.hasMany(models.ShopPayout, { foreignKey: "shop_id", as: "payouts" });
       Shop.hasMany(models.PlatformCommission, { foreignKey: "shop_id", as: "commissions" });
       Shop.hasMany(models.Conversation, { foreignKey: "shop_id", as: "conversations" });
+      Shop.hasMany(models.ShopFollower, { foreignKey: "shop_id", as: "followers" });
     }
   }
 

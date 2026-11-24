@@ -109,24 +109,24 @@ const BUCKET_DEFS: BucketDef[] = [
  */
 function classifyPixelColor(r: number, g: number, b: number): string {
   const { h, s, l } = rgbToHsl(r, g, b);
-  if (l < 0.16) return "black";
-  if (l > 0.88 && s < 0.25) return "white";
-  if (s < 0.13) return "gray";
-
-  // Nâu (Brown): các sắc tố ấm đậm (Hue 8-45 với độ sáng vừa/thấp)
-  if ((h >= 8 && h <= 45 && l <= 0.46) || ((h >= 345 || h < 8) && l <= 0.38 && s <= 0.65)) {
-    return "brown";
-  }
-  // Hồng (Pink): độ sáng cao, sắc đỏ/hồng/magenta
-  if ((h >= 315 || h <= 15) && l > 0.50 && s >= 0.13) {
+  if (l <= 0.18) return "black";
+  if (l >= 0.88 && s < 0.18) return "white";
+  // Hồng pastel / rose nhạt có độ bão hòa thấp (0.12-0.25) nhưng độ sáng cao (>0.54)
+  if ((h >= 315 || h <= 18) && l > 0.54 && s >= 0.12) {
     return "pink";
   }
-  // Đỏ (Red)
-  if ((h >= 345 || h <= 15) && s >= 0.35) {
+  if (s < 0.16) return "gray";
+
+  // Nâu (Brown): sắc tố ấm đậm (Hue 12-45, độ sáng thấp/vừa)
+  if (h >= 12 && h <= 45 && l <= 0.45 && s >= 0.18) {
+    return "brown";
+  }
+  // Đỏ (Red): ưu tiên bắt đỏ chuẩn trước khi xét hồng
+  if ((h >= 345 || h <= 12) && l >= 0.20 && l <= 0.54 && s >= 0.40) {
     return "red";
   }
   // Cam (Orange)
-  if (h > 15 && h < 42) return "orange";
+  if (h > 12 && h < 42) return "orange";
   // Vàng (Yellow)
   if (h >= 42 && h < 68) return "yellow";
   // Xanh lá (Green)
@@ -136,7 +136,7 @@ function classifyPixelColor(r: number, g: number, b: number): string {
   // Tím (Purple)
   if (h >= 260 && h < 315) return "purple";
 
-  return "pink";
+  return "gray";
 }
 
 /**
@@ -417,9 +417,13 @@ export const extractVisualMetadata = (
 
           const centerX = targetWidth / 2;
           const centerY = targetHeight / 2;
+          const roiStartX = Math.floor(targetWidth * 0.18);
+          const roiEndX = Math.ceil(targetWidth * 0.82);
+          const roiStartY = Math.floor(targetHeight * 0.18);
+          const roiEndY = Math.ceil(targetHeight * 0.82);
 
-          for (let y = 0; y < targetHeight; y++) {
-            for (let x = 0; x < targetWidth; x++) {
+          for (let y = roiStartY; y < roiEndY; y++) {
+            for (let x = roiStartX; x < roiEndX; x++) {
               const i = (y * targetWidth + x) * 4;
               const a = imageData[i + 3];
               if (a < 64) continue;
@@ -432,11 +436,11 @@ export const extractVisualMetadata = (
               const dx = (x - centerX) / (targetWidth / 2);
               const dy = (y - centerY) / (targetHeight / 2);
               const distFromCenter = Math.sqrt(dx * dx + dy * dy);
-              let pixelWeight = Math.max(0.3, 1.8 - distFromCenter);
+              let pixelWeight = Math.max(0.4, 2.0 - distFromCenter * 1.4);
 
-              // Giảm trọng số nền trắng / studio ở rìa
-              if (r > 240 && g > 240 && b > 240) {
-                pixelWeight *= 0.08;
+              // Giảm mạnh trọng số nền trắng / xám studio sáng
+              if (r > 235 && g > 235 && b > 235) {
+                pixelWeight *= 0.04;
               }
 
               const bucketId = classifyPixelColor(r, g, b);
@@ -451,7 +455,7 @@ export const extractVisualMetadata = (
             }
           }
 
-          // Chọn bucket màu có trọng số cao nhất (ưu tiên màu chromatic)
+          // Chọn bucket màu có trọng số cao nhất (chỉ ưu tiên màu sặc sỡ khi chiếm >= 32%)
           let totalWeight = 0;
           let bestChromaticBucket: { def: BucketDef; data: any } | null = null;
           let bestOverallBucket: { def: BucketDef; data: any } = {
@@ -476,7 +480,8 @@ export const extractVisualMetadata = (
           if (
             bestChromaticBucket &&
             bestChromaticBucket.data.weight > 0 &&
-            (bestChromaticBucket.data.weight / (totalWeight || 1) >= 0.12 || !bestOverallBucket.def.isChromatic)
+            (bestChromaticBucket.data.weight / (totalWeight || 1) >= 0.32 ||
+              (!bestOverallBucket.def.isChromatic && bestChromaticBucket.data.weight / (totalWeight || 1) >= 0.22))
           ) {
             winning = bestChromaticBucket;
           }

@@ -18,7 +18,7 @@ import {
 } from "@/services/notificationService";
 import { useLanguage } from "@/shared/context/LanguageContext";
 import { useAppSelector } from "@/app/stores/hooks";
-import { resolveNotificationTarget } from "@/shared/utils/notificationUtils";
+import { resolveNotificationTarget, formatNotificationText } from "@/shared/utils/notificationUtils";
 
 interface NotificationDropdownProps {
   variant?: "header" | "button";
@@ -303,7 +303,7 @@ export const NotificationDropdown = ({
                         )}
                       </div>
                       <p className="text-xs text-gray-600 dark:text-slate-300 mt-1 line-clamp-2 leading-relaxed">
-                        {notif.content}
+                        {formatNotificationText(notif.content)}
                       </p>
                       <div className="mt-1.5 flex items-center justify-between gap-2">
                         <p className="text-[11px] text-gray-400 dark:text-slate-500">
@@ -373,7 +373,7 @@ export const NotificationDropdown = ({
 
             <div className="border-t border-gray-100 dark:border-slate-700/80 py-4">
               <p className="text-xs sm:text-sm text-gray-700 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
-                {selectedNotif.content}
+                {formatNotificationText(selectedNotif.content)}
               </p>
             </div>
 

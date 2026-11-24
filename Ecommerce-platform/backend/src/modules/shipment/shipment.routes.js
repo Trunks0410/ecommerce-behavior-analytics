@@ -4,6 +4,8 @@ import shipmentController from "./shipment.controller.js";
 
 const router = express.Router();
 
+router.post("/webhook", shipmentController.handleShipmentWebhook);
+
 router.use(verifyToken);
 router.get("/order/:orderId", shipmentController.getShipmentByOrder);
 
