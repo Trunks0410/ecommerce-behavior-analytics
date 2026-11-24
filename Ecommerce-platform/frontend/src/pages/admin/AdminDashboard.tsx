@@ -47,6 +47,7 @@ import { DisputeTab } from '../manager/components/DisputeTab';
 import { ShopWalletTab } from './components/ShopWalletTab';
 import { MarketingTab } from '../manager/components/MarketingTab';
 import { ShippingPartnersTab } from './components/ShippingPartnersTab';
+import { IamTab } from './components/IamTab';
 
 // ============================================================
 // ADMIN DASHBOARD (Chuẩn mực Operate Mode theo AGENTS.md)
@@ -189,6 +190,7 @@ export const AdminDashboard = () => {
    // Danh sách các mục quản trị hệ thống
    const sidebarItems = [
       { id: "users", label: "Quản lý Tài khoản", icon: <Users size={18} /> },
+      { id: "iam", label: "Phân quyền IAM (Role & Policy)", icon: <Shield size={18} /> },
       { id: "vendors", label: "Duyệt gian hàng", icon: <Store size={18} /> },
       { id: "shipping_partners", label: "Đối tác Vận chuyển (UTE Express)", icon: <Truck size={18} /> },
       { id: "disputes", label: "Giải quyết khiếu nại", icon: <AlertCircle size={18} /> },
@@ -424,6 +426,7 @@ export const AdminDashboard = () => {
             <div className="p-6 md:p-8 max-w-7xl w-full mx-auto flex-1 space-y-6">
 
                {activeTab === "users" && <UserTab showToast={showToast} showConfirm={showConfirm} />}
+               {activeTab === "iam" && <IamTab showToast={showToast} showConfirm={showConfirm} />}
                {activeTab === "vendors" && <VendorTab showToast={showToast} showConfirm={showConfirm} />}
                {activeTab === "settings" && <SettingsTab showToast={showToast} showConfirm={showConfirm} />}
                {activeTab === "shipping_partners" && <ShippingPartnersTab showToast={showToast} showConfirm={showConfirm} />}

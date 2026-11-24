@@ -1,4 +1,4 @@
-# Dependencies
+tức # Dependencies
 node_modules/
 **/node_modules/
 .pnp
@@ -10,11 +10,14 @@ coverage/
 
 # Production & Build outputs
 dist/
+dist-ssr/
 build/
 .output/
 out/
 *.tsbuildinfo
+*.local
 **/dist/
+**/dist-ssr/
 
 # Environment variables & secrets
 .env
@@ -68,11 +71,25 @@ wheels/
 # Binary data & caches
 *.npy
 
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+playwright/.auth/
+
+# Service-specific ignores (Ecommerce-platform/backend)
+Ecommerce-platform/backend/package-lock.json
+Ecommerce-platform/backend/src/config/config.json
+Ecommerce-platform/backend/vendor/
+
 # Editor & OS files
 .DS_Store
 Thumbs.db
+~$*
 .idea/
 .vscode/
+!.vscode/extensions.json
 *.suo
 *.ntvs*
 *.njsproj

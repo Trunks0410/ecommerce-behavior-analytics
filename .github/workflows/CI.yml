@@ -1,16 +1,21 @@
-name: Build & Push Docker Images on Main Tag
+name: 5-Stage CI/CD Pipeline (Checkout -> Build -> Unit Test -> Docker Push -> Post Result)
 
 on:
   push:
     tags:
       - "*"
+      - "!model-*"
 
 env:
   DOCKER_NAMESPACE: nguyenkiet32
+  NODE_VERSION: "22"
 
 jobs:
+  # ============================================================================
+  # STAGE 1: Checkout & Xác thực tag nằm trên nhánh main
+  # ============================================================================
   verify-main-tag:
-    name: Stage 1 - Verify Tag on main
+    name: Stage 1 - Checkout & Verify Tag on main
     runs-on: ubuntu-latest
     outputs:
       tag_name: ${{ steps.meta.outputs.tag_name }}
@@ -29,36 +34,171 @@ jobs:
           TAG_COMMIT=$(git rev-parse "${GITHUB_SHA}^{commit}")
           echo "Tag commit: ${TAG_COMMIT} | origin/main: ${MAIN_SHA}"
           if ! git merge-base --is-ancestor "$TAG_COMMIT" "$MAIN_SHA"; then
-            echo "::error::Tag ${GITHUB_REF_NAME} (${TAG_COMMIT}) không nằm trên nhánh main (${MAIN_SHA}). Hủy build!"
+            echo "::error::Tag ${GITHUB_REF_NAME} (${TAG_COMMIT}) không nằm trên nhánh main (${MAIN_SHA}). Hủy pipeline!"
             exit 1
           fi
           echo "tag_name=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
           echo "Verified tag ${GITHUB_REF_NAME} on main."
 
-  build-and-push:
-    name: Stage 2 - Build & Push (${{ matrix.service }})
+  # ============================================================================
+  # STAGE 2: Build Production (3 Frontends) & Syntax Check (3 Backends)
+  # ============================================================================
+  build-check:
+    name: Stage 2 - Build & Syntax Check
     runs-on: ubuntu-latest
     needs: verify-main-tag
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: |
+            Ecommerce-platform/frontend/package-lock.json
+            analytics-platform/frontend/package-lock.json
+            shipment/frontend/package-lock.json
+
+      - name: Syntax check 3 Backends
+        run: |
+          node --check Ecommerce-platform/backend/src/app.js
+          node --check analytics-platform/backend/server.js
+          node --check shipment/backend/server.js
+
+      - name: Build Ecommerce Frontend
+        working-directory: ./Ecommerce-platform/frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build Analytics Frontend
+        working-directory: ./analytics-platform/frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build Shipment Frontend
+        working-directory: ./shipment/frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Upload Ecommerce Frontend dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ecommerce-gui-dist
+          path: ./Ecommerce-platform/frontend/dist
+          retention-days: 1
+
+      - name: Upload Analytics Frontend dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: analyze-gui-dist
+          path: ./analytics-platform/frontend/dist
+          retention-days: 1
+
+      - name: Upload Shipment Frontend dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: shipment-gui-dist
+          path: ./shipment/frontend/dist
+          retention-days: 1
+
+  # ============================================================================
+  # STAGE 3: Unit Tests (Chạy trên node:22-alpine đồng bộ 100% với Docker)
+  # ============================================================================
+  unit-test:
+    name: Stage 3 - Unit Tests (node:22-alpine)
+    runs-on: ubuntu-latest
+    container: node:22-alpine
+    needs: build-check
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Cache npm packages
+        uses: actions/cache@v4
+        with:
+          path: /root/.npm
+          key: npm-alpine-${{ hashFiles('**/package*.json') }}
+          restore-keys: |
+            npm-alpine-
+
+      - name: Run Ecommerce Backend Unit Tests
+        working-directory: ./Ecommerce-platform/backend
+        env:
+          ACCESS_TOKEN_SECRET: ci_access_secret_123
+          REFRESH_TOKEN_SECRET: ci_refresh_secret_456
+          VNPAY_TMN_CODE: CITESTTMN
+          VNPAY_HASH_SECRET: CITESTHASHSECRET123456
+          VNPAY_URL: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+          VNPAY_RETURN_URL: http://localhost:5173/payment/vnpay-return
+          DB_HOST: 127.0.0.1
+          DB_PORT: "3306"
+          DB_NAME: ecommerce_test
+          DB_USER: root
+          DB_PASSWORD: ""
+          DB_DIALECT: mysql
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+          npm test
+
+      - name: Run Shipment Backend Unit Tests
+        working-directory: ./shipment/backend
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+          npm test
+
+      - name: Run Analytics Search Engine Unit Tests
+        working-directory: ./analytics-platform/backend
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+          npm test
+
+  # ============================================================================
+  # STAGE 4: Docker Build & Push (6 Core Services)
+  # ============================================================================
+  build-and-push:
+    name: Stage 4 - Docker Build & Push (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    needs: [verify-main-tag, unit-test]
     strategy:
       fail-fast: false
       matrix:
         include:
           - service: ecommerce-server
             context: ./Ecommerce-platform/backend
+            is_frontend: false
           - service: ecommerce-gui
             context: ./Ecommerce-platform/frontend
+            is_frontend: true
           - service: analyze-server
             context: ./analytics-platform/backend
+            is_frontend: false
           - service: analyze-gui
             context: ./analytics-platform/frontend
+            is_frontend: true
           - service: shipment-server
             context: ./shipment/backend
+            is_frontend: false
           - service: shipment-gui
             context: ./shipment/frontend
+            is_frontend: true
 
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
+
+      - name: Download pre-built dist artifact (Frontend)
+        if: matrix.is_frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.service }}-dist
+          path: ${{ matrix.context }}/dist
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -82,3 +222,43 @@ jobs:
             ${{ env.DOCKER_NAMESPACE }}/${{ matrix.service }}:latest
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  # ============================================================================
+  # STAGE 5: Post Result (Tổng hợp kết quả Pipeline lên GitHub Step Summary)
+  # ============================================================================
+  post-result:
+    name: Stage 5 - Post Pipeline Result
+    runs-on: ubuntu-latest
+    needs: [verify-main-tag, build-check, unit-test, build-and-push]
+    if: always()
+
+    steps:
+      - name: Publish CI/CD Summary Report
+        run: |
+          TAG_NAME="${{ needs.verify-main-tag.outputs.tag_name || github.ref_name }}"
+          {
+            echo "## 🚀 CI/CD Pipeline Result — Tag \`${TAG_NAME}\`"
+            echo ""
+            echo "| Stage | Status |"
+            echo "|---|---|"
+            echo "| 1. Checkout & Verify Tag on \`main\` | \`${{ needs.verify-main-tag.result }}\` |"
+            echo "| 2. Build (3 Frontends + 3 Backends Syntax) | \`${{ needs.build-check.result }}\` |"
+            echo "| 3. Unit Tests (Shipment + Analytics Search) | \`${{ needs.unit-test.result }}\` |"
+            echo "| 4. Docker Build & Push (6 Services) | \`${{ needs.build-and-push.result }}\` |"
+            echo ""
+            echo "### Docker Images (\`${{ env.DOCKER_NAMESPACE }}\`)"
+            echo "- \`${{ env.DOCKER_NAMESPACE }}/ecommerce-server:${TAG_NAME}\` & \`:latest\`"
+            echo "- \`${{ env.DOCKER_NAMESPACE }}/ecommerce-gui:${TAG_NAME}\` & \`:latest\`"
+            echo "- \`${{ env.DOCKER_NAMESPACE }}/analyze-server:${TAG_NAME}\` & \`:latest\`"
+            echo "- \`${{ env.DOCKER_NAMESPACE }}/analyze-gui:${TAG_NAME}\` & \`:latest\`"
+            echo "- \`${{ env.DOCKER_NAMESPACE }}/shipment-server:${TAG_NAME}\` & \`:latest\`"
+            echo "- \`${{ env.DOCKER_NAMESPACE }}/shipment-gui:${TAG_NAME}\` & \`:latest\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "${{ needs.verify-main-tag.result }}" != "success" ] || \
+             [ "${{ needs.build-check.result }}" != "success" ] || \
+             [ "${{ needs.unit-test.result }}" != "success" ] || \
+             [ "${{ needs.build-and-push.result }}" != "success" ]; then
+            echo "::error::Một hoặc nhiều stage trong pipeline đã thất bại."
+            exit 1
+          fi

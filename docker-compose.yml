@@ -10,6 +10,9 @@ services:
       - ./analytics-platform/backend/.env
     environment:
       PORT: 8088
+      SEARCH_MODE: ${SEARCH_MODE:-auto}
+      ENABLE_RERANK: ${ENABLE_RERANK:-true}
+      MODEL_INFERENCE_URL: ${MODEL_INFERENCE_URL:-}
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8088/health"]
       interval: 15s
@@ -89,4 +92,5 @@ services:
 
 networks:
   datn-network:
+    name: datn-network
     driver: bridge

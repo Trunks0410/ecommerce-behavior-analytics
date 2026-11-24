@@ -1,0 +1,22 @@
+services:
+  qwen-inference:
+    image: nguyenkiet32/qwen-inference:${MODEL_IMAGE_TAG:-latest}
+    container_name: datn-qwen-inference
+    pull_policy: always
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      MODEL_NAME: Qwen/Qwen3-VL-Embedding-2B
+    volumes:
+      - huggingface_cache:/root/.cache/huggingface
+    networks:
+      - datn-network
+
+volumes:
+  huggingface_cache:
+
+networks:
+  datn-network:
+    name: datn-network
+    driver: bridge

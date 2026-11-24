@@ -13,7 +13,7 @@ class VectorSearchClient {
       "http://localhost:8088"
     ).replace(/\/+$/, "");
 
-    this.timeoutMs = Number(process.env.ANALYTICS_SERVICE_TIMEOUT_MS) || 5000;
+    this.timeoutMs = Number(process.env.ANALYTICS_SERVICE_TIMEOUT_MS) || 45000;
     this.isAvailable = false;
     this.lastHealthCheck = null;
   }

@@ -308,6 +308,41 @@ const calculateProductVisualMatch = (product, visualFeatures, clientCategoryFilt
 /**
  * Tìm kiếm sản phẩm bằng hình ảnh chuẩn xác (≥ 80% độ chính xác)
  */
+const searchVectorMicroserviceByImage = async (fileBuffer, topK = 60) => {
+  if (!fileBuffer || !Buffer.isBuffer(fileBuffer) || fileBuffer.length === 0) {
+    return null;
+  }
+
+  const serviceUrl = (
+    process.env.ANALYTICS_SERVICE_URL ||
+    process.env.VECTOR_SERVICE_URL ||
+    "http://localhost:8088"
+  ).replace(/\/+$/, "");
+  const timeoutMs = Number(process.env.ANALYTICS_SERVICE_TIMEOUT_MS) || 60000;
+
+  try {
+    const res = await fetch(`${serviceUrl}/api/v1/search/visual`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        imageBase64: fileBuffer.toString("base64"),
+        limit: topK,
+      }),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data?.success || !Array.isArray(data.results) || data.results.length === 0) {
+      return null;
+    }
+    return data.results;
+  } catch (err) {
+    console.warn(`⚠️ [VISUAL SEARCH] Fallback sang heuristic SQL: ${err.message}`);
+    return null;
+  }
+};
+
 export const searchProductsByImage = async ({
   fileBuffer,
   clientMetadata = {},
@@ -321,6 +356,80 @@ export const searchProductsByImage = async ({
   const objectKeywords = detectedObject?.searchKeywords || [];
   const colorKeywords = dominantColor?.keywords || [];
   const targetCategoryIds = detectedObject?.categoryIds || [];
+
+  // 1.5. Ưu tiên tìm kiếm Vector đa phương thức (Qwen3-VL) qua Analytics Microservice
+  const vectorMatches = await searchVectorMicroserviceByImage(
+    fileBuffer,
+    Math.max(Number(limit) * 3, 60)
+  );
+
+  if (Array.isArray(vectorMatches) && vectorMatches.length > 0) {
+    const matchedIds = vectorMatches.map((m) => Number(m.id)).filter(Boolean);
+    const scoreMap = new Map(
+      vectorMatches.map((m) => [Number(m.id), Number(m.score) || 0])
+    );
+
+    const whereClause = {
+      id: { [Op.in]: matchedIds },
+      deleted_at: null,
+      approval_status: "APPROVED",
+    };
+    if (categoryId) {
+      whereClause.category_id = categoryId;
+    }
+
+    const dbProducts = await db.Product.findAll({
+      where: whereClause,
+      include: [
+        { model: db.Category, as: "category", attributes: ["id", "name", "slug"] },
+        {
+          model: db.ProductImage,
+          as: "images",
+          attributes: ["id", "image_url", "is_primary", "sort_order"],
+        },
+      ],
+    });
+
+    if (dbProducts.length > 0) {
+      const rankedProducts = dbProducts
+        .map((product) => {
+          const productJson =
+            typeof product.toJSON === "function" ? product.toJSON() : product;
+          const primaryImg =
+            productJson.primary_image ||
+            productJson.images?.find((img) => img.is_primary)?.image_url ||
+            productJson.images?.[0]?.image_url ||
+            "";
+          const rawCosine = scoreMap.get(productJson.id) || 0;
+
+          return {
+            ...productJson,
+            primary_image: primaryImg,
+            similarity_score: Math.round(Math.max(0, Math.min(1, rawCosine)) * 100),
+            match_reasons: ["Tương đồng hình ảnh AI (Qwen3-VL)"],
+            isObjectMatch: true,
+          };
+        })
+        .sort((a, b) => (scoreMap.get(b.id) || 0) - (scoreMap.get(a.id) || 0));
+
+      const offset = (page - 1) * limit;
+      const pagedResults = rankedProducts.slice(offset, offset + limit);
+
+      return {
+        total: rankedProducts.length,
+        page: Number(page),
+        limit: Number(limit),
+        totalPages: Math.ceil(rankedProducts.length / limit) || 1,
+        visualFeatures: {
+          dominantColor: visualFeatures.dominantColor?.name || "Tự nhiên",
+          dominantColorHex: visualFeatures.dominantColor?.hex || "#1E293B",
+          detectedObject: visualFeatures.detectedObject,
+          smartTags: visualFeatures.smartTags,
+        },
+        products: pagedResults,
+      };
+    }
+  }
 
   const candidateMap = new Map();
 

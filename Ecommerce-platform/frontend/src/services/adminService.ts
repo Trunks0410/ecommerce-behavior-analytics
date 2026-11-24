@@ -220,5 +220,83 @@ export const adminService = {
     const response = await axiosClient.get("/admin/activity-logs", { params });
     return response.data;
   },
+
+  // ============================================================
+  // 9. QUẢN TRỊ IAM (ROLES, POLICIES & PERMISSIONS)
+  // ============================================================
+  getIamActions: async () => {
+    const response = await axiosClient.get("/admin/iam/actions");
+    return response.data;
+  },
+
+  getIamPolicies: async () => {
+    const response = await axiosClient.get("/admin/iam/policies");
+    return response.data;
+  },
+
+  createIamPolicy: async (data: { name: string; code: string; description?: string; effect?: "ALLOW" | "DENY"; actions: string[] }) => {
+    const response = await axiosClient.post("/admin/iam/policies", data);
+    return response.data;
+  },
+
+  updateIamPolicy: async (id: number | string, data: { name?: string; description?: string; effect?: "ALLOW" | "DENY"; actions?: string[] }) => {
+    const response = await axiosClient.put(`/admin/iam/policies/${id}`, data);
+    return response.data;
+  },
+
+  deleteIamPolicy: async (id: number | string) => {
+    const response = await axiosClient.delete(`/admin/iam/policies/${id}`);
+    return response.data;
+  },
+
+  getIamRoles: async () => {
+    const response = await axiosClient.get("/admin/iam/roles");
+    return response.data;
+  },
+
+  createIamRole: async (data: { role_name: string; description?: string; policy_ids?: number[] }) => {
+    const response = await axiosClient.post("/admin/iam/roles", data);
+    return response.data;
+  },
+
+  updateIamRole: async (id: number | string, data: { role_name?: string; description?: string }) => {
+    const response = await axiosClient.put(`/admin/iam/roles/${id}`, data);
+    return response.data;
+  },
+
+  deleteIamRole: async (id: number | string) => {
+    const response = await axiosClient.delete(`/admin/iam/roles/${id}`);
+    return response.data;
+  },
+
+  attachPolicyToRole: async (roleId: number | string, policyId: number | string) => {
+    const response = await axiosClient.post(`/admin/iam/roles/${roleId}/policies`, { policy_id: policyId });
+    return response.data;
+  },
+
+  detachPolicyFromRole: async (roleId: number | string, policyId: number | string) => {
+    const response = await axiosClient.delete(`/admin/iam/roles/${roleId}/policies/${policyId}`);
+    return response.data;
+  },
+
+  getUserIamPermissions: async (userId: number | string) => {
+    const response = await axiosClient.get(`/admin/iam/users/${userId}/permissions`);
+    return response.data;
+  },
+
+  assignRoleToUser: async (userId: number | string, roleId: number | string) => {
+    const response = await axiosClient.post(`/admin/iam/users/${userId}/role`, { role_id: roleId });
+    return response.data;
+  },
+
+  attachPolicyToUser: async (userId: number | string, policyId: number | string) => {
+    const response = await axiosClient.post(`/admin/iam/users/${userId}/policies`, { policy_id: policyId });
+    return response.data;
+  },
+
+  detachPolicyFromUser: async (userId: number | string, policyId: number | string) => {
+    const response = await axiosClient.delete(`/admin/iam/users/${userId}/policies/${policyId}`);
+    return response.data;
+  },
 };
 
