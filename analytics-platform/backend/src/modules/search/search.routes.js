@@ -2,6 +2,7 @@ import express from "express";
 import {
   getHealth,
   searchProducts,
+  visualSearchProducts,
   getSimilarProducts,
   getRecommendations,
   upsertVector,
@@ -14,6 +15,7 @@ const router = express.Router();
 // Search endpoints
 router.get("/search", searchProducts);
 router.post("/search", searchProducts);
+router.post("/visual", visualSearchProducts);
 
 // Recommendations & Similar endpoints
 router.get("/similar/:productId", getSimilarProducts);

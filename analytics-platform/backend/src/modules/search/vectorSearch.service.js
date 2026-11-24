@@ -21,6 +21,18 @@ const SYNONYM_GROUPS = [
   ["pants", "jeans", "trousers", "shorts"],
   ["watch", "smartwatch", "timepiece"],
   ["headphones", "earphones", "earbuds", "headset"],
+  ["ring", "rings", "band", "engagement"],
+  ["necklace", "pendant", "choker", "chain"],
+  ["earring", "earrings", "studs", "hoops"],
+  ["bracelet", "bangle", "wristband"],
+  ["cabinet", "wardrobe", "dresser", "cupboard", "closet", "locker", "sideboard", "chest", "storage"],
+  ["table", "desk", "nightstand", "console"],
+  ["chair", "sofa", "couch", "armchair", "stool", "bench", "recliner"],
+  ["shelf", "shelves", "bookshelf", "rack", "bookcase"],
+  ["lamp", "light", "lantern", "chandelier"],
+  ["rug", "carpet", "mat"],
+  ["pillow", "cushion"],
+  ["glasses", "sunglasses", "eyewear"],
 ];
 
 const VI_EN_FALLBACK_PHRASES = [
@@ -58,6 +70,24 @@ const VI_EN_FALLBACK_PHRASES = [
   ["đồng hồ", "watch"],
   ["tai nghe", "headphones"],
   ["điện thoại", "phone"],
+  ["dây chuyền", "necklace"],
+  ["bông tai", "earrings"],
+  ["vòng tay", "bracelet"],
+  ["nhẫn", "ring"],
+  ["tủ quần áo", "wardrobe"],
+  ["tủ", "cabinet"],
+  ["kệ sách", "bookshelf"],
+  ["kệ", "shelf"],
+  ["bàn phím", "keyboard"],
+  ["bàn", "table"],
+  ["ghế sofa", "sofa"],
+  ["ghế", "chair"],
+  ["giường", "bed"],
+  ["đèn", "lamp"],
+  ["thảm", "rug"],
+  ["gối", "pillow"],
+  ["kính mát", "sunglasses"],
+  ["kính", "glasses"],
   ["trắng", "white"],
   ["đen", "black"],
   ["hồng", "pink"],
@@ -72,6 +102,16 @@ const VI_EN_FALLBACK_PHRASES = [
   ["nữ", "women"],
   ["da", "leather"],
 ];
+
+function hasWordMatch(textLower, term) {
+  if (!textLower || !term) return false;
+  if (term.includes(" ")) {
+    return textLower.includes(term);
+  }
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = new RegExp(`(^|[^a-z0-9\\u00C0-\\u1EF9])${escaped}([^a-z0-9\\u00C0-\\u1EF9]|$)`, "i");
+  return regex.test(textLower);
+}
 
 function expandWordWithSynonyms(word) {
   for (const group of SYNONYM_GROUPS) {
@@ -101,6 +141,7 @@ class VectorSearchEngine {
     this.vectorDim = 2048;
     this.modelName = "Qwen3-VL-Embedding-2B (Multimodal)";
     this.translationCache = new Map();
+    this.queryVectorCache = new Map();
   }
 
   findFile(filename) {
@@ -196,6 +237,13 @@ class VectorSearchEngine {
       return this.translationCache.get(cacheKey);
     }
 
+    // Ưu tiên tra từ điển Việt-Anh nội bộ tức thì (0ms) trước khi gọi Google Translate
+    const localFastTranslation = fallbackTranslateViToEn(clean);
+    if (localFastTranslation && localFastTranslation !== cacheKey) {
+      this.translationCache.set(cacheKey, localFastTranslation);
+      return localFastTranslation;
+    }
+
     try {
       const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(clean)}`;
       const res = await fetch(url, {
@@ -203,7 +251,7 @@ class VectorSearchEngine {
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
           Accept: "application/json,text/plain,*/*",
         },
-        signal: AbortSignal.timeout(3000),
+        signal: AbortSignal.timeout(1200),
       });
       const contentType = res.headers.get("content-type") || "";
       if (!res.ok || contentType.includes("text/html")) {
@@ -278,15 +326,15 @@ class VectorSearchEngine {
       const titleLower = (this.metadata[item.id - 1]?.title || "").toLowerCase();
       const titleTokens = new Set(titleLower.split(/[^a-z0-9]+/).filter(Boolean));
 
-      // 1. Điểm khớp từ vựng & đồng nghĩa ngành hàng (Lexical & Synonym Match)
+      // 1. Điểm khớp từ vựng & đồng nghĩa ngành hàng (Lexical & Synonym Match với Word Boundary)
       let lexicalScore = 0;
-      if (titleLower.includes(queryLower)) {
+      if (hasWordMatch(titleLower, queryLower)) {
         lexicalScore += 0.40;
       }
       let matches = 0;
       for (const w of rawWords) {
         const synonyms = expandWordWithSynonyms(w);
-        if (synonyms.some((syn) => titleLower.includes(syn))) {
+        if (synonyms.some((syn) => hasWordMatch(titleLower, syn))) {
           matches++;
         }
       }
@@ -340,20 +388,77 @@ class VectorSearchEngine {
       };
     });
 
-    scored.sort((a, b) => b.finalScore - a.finalScore);
-    return scored.slice(0, topK);
+    // Chỉ giữ sản phẩm có độ liên quan thực sự (khớp từ vựng/đồng nghĩa hoặc semantic >= 0.34)
+    const relevant = scored.filter(
+      (item) => item.lexicalScore > 0 || item.semanticScore >= 0.34
+    );
+    const pool = relevant.length > 0 ? relevant : scored.filter((item) => item.semanticScore >= 0.28);
+    pool.sort((a, b) => b.finalScore - a.finalScore);
+    return pool.slice(0, topK);
+  }
+
+  /**
+   * Lấy vector embedding trực tiếp từ Qwen3-VL /embed (hỗ trợ đa ngôn ngữ Việt/Anh/Đức)
+   */
+  async getQueryEmbeddingFromModel(rawQuery) {
+    const cacheKey = rawQuery.toLowerCase();
+    if (this.queryVectorCache.has(cacheKey)) {
+      return this.queryVectorCache.get(cacheKey);
+    }
+
+    const modelInferenceUrl = (process.env.MODEL_INFERENCE_URL || "").replace(/\/+$/, "");
+    if (!modelInferenceUrl) return null;
+
+    try {
+      const res = await fetch(`${modelInferenceUrl}/embed`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: rawQuery }),
+        signal: AbortSignal.timeout(3000),
+      });
+      if (!res.ok) return null;
+
+      const data = await res.json();
+      const rawVec = data?.vector;
+      if (!Array.isArray(rawVec) || rawVec.length !== this.vectorDim) return null;
+
+      const qVec = new Float32Array(this.vectorDim);
+      let norm = 0;
+      for (let d = 0; d < this.vectorDim; d++) {
+        const val = Number(rawVec[d]) || 0;
+        qVec[d] = val;
+        norm += val * val;
+      }
+      norm = Math.sqrt(norm);
+      if (norm > 0) {
+        for (let d = 0; d < this.vectorDim; d++) qVec[d] /= norm;
+      }
+
+      if (this.queryVectorCache.size >= 500) {
+        const oldestKey = this.queryVectorCache.keys().next().value;
+        this.queryVectorCache.delete(oldestKey);
+      }
+      this.queryVectorCache.set(cacheKey, qVec);
+      return qVec;
+    } catch (err) {
+      console.warn(`⚠️ [SEARCH EMBED] Qwen3-VL /embed fallback to anchors (${err.message})`);
+      return null;
+    }
   }
 
   /**
    * Pipeline Tìm kiếm 2 Giai đoạn:
-   * Giai đoạn 0: Chuẩn hóa / Dịch từ khóa sang tiếng Anh bằng Translate API
-   * Giai đoạn 1: Thu hồi ứng viên nhanh bằng Vector Similarity (Candidate Retrieval)
+   * Giai đoạn 0: Chuẩn hóa / Dịch từ khóa sang tiếng Anh để chấm điểm Lexical Rerank
+   * Giai đoạn 1: Tạo Query Vector bằng Qwen3-VL /embed (ưu tiên) hoặc Anchor Centroid (fallback)
    * Giai đoạn 2: Tái xếp hạng chính xác bằng Multi-Signal Reranker (Reranking)
    */
   async search(keyword, limit = 20) {
     if (!this.ready || !keyword || typeof keyword !== "string") return [];
 
-    const englishQuery = await this.translateToEnglish(keyword);
+    const cleanQuery = keyword.trim();
+    if (!cleanQuery) return [];
+
+    const englishQuery = await this.translateToEnglish(cleanQuery);
     const stopWords = new Set(["for", "the", "and", "with", "in", "on", "of", "to", "a", "an", "color", "colored"]);
 
     const words = Array.from(
@@ -365,47 +470,55 @@ class VectorSearchEngine {
       )
     );
 
-    if (words.length === 0) return [];
+    // Ưu tiên gọi Qwen3-VL /embed (hiểu đa ngôn ngữ Việt/Anh trực tiếp)
+    // Dùng englishQuery nếu dịch được sang tiếng Anh chuẩn hoặc cleanQuery nếu không
+    const embedInput =
+      englishQuery && englishQuery.toLowerCase() !== cleanQuery.toLowerCase()
+        ? `${englishQuery} (${cleanQuery})`
+        : cleanQuery;
+    let qVec = await this.getQueryEmbeddingFromModel(embedInput);
 
-    // 1. Tìm các Anchor Items chứa nhiều từ khóa (hoặc từ đồng nghĩa) nhất
-    const anchors = [];
-    for (let i = 0; i < this.totalRecords; i++) {
-      const titleLower = (this.metadata[i]?.title || "").toLowerCase();
-      let matches = 0;
-      for (const w of words) {
-        const synonyms = expandWordWithSynonyms(w);
-        if (synonyms.some((syn) => titleLower.includes(syn))) {
-          matches++;
+    // Fallback Stage 1B: Dựng Query Vector Centroid từ Anchor Items có ranh giới từ
+    if (!qVec) {
+      if (words.length === 0) return [];
+
+      const anchors = [];
+      for (let i = 0; i < this.totalRecords; i++) {
+        const titleLower = (this.metadata[i]?.title || "").toLowerCase();
+        let matches = 0;
+        for (const w of words) {
+          const synonyms = expandWordWithSynonyms(w);
+          if (synonyms.some((syn) => hasWordMatch(titleLower, syn))) {
+            matches++;
+          }
+        }
+        if (matches > 0) {
+          anchors.push({ idx: i, matches });
         }
       }
-      if (matches > 0) {
-        anchors.push({ idx: i, matches });
+
+      if (anchors.length === 0) return [];
+
+      anchors.sort((a, b) => b.matches - a.matches);
+      const topAnchors = anchors.slice(0, 8);
+
+      qVec = new Float32Array(this.vectorDim);
+      for (const anchor of topAnchors) {
+        const rowOffset = anchor.idx * this.vectorDim;
+        for (let d = 0; d < this.vectorDim; d++) {
+          qVec[d] += this.vectors[rowOffset + d];
+        }
       }
-    }
 
-    if (anchors.length === 0) return [];
-
-    // Chọn top anchor tốt nhất để dựng Vector Centroid cho câu query
-    anchors.sort((a, b) => b.matches - a.matches);
-    const topAnchors = anchors.slice(0, 8);
-
-    const qVec = new Float32Array(this.vectorDim);
-    for (const anchor of topAnchors) {
-      const rowOffset = anchor.idx * this.vectorDim;
+      let norm = 0;
       for (let d = 0; d < this.vectorDim; d++) {
-        qVec[d] += this.vectors[rowOffset + d];
+        norm += qVec[d] * qVec[d];
       }
-    }
-
-    // Chuẩn hóa L2 norm cho query vector
-    let norm = 0;
-    for (let d = 0; d < this.vectorDim; d++) {
-      norm += qVec[d] * qVec[d];
-    }
-    norm = Math.sqrt(norm);
-    if (norm > 0) {
-      for (let d = 0; d < this.vectorDim; d++) {
-        qVec[d] /= norm;
+      norm = Math.sqrt(norm);
+      if (norm > 0) {
+        for (let d = 0; d < this.vectorDim; d++) {
+          qVec[d] /= norm;
+        }
       }
     }
 
@@ -431,53 +544,144 @@ class VectorSearchEngine {
   }
 
   /**
-   * Đề xuất sản phẩm cá nhân hóa theo lịch sử xem (User Behavior Recommendation)
+   * Tìm kiếm trực tiếp bằng Hình ảnh thông qua Qwen3-VL Multimodal Inference (/embed-image)
    */
-  getRecommendationsByUserHistory(viewedProductIds, limit = 10) {
-    if (!this.ready || !Array.isArray(viewedProductIds) || viewedProductIds.length === 0) return [];
+  async searchByImage(imageBase64, text = "", limit = 24) {
+    if (!this.ready || !imageBase64) return [];
 
-    const validIndices = viewedProductIds
-      .map((id) => Number(id) - 1)
-      .filter((idx) => idx >= 0 && idx < this.totalRecords);
-
-    if (validIndices.length === 0) return [];
-
-    const userVec = new Float32Array(this.vectorDim);
-    for (const idx of validIndices) {
-      const rowOffset = idx * this.vectorDim;
-      for (let d = 0; d < this.vectorDim; d++) {
-        userVec[d] += this.vectors[rowOffset + d];
-      }
+    const modelInferenceUrl = (process.env.MODEL_INFERENCE_URL || "").replace(/\/+$/, "");
+    if (!modelInferenceUrl) {
+      throw new Error("MODEL_INFERENCE_URL is not configured");
     }
 
+    const res = await fetch(`${modelInferenceUrl}/embed-image`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        imageBase64,
+        ...(text && text.trim() ? { text: text.trim() } : {}),
+      }),
+      signal: AbortSignal.timeout(20000),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      throw new Error(`Qwen embed-image HTTP ${res.status}: ${errText}`);
+    }
+
+    const data = await res.json();
+    const rawVec = data?.vector;
+    if (!Array.isArray(rawVec) || rawVec.length !== this.vectorDim) {
+      throw new Error(
+        `Invalid embedding dimension from Qwen (got ${rawVec?.length}, expected ${this.vectorDim})`
+      );
+    }
+
+    const qVec = new Float32Array(this.vectorDim);
     let norm = 0;
     for (let d = 0; d < this.vectorDim; d++) {
-      norm += userVec[d] * userVec[d];
+      const val = Number(rawVec[d]) || 0;
+      qVec[d] = val;
+      norm += val * val;
     }
     norm = Math.sqrt(norm);
     if (norm > 0) {
       for (let d = 0; d < this.vectorDim; d++) {
-        userVec[d] /= norm;
+        qVec[d] /= norm;
       }
     }
 
-    const viewedSet = new Set(viewedProductIds.map(Number));
     const scores = [];
-
     for (let i = 0; i < this.totalRecords; i++) {
-      const pid = i + 1;
-      if (viewedSet.has(pid)) continue;
-
       let dot = 0;
       const rowOffset = i * this.vectorDim;
       for (let d = 0; d < this.vectorDim; d++) {
-        dot += userVec[d] * this.vectors[rowOffset + d];
+        dot += qVec[d] * this.vectors[rowOffset + d];
       }
-      scores.push({ id: pid, score: dot });
+      scores.push({
+        id: i + 1,
+        score: dot,
+        semanticScore: dot,
+        title: this.metadata[i]?.title,
+      });
     }
 
     scores.sort((a, b) => b.score - a.score);
-    return scores.slice(0, limit);
+    return scores.slice(0, Math.max(1, Number(limit) || 24));
+  }
+
+  /**
+   * Đề xuất sản phẩm cá nhân hóa đa sở thích (Multi-Interest Round-Robin Interleaving)
+   * Tổng hợp xen kẽ các danh mục/sản phẩm khách hàng đã xem, yêu thích, thêm giỏ hàng
+   * thay vì gộp về một điểm duy nhất.
+   */
+  getRecommendationsByUserHistory(viewedProductIds, limit = 10, signalWeights = {}) {
+    if (!this.ready || !Array.isArray(viewedProductIds) || viewedProductIds.length === 0) return [];
+
+    const validAnchors = [];
+    const seenIdx = new Set();
+    for (const id of viewedProductIds) {
+      const idx = Number(id) - 1;
+      if (idx >= 0 && idx < this.totalRecords && !seenIdx.has(idx)) {
+        seenIdx.add(idx);
+        const pid = idx + 1;
+        const pos = validAnchors.length;
+        const weight = Math.pow(0.85, pos) * (Number(signalWeights?.[pid]) || 1.0);
+        validAnchors.push({ idx, pid, weight });
+      }
+      if (validAnchors.length >= 8) break;
+    }
+
+    if (validAnchors.length === 0) return [];
+
+    const viewedSet = new Set(viewedProductIds.map(Number));
+    const perAnchorPoolSize = Math.max(15, Math.ceil((limit * 2) / validAnchors.length) + 6);
+
+    // 1. Tính danh sách sản phẩm liên quan nhất cho từng anchor riêng biệt
+    const anchorLists = validAnchors.map((anchor) => {
+      const anchorOffset = anchor.idx * this.vectorDim;
+      const list = [];
+      for (let i = 0; i < this.totalRecords; i++) {
+        const pid = i + 1;
+        if (viewedSet.has(pid)) continue;
+
+        let dot = 0;
+        const rowOffset = i * this.vectorDim;
+        for (let d = 0; d < this.vectorDim; d++) {
+          dot += this.vectors[anchorOffset + d] * this.vectors[rowOffset + d];
+        }
+        list.push({ id: pid, score: dot, weightedScore: dot * anchor.weight });
+      }
+      list.sort((a, b) => b.score - a.score);
+      return list.slice(0, perAnchorPoolSize);
+    });
+
+    // 2. Trộn xen kẽ (Round-Robin Interleaving) giữa các nhóm sở thích để đảm bảo đa dạng
+    const interleaved = [];
+    const pickedIds = new Set();
+    let round = 0;
+
+    while (interleaved.length < limit) {
+      let addedInRound = false;
+      for (let a = 0; a < anchorLists.length; a++) {
+        const list = anchorLists[a];
+        while (list.length > 0 && pickedIds.has(list[0].id)) {
+          list.shift();
+        }
+        if (list.length > 0) {
+          const item = list.shift();
+          pickedIds.add(item.id);
+          interleaved.push({ id: item.id, score: item.weightedScore });
+          addedInRound = true;
+          if (interleaved.length >= limit) break;
+        }
+      }
+      if (!addedInRound) break;
+      round++;
+      if (round > perAnchorPoolSize + 2) break;
+    }
+
+    return interleaved.slice(0, limit);
   }
 }
 

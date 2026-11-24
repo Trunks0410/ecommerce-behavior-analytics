@@ -68,6 +68,8 @@ type ActiveTab = 'overview' | 'funnel' | 'rfm' | 'events' | 'engine';
 export const App: React.FC = () => {
   // Access Control / Auth State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [authChecking, setAuthChecking] = useState<boolean>(true);
+  const [authToken, setAuthToken] = useState<string | null>(null);
   const [adminUser, setAdminUser] = useState<{ email: string; role: string } | null>(null);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState<boolean>(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
@@ -120,23 +122,108 @@ export const App: React.FC = () => {
   const [isRetraining, setIsRetraining] = useState<boolean>(false);
   const [retrainSuccess, setRetrainSuccess] = useState<boolean>(false);
 
-  // Check Token / Authentication on mount
+  // Check Token / Authentication on mount (bắt buộc verify JWT + role admin với Backend)
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const tokenFromUrl = urlParams.get('token');
-    const tokenFromStorage =
-      localStorage.getItem('admin_token') || localStorage.getItem('analytics_token');
+    const clearSession = () => {
+      sessionStorage.removeItem('analytics_session_token');
+      localStorage.removeItem('analytics_token');
+      localStorage.removeItem('admin_token');
+      setAuthToken(null);
+      setIsAuthenticated(false);
+      setAdminUser(null);
+    };
 
-    if (tokenFromUrl) {
-      localStorage.setItem('analytics_token', tokenFromUrl);
-      setIsAuthenticated(true);
-      setAdminUser({ email: 'admin@meemart.com', role: 'Quản trị viên' });
-      window.history.replaceState({}, '', window.location.pathname);
-    } else if (tokenFromStorage) {
-      setIsAuthenticated(true);
-      setAdminUser({ email: 'admin@meemart.com', role: 'Quản trị viên' });
-    }
+    const verifyTokenWithBackend = async (token: string) => {
+      try {
+        const res = await axios.get('http://localhost:8088/auth/verify', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const verifiedUser = res.data?.data?.user;
+        if (verifiedUser && verifiedUser.role === 'admin') {
+          sessionStorage.setItem('analytics_session_token', token);
+          setAuthToken(token);
+          setIsAuthenticated(true);
+          setAdminUser({
+            email: verifiedUser.email || 'admin@meemart.com',
+            role: 'Quản trị viên',
+          });
+          return true;
+        }
+      } catch {
+        // Token không hợp lệ, hết hạn hoặc không phải admin
+      }
+      clearSession();
+      return false;
+    };
+
+    const initAuth = async () => {
+      setAuthChecking(true);
+      // Xóa token tồn dư trong localStorage nếu có từ bản cũ
+      localStorage.removeItem('analytics_token');
+      localStorage.removeItem('admin_token');
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const ssoCode = urlParams.get('sso_code');
+
+      // Xóa mọi query nhạy cảm (?sso_code=, ?token=) khỏi URL ngay lập tức
+      if (ssoCode || urlParams.has('token')) {
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+
+      if (ssoCode) {
+        try {
+          const exchangeRes = await axios.post('http://localhost:8088/auth/sso-exchange', {
+            code: ssoCode,
+          });
+          const exchangedToken = exchangeRes.data?.data?.accessToken;
+          if (exchangedToken) {
+            await verifyTokenWithBackend(exchangedToken);
+            setAuthChecking(false);
+            return;
+          }
+        } catch {
+          clearSession();
+          setAuthChecking(false);
+          return;
+        }
+      }
+
+      const sessionToken = sessionStorage.getItem('analytics_session_token');
+      if (sessionToken) {
+        await verifyTokenWithBackend(sessionToken);
+      } else {
+        clearSession();
+      }
+      setAuthChecking(false);
+    };
+
+    initAuth();
   }, []);
+
+  // Tự động đăng xuất khi JWT hết hạn
+  useEffect(() => {
+    if (!isAuthenticated || !authToken) return;
+    const parseJwtExp = (token: string): number | null => {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return typeof payload.exp === 'number' ? payload.exp * 1000 : null;
+      } catch {
+        return null;
+      }
+    };
+    const checkExpiry = () => {
+      const expMs = parseJwtExp(authToken);
+      if (expMs && Date.now() >= expMs) {
+        sessionStorage.removeItem('analytics_session_token');
+        setAuthToken(null);
+        setIsAuthenticated(false);
+        setAdminUser(null);
+      }
+    };
+    checkExpiry();
+    const timer = setInterval(checkExpiry, 30000);
+    return () => clearInterval(timer);
+  }, [isAuthenticated, authToken]);
 
   // Continuous Realtime Ingestion & Dynamic Updates
   useEffect(() => {
@@ -240,7 +327,8 @@ export const App: React.FC = () => {
 
   const handleEnterAnalytics = () => {
     if (authPayload) {
-      localStorage.setItem('analytics_token', authPayload.token);
+      sessionStorage.setItem('analytics_session_token', authPayload.token);
+      setAuthToken(authPayload.token);
       setAdminUser({
         email: authPayload.user?.email || 'admin@meemart.com',
         role: 'Quản trị viên',
@@ -251,20 +339,14 @@ export const App: React.FC = () => {
   };
 
   const handleGoToEcommerce = () => {
-    const token =
-      authPayload?.token ||
-      localStorage.getItem('analytics_token') ||
-      localStorage.getItem('admin_token') ||
-      '';
-    const targetUrl = `http://localhost:5173/admin${
-      token ? `?token=${encodeURIComponent(token)}` : ''
-    }`;
-    window.location.href = targetUrl;
+    window.location.href = 'http://localhost:5173/admin';
   };
 
   const handleLogout = () => {
+    sessionStorage.removeItem('analytics_session_token');
     localStorage.removeItem('analytics_token');
     localStorage.removeItem('admin_token');
+    setAuthToken(null);
     setIsAuthenticated(false);
     setAdminUser(null);
     setShowWorkspaceModal(false);
@@ -340,6 +422,17 @@ export const App: React.FC = () => {
   // =========================================================================
   // ACCESS RESTRICTED SCREEN (Trang Đăng Nhập Chuẩn Hóa Với AdminLoginPage)
   // =========================================================================
+  if (authChecking) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3 text-slate-600">
+          <div className="w-8 h-8 border-2 border-slate-900 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs font-semibold">Đang xác thực phiên quản trị...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between font-sans antialiased">

@@ -40,6 +40,33 @@ export const searchProducts = async (req, res) => {
   }
 };
 
+export const visualSearchProducts = async (req, res) => {
+  try {
+    const { imageBase64, text = "", limit = 24 } = req.body || {};
+    if (!imageBase64) {
+      return res.status(400).json({ success: false, message: "Thiếu dữ liệu ảnh imageBase64" });
+    }
+
+    const ranked = await vectorSearchEngine.searchByImage(imageBase64, text, Number(limit) || 24);
+    const productIds = ranked.map((r) => r.id);
+
+    return res.status(200).json({
+      success: true,
+      engine: "qwen3-vl-multimodal",
+      count: productIds.length,
+      productIds,
+      results: ranked,
+    });
+  } catch (error) {
+    console.error("❌ [API] Lỗi Visual Search Qwen3-VL:", error.message);
+    return res.status(502).json({
+      success: false,
+      message: "Không thể thực hiện Visual Search qua Qwen3-VL",
+      error: error.message,
+    });
+  }
+};
+
 export const getSimilarProducts = (req, res) => {
   try {
     const productId = Number(req.params.productId);
@@ -72,9 +99,14 @@ export const getSimilarProducts = (req, res) => {
 export const getRecommendations = (req, res) => {
   try {
     const viewedProductIds = req.body?.viewedProductIds || req.body?.viewedIds || [];
+    const signalWeights = req.body?.signalWeights || {};
     const limit = Number(req.body?.limit || req.query.limit) || 10;
 
-    const recommended = vectorSearchEngine.getRecommendationsByUserHistory(viewedProductIds, limit);
+    const recommended = vectorSearchEngine.getRecommendationsByUserHistory(
+      viewedProductIds,
+      limit,
+      signalWeights
+    );
     const productIds = recommended.map((r) => r.id);
 
     return res.status(200).json({
