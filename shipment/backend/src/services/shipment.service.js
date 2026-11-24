@@ -274,7 +274,7 @@ export async function transitionShipment(id, action, actor, input = {}) {
     throw new ServiceError(404, "ACTION_NOT_FOUND", "Unknown shipment action.");
   }
 
-  return sequelize.transaction(async (transaction) => {
+  const updatedShipment = await sequelize.transaction(async (transaction) => {
     const shipment = await Shipment.findByPk(id, { transaction, lock: transaction.LOCK.UPDATE });
     if (!shipment) throw new ServiceError(404, "SHIPMENT_NOT_FOUND", "Không tìm thấy vận đơn.");
     if (actor.role === "SHIPPER" && Number(shipment.agentId) !== Number(actor.id)) {
@@ -359,9 +359,37 @@ export async function transitionShipment(id, action, actor, input = {}) {
       }
     }
 
-    return loadShipment(shipment.id, transaction);
+    const result = await loadShipment(shipment.id, transaction);
+    return result;
   });
+
+  await notifyEcommerceWebhook(updatedShipment);
+  return updatedShipment;
 }
+
+const notifyEcommerceWebhook = async (shipment) => {
+  if (!shipment || !["DELIVERED", "RETURNED", "DELIVERY_FAILED"].includes(shipment.status)) return;
+  const webhookUrl = process.env.ECOMMERCE_WEBHOOK_URL || "http://ecommerce-server:8080/shipments/webhook";
+  const apiKey = process.env.ECOMMERCE_SERVICE_API_KEY || "";
+  try {
+    await fetch(webhookUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(apiKey ? { "x-service-api-key": apiKey } : {}),
+      },
+      body: JSON.stringify({
+        orderReference: shipment.orderReference,
+        trackingNumber: shipment.trackingNumber,
+        status: shipment.status,
+        deliveredAt: shipment.deliveredAt,
+      }),
+      signal: AbortSignal.timeout(4000),
+    });
+  } catch (err) {
+    console.warn("Webhook to ecommerce-server failed:", err.message);
+  }
+};
 
 export async function updateAgentAvailability(agentId, availability) {
   if (!["AVAILABLE", "OFFLINE"].includes(availability)) {
@@ -372,7 +400,7 @@ export async function updateAgentAvailability(agentId, availability) {
   if (availability === "OFFLINE" && agent.availability === "BUSY") {
     throw new ServiceError(409, "AGENT_HAS_ACTIVE_SHIPMENT", "Hoàn tất vận đơn đang giao trước khi chuyển offline.");
   }
-  return sequelize.transaction(async (transaction) => {
+  const updatedShipment = await sequelize.transaction(async (transaction) => {
     await agent.update({ availability }, { transaction });
     if (availability === "AVAILABLE") await dispatchPendingShipments(transaction);
     return agent;

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { ShopOrder } from "../api/shipperApi";
-import StatusBadge from "./StatusBadge";
+import StatusBadge, { getShipmentEventLabel } from "./StatusBadge";
 
 interface WaybillDetailModalProps {
   order: ShopOrder | null;
@@ -193,7 +193,7 @@ export const WaybillDetailModal: React.FC<WaybillDetailModalProps> = ({
                   <span className={`step-marker${event.status === "DELIVERED" ? " step-marker--success" : event.status === "DELIVERY_FAILED" ? " step-marker--danger" : ""}`} />
                   <div className="step-content">
                     <div className="step-header">
-                      <strong>{event.status.replace(/_/g, " ")}</strong>
+                      <strong>{getShipmentEventLabel(event.status)}</strong>
                       <span className="step-time text-mono">
                         {new Date(event.created_at).toLocaleString("vi-VN")}
                       </span>

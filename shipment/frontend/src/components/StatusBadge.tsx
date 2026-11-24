@@ -1,5 +1,35 @@
 import React from "react";
 
+const SHIPMENT_EVENT_LABELS: Record<string, string> = {
+  PENDING_ASSIGNMENT: "Chờ phân công shipper",
+  CHUA_PHAN_CONG: "Chờ phân công shipper",
+  ASSIGNED: "Đã phân công shipper",
+  DA_PHAN_CONG: "Đã phân công shipper",
+  ACCEPTED: "Shipper đã nhận đơn",
+  PENDING_PICKUP: "Chờ lấy hàng",
+  CHO_LAY_HANG: "Chờ lấy hàng",
+  PICKED_UP: "Đã lấy hàng",
+  IN_TRANSIT: "Đang trung chuyển",
+  OUT_FOR_DELIVERY: "Đang đi giao",
+  SHIPPING: "Đang đi giao",
+  DANG_GIAO: "Đang đi giao",
+  DELIVERED: "Giao hàng thành công",
+  THANH_CONG: "Giao hàng thành công",
+  FAILED: "Giao hàng thất bại",
+  DELIVERY_FAILED: "Giao hàng thất bại",
+  THAT_BAI: "Giao hàng thất bại",
+  RETURN_PENDING: "Chờ chuyển hoàn",
+  CHO_HOAN: "Chờ chuyển hoàn",
+  RETURNED: "Đã chuyển hoàn",
+  DA_HOAN: "Đã chuyển hoàn",
+  CANCELLED: "Đã hủy",
+};
+
+export const getShipmentEventLabel = (status?: string): string => {
+  const norm = (status || "").toUpperCase();
+  return SHIPMENT_EVENT_LABELS[norm] || (status || "").replace(/_/g, " ");
+};
+
 interface StatusBadgeProps {
   status: string;
   className?: string;
