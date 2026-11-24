@@ -207,6 +207,10 @@ const syncVectorDatabase = async (req, res, next) => {
 // POST /products/visual-search
 const visualSearch = async (req, res, next) => {
   try {
+    if (!req.file && !req.body?.metadata) {
+      return res.status(400).json({ message: "Vui lòng tải lên hình ảnh để tìm kiếm" });
+    }
+
     let clientMetadata = {};
     if (req.body?.metadata) {
       try {

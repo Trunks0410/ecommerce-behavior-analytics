@@ -6,6 +6,10 @@ on:
       - "*"
       - "!model-*"
 
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
 env:
   DOCKER_NAMESPACE: nguyenkiet32
   NODE_VERSION: "22"

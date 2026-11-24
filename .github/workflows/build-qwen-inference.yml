@@ -1,6 +1,6 @@
 name: Build & Push Qwen3-VL Inference Image (On-Demand)
 
-# Chỉ chạy khi bấm thủ công (workflow_dispatch) hoặc push tag bắt đầu bằng model-*
+# Chỉ chạy khi bấm thủ công (workflow_dispatch); tạm tắt trigger push tag model-*
 on:
   workflow_dispatch:
     inputs:
@@ -9,9 +9,13 @@ on:
         required: false
         default: "latest"
         type: string
-  push:
-    tags:
-      - "model-*"
+  # push:
+  #   tags:
+  #     - "model-*"
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
 
 env:
   DOCKER_NAMESPACE: nguyenkiet32
