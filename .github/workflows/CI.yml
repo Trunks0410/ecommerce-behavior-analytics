@@ -1,6 +1,7 @@
 name: 5-Stage CI/CD Pipeline (Checkout -> Build -> Unit Test -> Docker Push -> Post Result)
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - "*"
@@ -41,8 +42,14 @@ jobs:
             echo "::error::Tag ${GITHUB_REF_NAME} (${TAG_COMMIT}) không nằm trên nhánh main (${MAIN_SHA}). Hủy pipeline!"
             exit 1
           fi
-          echo "tag_name=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
-          echo "Verified tag ${GITHUB_REF_NAME} on main."
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            TAG_VAL="${GITHUB_REF_NAME}"
+          else
+            TAG_VAL=$(git tag --merged "$MAIN_SHA" --sort=-v:refname | grep -v '^model-' | head -n 1 || true)
+            TAG_VAL="${TAG_VAL:-latest}"
+          fi
+          echo "tag_name=${TAG_VAL}" >> "$GITHUB_OUTPUT"
+          echo "Verified ${TAG_VAL} on main."
 
   # ============================================================================
   # STAGE 2: Build Production (3 Frontends) & Syntax Check (3 Backends)

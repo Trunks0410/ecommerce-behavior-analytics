@@ -452,8 +452,14 @@ class VectorSearchEngine {
    * Giai đoạn 1: Tạo Query Vector bằng Qwen3-VL /embed (ưu tiên) hoặc Anchor Centroid (fallback)
    * Giai đoạn 2: Tái xếp hạng chính xác bằng Multi-Signal Reranker (Reranking)
    */
-  async search(keyword, limit = 20) {
+  async search(keyword, limit = 20, options = {}) {
     if (!this.ready || !keyword || typeof keyword !== "string") return [];
+
+    const mode = String(options.mode || process.env.SEARCH_MODE || "auto").toLowerCase();
+    const enableRerank =
+      options.rerank !== undefined
+        ? String(options.rerank).toLowerCase() !== "false"
+        : String(process.env.ENABLE_RERANK || "true").toLowerCase() !== "false";
 
     const cleanQuery = keyword.trim();
     if (!cleanQuery) return [];
@@ -476,7 +482,7 @@ class VectorSearchEngine {
       englishQuery && englishQuery.toLowerCase() !== cleanQuery.toLowerCase()
         ? `${englishQuery} (${cleanQuery})`
         : cleanQuery;
-    let qVec = await this.getQueryEmbeddingFromModel(embedInput);
+    let qVec = mode !== "ram" ? await this.getQueryEmbeddingFromModel(embedInput) : null;
 
     // Fallback Stage 1B: Dựng Query Vector Centroid từ Anchor Items có ranh giới từ
     if (!qVec) {
@@ -538,9 +544,35 @@ class VectorSearchEngine {
     candidateScores.sort((a, b) => b.score - a.score);
     const topCandidates = candidateScores.slice(0, recallK);
 
+    if (!enableRerank) {
+      return topCandidates.slice(0, limit).map((item) => ({
+        id: item.id,
+        finalScore: item.score,
+        semanticScore: item.score,
+        lexicalScore: 0,
+        title: this.metadata[item.id - 1]?.title,
+      }));
+    }
+
     // Giai đoạn 2 (Stage 2): Chạy qua Reranker đa mục tiêu để xếp hạng chính xác nhất
     const rankedResults = this.rerankCandidates(englishQuery, topCandidates, limit);
     return rankedResults;
+  }
+
+  /**
+   * Wrapper an toàn cho visual search (trả [] nếu MODEL_INFERENCE_URL chưa cấu hình hoặc lỗi mạng)
+   */
+  async searchByImageVector(imageBase64, limit = 24) {
+    if (!this.ready || !imageBase64 || typeof imageBase64 !== "string") return [];
+    const modelInferenceUrl = (process.env.MODEL_INFERENCE_URL || "").trim();
+    if (!modelInferenceUrl) return [];
+
+    try {
+      return await this.searchByImage(imageBase64, "", limit);
+    } catch (err) {
+      console.warn(`⚠️ [VISUAL SEARCH] Model inference unreachable: ${err.message}`);
+      return [];
+    }
   }
 
   /**
