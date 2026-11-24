@@ -91,7 +91,7 @@ const CheckoutPage = () => {
   const { data: systemSettings } = useSystemSettings() as any;
 
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<"COD" | "SEPAY">("COD");
+  const [paymentMethod, setPaymentMethod] = useState<"COD" | "SEPAY" | "VNPAY">("COD");
   const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState<number | null>(null);
   const [openShopCouponDropdownId, setOpenShopCouponDropdownId] = useState<number | null>(null);
@@ -819,6 +819,26 @@ const CheckoutPage = () => {
                         </div>
                         <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center bg-white ${paymentMethod === 'SEPAY' ? 'border-[#ee4d2d]' : 'border-gray-300'}`}>
                           {paymentMethod === 'SEPAY' && <div className="w-2 h-2 rounded-full bg-[#ee4d2d]" />}
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod("VNPAY")}
+                        className={`w-full flex items-center justify-between p-3.5 border rounded-xs transition-colors text-left cursor-pointer ${paymentMethod === 'VNPAY'
+                            ? 'bg-[#fef0ed]/40 dark:bg-slate-700/60 border-[#ee4d2d]'
+                            : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:border-gray-300'
+                          }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <CreditCard size={20} className={paymentMethod === 'VNPAY' ? 'text-[#ee4d2d]' : 'text-gray-400'} />
+                          <div>
+                            <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-slate-100">Thanh toán qua VNPay (VNPAY-QR / ATM / Visa)</p>
+                            <p className="text-[11px] text-gray-500 dark:text-slate-400">Cổng thanh toán điện tử VNPay an toàn, tức thì</p>
+                          </div>
+                        </div>
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center bg-white ${paymentMethod === 'VNPAY' ? 'border-[#ee4d2d]' : 'border-gray-300'}`}>
+                          {paymentMethod === 'VNPAY' && <div className="w-2 h-2 rounded-full bg-[#ee4d2d]" />}
                         </div>
                       </button>
                     </div>
