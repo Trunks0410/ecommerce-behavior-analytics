@@ -220,10 +220,16 @@ const Register = () => {
 
               <div className="flex justify-center pt-1">
                 <div className="scale-[0.88] origin-center -my-1">
-                  <ReCAPTCHA
-                    sitekey="6LfKIuYsAAAAAJz_47Qvah7gjvrtOkgbOm5sjFLT"
-                    onChange={handleRecaptchaChange}
-                  />
+                  {import.meta.env.VITE_RECAPTCHA_SITE_KEY ? (
+                    <ReCAPTCHA
+                      sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+                      onChange={handleRecaptchaChange}
+                    />
+                  ) : (
+                    <p className="text-xs text-amber-600">
+                      Chưa cấu hình VITE_RECAPTCHA_SITE_KEY
+                    </p>
+                  )}
                 </div>
               </div>
 
