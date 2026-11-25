@@ -140,17 +140,29 @@ class VectorSearchClient {
 
   /**
    * Đề xuất sản phẩm theo hành vi người dùng từ Analytics Service
-   * @param {number[]} viewedProductIds
+   * Hỗ trợ cả mảng ID cũ lẫn payload pipeline đầy đủ (interactions, purchasedIds, inCartIds...)
+   * @param {number[]|object} input
    * @param {number} limit
+   * @param {object} signalWeights
    * @returns {Promise<number[]>}
    */
-  async getRecommendationsByUserHistory(viewedProductIds, limit = 10, signalWeights = {}) {
-    if (!Array.isArray(viewedProductIds) || viewedProductIds.length === 0) return [];
+  async getRecommendationsByUserHistory(input, limit = 10, signalWeights = {}) {
+    const isPayloadObj = input && !Array.isArray(input) && typeof input === "object";
+    const payload = isPayloadObj
+      ? { ...input, limit }
+      : { viewedProductIds: input, limit, signalWeights };
+
+    const hasInteractions =
+      Array.isArray(payload.interactions) && payload.interactions.length > 0;
+    const hasViewed =
+      Array.isArray(payload.viewedProductIds) && payload.viewedProductIds.length > 0;
+
+    if (!hasInteractions && !hasViewed) return [];
 
     try {
       const response = await axios.post(
         `${this.serviceUrl}/api/v1/search/user-history`,
-        { viewedProductIds, limit, signalWeights },
+        payload,
         { timeout: this.timeoutMs }
       );
 

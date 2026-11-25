@@ -713,21 +713,28 @@ const getRecommendedProducts = async (userId, viewedIdsParam, limit = 10, lang =
   }
 
   let viewedIds = [...browserViewedIds];
+  let purchasedIds = [];
+  let cartProductIds = [];
+  const interactions = browserViewedIds.map((pid) => ({
+    productId: pid,
+    eventType: "view_item",
+    timestamp: Date.now(),
+  }));
 
   if (userId) {
-    const [history, wishlists, cartItems] = await Promise.all([
+    const [history, wishlists, cartItems, orderItems] = await Promise.all([
       db.UserViewedProduct.findAll({
         where: { user_id: userId },
         order: [["viewed_at", "DESC"]],
-        limit: 10,
-        attributes: ["product_id"],
+        limit: 15,
+        attributes: ["product_id", "viewed_at"],
         raw: true,
       }),
       db.Wishlist.findAll({
         where: { user_id: userId },
-        order: [["created_at", "DESC"]],
+        order: [["added_at", "DESC"]],
         limit: 10,
-        attributes: ["product_id"],
+        attributes: ["product_id", "added_at"],
         raw: true,
       }),
       db.CartItem.findAll({
@@ -742,31 +749,112 @@ const getRecommendedProducts = async (userId, viewedIdsParam, limit = 10, lang =
         ],
         limit: 10,
       }),
+      db.OrderItem.findAll({
+        include: [
+          {
+            model: db.ProductVariant,
+            as: "variant",
+            attributes: ["product_id"],
+            required: true,
+          },
+          {
+            model: db.ShopOrder,
+            as: "shopOrder",
+            attributes: ["created_at", "status"],
+            where: { status: { [Op.notIn]: ["CANCELLED", "RETURNED"] } },
+            required: true,
+            include: [
+              {
+                model: db.ParentOrder,
+                as: "parentOrder",
+                attributes: [],
+                where: { user_id: userId },
+                required: true,
+              },
+            ],
+          },
+        ],
+        order: [["id", "DESC"]],
+        limit: 20,
+      }),
     ]);
 
     const dbViewedIds = history.map((h) => Number(h.product_id));
     const wishlistIds = wishlists.map((w) => Number(w.product_id));
-    const cartProductIds = cartItems
+    cartProductIds = cartItems
       .map((c) => Number(c.variant?.product_id))
       .filter((id) => !isNaN(id) && id > 0);
+    purchasedIds = Array.from(
+      new Set(
+        orderItems
+          .map((oi) => Number(oi.variant?.product_id))
+          .filter((id) => !isNaN(id) && id > 0)
+      )
+    );
 
-    wishlistIds.forEach((id) => {
-      signalWeights[id] = Math.max(signalWeights[id] || 1, 1.3);
+    history.forEach((h) => {
+      const pid = Number(h.product_id);
+      if (pid > 0) {
+        interactions.push({
+          productId: pid,
+          eventType: "view_item",
+          timestamp: h.viewed_at ? new Date(h.viewed_at).getTime() : Date.now(),
+        });
+      }
     });
-    cartProductIds.forEach((id) => {
-      signalWeights[id] = Math.max(signalWeights[id] || 1, 1.5);
+    wishlists.forEach((w) => {
+      const pid = Number(w.product_id);
+      if (pid > 0) {
+        signalWeights[pid] = Math.max(signalWeights[pid] || 1, 1.3);
+        interactions.push({
+          productId: pid,
+          eventType: "wishlist",
+          timestamp: w.added_at ? new Date(w.added_at).getTime() : Date.now(),
+        });
+      }
+    });
+    cartItems.forEach((c) => {
+      const pid = Number(c.variant?.product_id);
+      if (pid > 0) {
+        signalWeights[pid] = Math.max(signalWeights[pid] || 1, 1.5);
+        interactions.push({
+          productId: pid,
+          eventType: "add_to_cart",
+          timestamp: c.added_at ? new Date(c.added_at).getTime() : Date.now(),
+        });
+      }
+    });
+    orderItems.forEach((oi) => {
+      const pid = Number(oi.variant?.product_id);
+      if (pid > 0) {
+        interactions.push({
+          productId: pid,
+          eventType: "purchase",
+          timestamp: oi.shopOrder?.created_at
+            ? new Date(oi.shopOrder.created_at).getTime()
+            : Date.now(),
+        });
+      }
     });
 
     // Ưu tiên lịch sử DB của chính user + browserViewedIds của user đó
     viewedIds = Array.from(
-      new Set([...dbViewedIds, ...cartProductIds, ...wishlistIds, ...browserViewedIds])
-    ).slice(0, 15);
+      new Set([...dbViewedIds, ...cartProductIds, ...wishlistIds, ...purchasedIds, ...browserViewedIds])
+    ).slice(0, 20);
   }
 
-  if (viewedIds.length > 0 && vectorSearchService.isReady()) {
+  interactions.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+  if ((interactions.length > 0 || viewedIds.length > 0) && vectorSearchService.isReady()) {
     const overFetchLimit = Math.min(240, Math.max(parsedLimit * 3, 60));
     const recommendedIds = await vectorSearchService.getRecommendationsByUserHistory(
-      viewedIds,
+      {
+        interactions: interactions.slice(0, 20),
+        viewedProductIds: viewedIds,
+        purchasedIds,
+        inCartIds: cartProductIds,
+        filterMode: "hard",
+      },
       overFetchLimit,
       signalWeights
     );

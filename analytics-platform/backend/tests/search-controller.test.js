@@ -121,3 +121,53 @@ test("searchController.visualSearchByImage validates input and ranks vectors fro
     }
   }
 });
+
+test("searchController.getRecommendations supports weighted interactions, time decay, hard filter and soft penalty", () => {
+  vectorSearchEngine.init();
+  const now = Date.now();
+
+  const resHard = createMockRes();
+  getRecommendations(
+    {
+      body: {
+        interactions: [
+          { productId: 1379, eventType: "add_to_cart", timestamp: now },
+          { productId: 278, eventType: "view_item", timestamp: now - 24 * 3600000 },
+        ],
+        purchasedIds: [1379],
+        inCartIds: [278],
+        filterMode: "hard",
+        limit: 5,
+      },
+      query: {},
+    },
+    resHard
+  );
+
+  assert.equal(resHard.statusCode, 200);
+  assert.equal(resHard.body.success, true);
+  assert.equal(resHard.body.productIds.length, 5);
+  assert.ok(!resHard.body.productIds.includes(1379));
+  assert.ok(!resHard.body.productIds.includes(278));
+
+  const resSoft = createMockRes();
+  getRecommendations(
+    {
+      body: {
+        interactions: [{ productId: 1, eventType: "purchase", timestamp: now }],
+        purchasedIds: [1],
+        filterMode: "soft",
+        excludeInCart: false,
+        limit: 10,
+      },
+      query: {},
+    },
+    resSoft
+  );
+
+  assert.equal(resSoft.statusCode, 200);
+  const penalized = resSoft.body.results.find((r) => r.id === 1);
+  if (penalized) {
+    assert.equal(penalized.penalty, 0.2);
+  }
+});

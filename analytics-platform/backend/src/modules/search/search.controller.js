@@ -100,15 +100,26 @@ export const getSimilarProducts = (req, res) => {
 
 export const getRecommendations = (req, res) => {
   try {
+    const interactions = req.body?.interactions;
     const viewedProductIds = req.body?.viewedProductIds || req.body?.viewedIds || [];
     const signalWeights = req.body?.signalWeights || {};
     const limit = Number(req.body?.limit || req.query.limit) || 10;
 
-    const recommended = vectorSearchEngine.getRecommendationsByUserHistory(
-      viewedProductIds,
-      limit,
-      signalWeights
-    );
+    const recommended =
+      Array.isArray(interactions) && interactions.length > 0
+        ? vectorSearchEngine.recommendWithBehaviorPipeline(interactions, limit, {
+            purchasedIds: req.body?.purchasedIds || [],
+            softPurchasedIds: req.body?.softPurchasedIds || [],
+            inCartIds: req.body?.inCartIds || [],
+            viewedOftenIds: req.body?.viewedOftenIds || [],
+            filterMode: req.body?.filterMode || "hard",
+            excludeInCart: req.body?.excludeInCart !== false,
+          })
+        : vectorSearchEngine.getRecommendationsByUserHistory(
+            viewedProductIds,
+            limit,
+            signalWeights
+          );
     const productIds = recommended.map((r) => r.id);
 
     return res.status(200).json({

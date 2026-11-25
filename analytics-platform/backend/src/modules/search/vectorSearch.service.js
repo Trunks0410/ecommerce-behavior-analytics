@@ -6,6 +6,14 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const EVENT_WEIGHTS = {
+  view_item: 1.0,
+  click_item: 1.5,
+  wishlist: 2.0,
+  add_to_cart: 3.0,
+  purchase: 5.0,
+};
+
 const COLOR_TERMS = new Set([
   "white", "black", "brown", "tan", "navy", "blue", "red", "pink",
   "green", "grey", "gray", "yellow", "orange", "purple", "silver",
@@ -714,6 +722,116 @@ class VectorSearchEngine {
     }
 
     return interleaved.slice(0, limit);
+  }
+
+  /**
+   * Giai đoạn 1 & 2: Pipeline Gợi ý 2048-dim (Interaction Weight + Time Decay + Top-K + Filtering/Soft Penalty)
+   * @param {Array<{productId: number, eventType?: string, weight?: number, timestamp?: number}>} interactions
+   * @param {number} limit
+   * @param {object} options
+   */
+  recommendWithBehaviorPipeline(interactions = [], limit = 10, options = {}) {
+    if (!this.ready || !Array.isArray(interactions) || interactions.length === 0) return [];
+
+    const now = Number(options.now) || Date.now();
+    const lambdaPerHour = Number(process.env.REC_TIME_DECAY_LAMBDA) || 0.03;
+    const filterMode = String(options.filterMode || "hard").toLowerCase();
+    const excludeInCart = options.excludeInCart !== false;
+
+    const userVec = new Float32Array(this.vectorDim);
+    let totalWeight = 0;
+    const anchorIds = [];
+
+    for (const item of interactions.slice(0, 20)) {
+      const pid = Number(item?.productId);
+      const idx = pid - 1;
+      if (idx < 0 || idx >= this.totalRecords) continue;
+
+      const w = EVENT_WEIGHTS[item.eventType] || Number(item.weight) || 1.0;
+      const ts = Number(item.timestamp);
+      const dtHours = ts > 0 ? Math.max(0, (now - ts) / 3600000) : 0;
+      const decayWeight = w * Math.exp(-lambdaPerHour * dtHours);
+
+      const rowOffset = idx * this.vectorDim;
+      for (let d = 0; d < this.vectorDim; d++) {
+        userVec[d] += decayWeight * this.vectors[rowOffset + d];
+      }
+      totalWeight += decayWeight;
+      anchorIds.push(pid);
+    }
+
+    if (totalWeight === 0) return [];
+
+    let norm = 0;
+    for (let d = 0; d < this.vectorDim; d++) {
+      userVec[d] /= totalWeight;
+      norm += userVec[d] * userVec[d];
+    }
+    norm = Math.sqrt(norm);
+    if (norm > 0) {
+      for (let d = 0; d < this.vectorDim; d++) {
+        userVec[d] /= norm;
+      }
+    }
+
+    const purchasedSet = new Set((options.purchasedIds || []).map(Number));
+    const softPurchasedSet = new Set((options.softPurchasedIds || []).map(Number));
+    const viewedOftenSet = new Set((options.viewedOftenIds || []).map(Number));
+    const inCartSet = new Set((options.inCartIds || []).map(Number));
+
+    // Stage 1: Truy xuất Top-K rộng (tối thiểu 50 ứng viên)
+    const candidates = [];
+    for (let i = 0; i < this.totalRecords; i++) {
+      const pid = i + 1;
+      if (filterMode === "hard" && purchasedSet.has(pid)) continue;
+      if (excludeInCart && inCartSet.has(pid)) continue;
+
+      let cosine = 0;
+      const rowOffset = i * this.vectorDim;
+      for (let d = 0; d < this.vectorDim; d++) {
+        cosine += userVec[d] * this.vectors[rowOffset + d];
+      }
+      candidates.push({ id: pid, cosine });
+    }
+
+    candidates.sort((a, b) => b.cosine - a.cosine);
+    const poolSize = Math.max(50, (Number(limit) || 10) * 5);
+    const topCandidates = candidates.slice(0, poolSize);
+
+    // Stage 2: Soft Penalty & Co-Purchase (nếu đã có ma trận mua kèm)
+    const coMap = this.coPurchaseMap instanceof Map ? this.coPurchaseMap : null;
+    const hasCoPurchase = Boolean(coMap && coMap.size > 0);
+
+    const reranked = topCandidates.map((cand) => {
+      let coScore = 0;
+      if (hasCoPurchase) {
+        for (const srcId of anchorIds) {
+          const s = coMap.get(srcId)?.get(cand.id) || 0;
+          if (s > coScore) coScore = s;
+        }
+      }
+
+      let penalty = 1.0;
+      if (softPurchasedSet.has(cand.id) || (filterMode === "soft" && purchasedSet.has(cand.id))) {
+        penalty = 0.2;
+      } else if (viewedOftenSet.has(cand.id)) {
+        penalty = 0.5;
+      }
+
+      const baseScore = hasCoPurchase ? 0.7 * cand.cosine + 0.3 * coScore : cand.cosine;
+      const score = baseScore * penalty;
+
+      return {
+        id: cand.id,
+        score,
+        cosine: cand.cosine,
+        coPurchase: coScore,
+        penalty,
+      };
+    });
+
+    reranked.sort((a, b) => b.score - a.score);
+    return reranked.slice(0, Math.max(1, Number(limit) || 10));
   }
 }
 
