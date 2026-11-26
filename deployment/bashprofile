@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+export DEPLOY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export COMPOSE_ENV_FILE="${DEPLOY_DIR}/env"

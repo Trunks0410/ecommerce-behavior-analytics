@@ -81,18 +81,26 @@ jobs:
 
       - name: Build Ecommerce Frontend
         working-directory: ./Ecommerce-platform/frontend
+        env:
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL || '/api' }}
+          VITE_SHIPPER_PORTAL_URL: ${{ vars.VITE_SHIPPER_PORTAL_URL || '' }}
         run: |
           npm ci
           npm run build
 
       - name: Build Analytics Frontend
         working-directory: ./analytics-platform/frontend
+        env:
+          VITE_ANALYTICS_API_URL: ${{ vars.VITE_ANALYTICS_API_URL || '/api' }}
+          VITE_ECOMMERCE_URL: ${{ vars.VITE_ECOMMERCE_URL || '' }}
         run: |
           npm ci
           npm run build
 
       - name: Build Shipment Frontend
         working-directory: ./shipment/frontend
+        env:
+          VITE_SHIPMENT_API_URL: ${{ vars.VITE_SHIPMENT_API_URL || '/api/v1' }}
         run: |
           npm ci
           npm run build

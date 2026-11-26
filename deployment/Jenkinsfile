@@ -1,0 +1,145 @@
+properties([
+    parameters([
+        [
+            $class: 'ChoiceParameter',
+            choiceType: 'PT_SINGLE_SELECT',
+            description: 'Select Git tag from GitHub',
+            filterLength: 1,
+            filterable: true,
+            name: 'IMAGE_TAG',
+            script: [
+                $class: 'GroovyScript',
+                fallbackScript: [
+                    classpath: [],
+                    sandbox: true,
+                    script: "return ['']"
+                ],
+                script: [
+                    classpath: [],
+                    sandbox: false,
+                    script: '''
+                        def proc = ['git', 'ls-remote', '--tags', '--refs', 'https://github.com/Trunks0410/ecommerce-behavior-analytics.git'].execute()
+                        proc.waitFor()
+                        if (proc.exitValue() != 0) return ['']
+                        def tags = proc.in.text.readLines()
+                            .collect { it.split('refs/tags/')[-1] }
+                            .findAll { it && !it.startsWith('model-') }
+                            .reverse()
+                        return [''] + tags
+                    '''
+                ]
+            ]
+        ],
+        booleanParam(name: 'PULL_IMAGES', defaultValue: true, description: 'Pull images before deploy'),
+        booleanParam(name: 'DEPLOY_MODEL', defaultValue: false, description: 'Deploy qwen-inference model service'),
+        booleanParam(name: 'DEPLOY_NGINX', defaultValue: false, description: 'Start or recreate standalone nginx-proxy'),
+        choice(name: 'SEARCH_MODE', choices: ['ram', 'auto', 'model'], description: 'Search mode for analyze-server')
+    ])
+])
+
+pipeline {
+    agent { label 'ec2-server' }
+
+    environment {
+        DEPLOY_SRC = 'deployment'
+        SERVER_DIR = '/home/ecommerce'
+    }
+
+    stages {
+        stage('1. Load Image & Config') {
+            steps {
+                sh '''
+                    set -e
+                    if [ -z "${IMAGE_TAG}" ]; then
+                      echo "ERROR: IMAGE_TAG is required"
+                      exit 1
+                    fi
+
+                    cd "${SERVER_DIR}"
+                    sed -i 's/\\r$//' docker-compose.sh validate.sh || true
+                    chmod +x docker-compose.sh validate.sh
+
+                    TARGET_ENV="${SERVER_DIR}/env"
+                    if [ ! -f "${TARGET_ENV}" ] && [ -f "${SERVER_DIR}/.env" ]; then
+                      TARGET_ENV="${SERVER_DIR}/.env"
+                    fi
+                    if [ ! -f "${TARGET_ENV}" ]; then
+                      echo "ERROR: missing ${SERVER_DIR}/env"
+                      exit 1
+                    fi
+
+                    set +x
+                    update_env() {
+                      local key="$1"
+                      local val="$2"
+                      if grep -q "^${key}=" "${TARGET_ENV}"; then
+                        sed -i "s|^${key}=.*|${key}=${val}|" "${TARGET_ENV}"
+                      else
+                        echo "${key}=${val}" >> "${TARGET_ENV}"
+                      fi
+                    }
+
+                    update_env "IMAGE_TAG" "${IMAGE_TAG}"
+                    update_env "SEARCH_MODE" "${SEARCH_MODE}"
+                    if [ "${DEPLOY_MODEL}" = "true" ]; then
+                      update_env "MODEL_INFERENCE_URL" "http://qwen-inference:8000"
+                      export COMPOSE_PROFILES="model"
+                    else
+                      update_env "MODEL_INFERENCE_URL" ""
+                    fi
+                    set -x
+
+                    if [ "${PULL_IMAGES}" = "true" ]; then
+                      ./docker-compose.sh pull
+                    fi
+                '''
+            }
+        }
+
+        stage('2. Deploy') {
+            steps {
+                sh '''
+                    set -e
+                    cd "${SERVER_DIR}"
+
+                    if [ "${DEPLOY_MODEL}" = "true" ]; then
+                      export COMPOSE_PROFILES="model"
+                    fi
+
+                    PULL_POLICY="missing"
+                    if [ "${PULL_IMAGES}" = "true" ]; then
+                      PULL_POLICY="always"
+                    fi
+                    ./docker-compose.sh up --pull "${PULL_POLICY}" --remove-orphans
+
+                    NGINX_RUNNING=$(docker inspect -f '{{.State.Running}}' datn-nginx-proxy 2>/dev/null || echo "false")
+                    if [ "${DEPLOY_NGINX}" = "true" ] || [ "${NGINX_RUNNING}" != "true" ]; then
+                      ./docker-compose.sh nginx-up
+                    fi
+                '''
+            }
+        }
+
+        stage('3. Validate') {
+            steps {
+                sh '''
+                    set -e
+                    cd "${SERVER_DIR}"
+                    DEPLOY_MODEL="${DEPLOY_MODEL}" ./validate.sh
+                '''
+            }
+        }
+    }
+
+    post {
+        always {
+            sh 'docker ps --filter "name=datn-" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" || true'
+        }
+        success {
+            echo "Deploy succeeded: IMAGE_TAG=${params.IMAGE_TAG} DEPLOY_MODEL=${params.DEPLOY_MODEL} SEARCH_MODE=${params.SEARCH_MODE}"
+        }
+        failure {
+            echo "Deploy failed"
+        }
+    }
+}
